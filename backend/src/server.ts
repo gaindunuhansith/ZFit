@@ -1,14 +1,13 @@
-import express from "express";
+import dotenv from "dotenv";
+import app from "./app.js";
+import env from "./config/env.js";
+import connectToMongoDB from "./config/mongodb.js";
 
-// Create an Express application
-const app = express(); 
 
-const PORT = 5000;
+dotenv.config();
 
-app.get("/", (req, res) => {
-    res.send("The server is running");
-});
-
-app.listen(PORT, () => {
-    console.log("Server is running on the Port", PORT);
-});
+app.listen(env.PORT, async () => {
+    console.log(`Server is running http://localhost:${env.PORT}`);
+    
+    await connectToMongoDB();
+})
