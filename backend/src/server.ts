@@ -1,10 +1,6 @@
-import dotenv from "dotenv";
 import app from "./app.js";
 import env from "./config/env.js";
 import connectToMongoDB from "./config/mongodb.js";
-
-
-dotenv.config();
 
 app.listen(env.PORT, async () => {
     console.log(`Server is running http://localhost:${env.PORT}`);
