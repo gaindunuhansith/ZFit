@@ -13,6 +13,13 @@ export interface UserDocument extends mongoose.Document {
         address: string;
         emergencyContact: string;
     };
+    consent: {
+        gdpr: boolean;
+        marketing: boolean;
+        date: Date;
+    };
+    role: string;
+    qrCode: string;
     status: string;
     createdAt: Date;
     updatedAt: Date;
@@ -20,23 +27,37 @@ export interface UserDocument extends mongoose.Document {
     comparePassword(val: string): Promise<boolean>;
     omitPassword(): Pick<
     UserDocument,
-    "_id" | "email" | "verified" | "contactNo" | "dob" | "profile" | "status" | "createdAt" | "updatedAt"
+    "_id" | "name" | "email" | "verified" | "contactNo" | "dob" | "profile" | "consent" | "role" | "qrCode" | "status" | "createdAt" | "updatedAt"
     >
 }
 
 const userSchema = new mongoose.Schema<UserDocument>({
         name: { 
             type: String, 
-            required: true, 
-            unique: true 
+            required: true
         },
         email: { 
             type: String, 
-            required: true
+            required: true,
+            unique: true,
+            lowercase: true,
+            validate: {
+                validator: function(v: string) {
+                    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); 
+                },
+                message: 'Invalid email format'
+            }
         },
         password: { 
             type: String, 
-            required: true
+            required: true,
+            minLenght: 8,
+            validate: {
+                validator: function(v: string) {
+                    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(v);
+                },
+                message: 'Password should be at least 8 characters long and should contain at least one upper case letter, one lower case letter, a number and a special character'
+            }
         },
         verified: { 
             type: Boolean, 
@@ -45,7 +66,13 @@ const userSchema = new mongoose.Schema<UserDocument>({
         },
         contactNo: { 
             type: String, 
-            required: true
+            required: true,
+            validate: {
+                validator: function(v: string) {
+                    return /^\+?[1-9]\d{1,14}$/.test(v);
+                },
+                message: 'Invalid phone number'
+            }
         },
         dob: { 
             type: Date 
@@ -61,6 +88,36 @@ const userSchema = new mongoose.Schema<UserDocument>({
             emergencyContact: { 
                 type: String
             }
+        },
+        consent: {
+            gdpr: {
+                type: Boolean,
+                required: true,
+                default: false
+            },
+            marketing: {
+                type: Boolean,
+                default: false
+            },
+            date: {
+                type: Date,
+                required: true
+            }
+        },
+        role: {
+            type: String,
+            enum: ['member', 'staff', 'manager'],
+            required: true,
+            default: 'member'
+        },
+        qrCode: {
+            type: String,
+            required: true
+        },
+        status: {
+            type: String,
+            enum: [ 'active', 'inactive', 'expired'],
+            default: 'active'
         }
 
     }, 
@@ -68,6 +125,12 @@ const userSchema = new mongoose.Schema<UserDocument>({
         timestamps: true,
     }
 );
+
+userSchema.index({ email: 1 });
+userSchema.index({ role: 1 });
+userSchema.index({ status: 1 });
+userSchema.index({ createdAt: -1 });
+userSchema.index({ email: 1, status: 1});
 
 userSchema.pre("save", async function (next){
     if(!this.isModified("password")){
