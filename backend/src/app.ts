@@ -19,14 +19,14 @@ app.use(morgan("dev"));
 
 //routes
 app.use('/api/v1/inventory', categoryRoutes);
+app.use("/api/v1/suppliers", inventorySupplierRoutes);
 
 //API health check
 app.use("/", (req: express.Request, res: express.Response) => {
     res.send("The API is running");
 })
 
-//routes
-app.use("/api/v1/suppliers", inventorySupplierRoutes);
+
 
 
 export default app;

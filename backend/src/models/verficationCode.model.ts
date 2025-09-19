@@ -8,7 +8,7 @@ export interface VerficationCodeDocument extends mongoose.Document {
     expiresAt: Date;
 }
 
-const verficationCodeSchema = new mongoose.Schema<VerficationCodeDocument> ({
+const verificationCodeSchema = new mongoose.Schema<VerficationCodeDocument> ({
     userId: {
         ref: "User",
         type: mongoose.Schema.Types.ObjectId,
@@ -30,10 +30,10 @@ const verficationCodeSchema = new mongoose.Schema<VerficationCodeDocument> ({
     }
 })
 
-const VerficationCodeModel = mongoose.model<VerficationCodeDocument> (
+const VerificationCodeModel = mongoose.model<VerficationCodeDocument> (
     "VerficationCode",
-    verficationCodeSchema,
+    verificationCodeSchema,
     "verificatin_codes"
 );
 
-export default VerficationCodeModel;
+export default VerificationCodeModel;
