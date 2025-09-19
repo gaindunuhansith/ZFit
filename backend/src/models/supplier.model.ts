@@ -18,5 +18,5 @@ const SupplierSchema = new mongoose.Schema<IInventorySupplier>({
     updatedAt: {type: Date, default: Date.now}
 })
 
-const Suppllier = mongoose.model<IInventorySupplier>("Supplier", SupplierSchema)
-export default Suppllier;
+const Supplier = mongoose.model<IInventorySupplier>("Supplier", SupplierSchema)
+export default Supplier;

@@ -1,29 +1,29 @@
-import Suppllier from "../models/supplier.model.js";
+import Supplier from "../models/supplier.model.js";
 import type { IInventorySupplier } from "../models/supplier.model.js";
 
 export default class SupplierService{
     //Cretate supplier
-    async createSupplier(data: { supplierName: String, supplierEmail: String, supplierPhone: String, supplierAddress: String}): Promise<IInventorySupplier>{
-        const supplier = new Suppllier(data);
+    async createSupplier(data: { supplierName: string, supplierEmail: string, supplierPhone: string, supplierAddress: string}): Promise<IInventorySupplier>{
+        const supplier = new Supplier(data);
         return await supplier.save();
     }
 
     //Get all suppliers
-    async getAllSupllier(): Promise<IInventorySupplier[]>{
-        return await Suppllier.find().sort({ supplierName: 1})
+    async getAllSuppliers(): Promise<IInventorySupplier[]>{
+        return await Supplier.find().sort({ supplierName: 1})
     }
 
     //Get supplier by id
-    async getSupplierById(id: String): Promise<IInventorySupplier| null>{
-        return await Suppllier.findById(id);
+    async getSupplierById(id: string): Promise<IInventorySupplier| null>{
+        return await Supplier.findById(id);
     }
 
     //Update supplier
     async updateSupplier(
-        id: String,
-        data: { supplierName: String | undefined, supplierEmail: String | undefined, supplierPhone: String | undefined, supplierAddress: String | undefined}
+        id: string,
+        data: { supplierName?: string | undefined, supplierEmail?: string | undefined, supplierPhone?: string | undefined, supplierAddress?: string | undefined}
     ): Promise<IInventorySupplier | null>{
-        return await Suppllier.findByIdAndUpdate(
+        return await Supplier.findByIdAndUpdate(
             id,
             {...data, updatedAt: new Date()},
             {new: true, runValidators: true}
@@ -31,7 +31,7 @@ export default class SupplierService{
     }
 
     //Delete supplier
-    async deleteSupllier(id: String): Promise<IInventorySupplier | null>{
-        return await Suppllier.findByIdAndDelete(id);
+    async deleteSupplier(id: string): Promise<IInventorySupplier | null>{
+        return await Supplier.findByIdAndDelete(id);
     }
 }
