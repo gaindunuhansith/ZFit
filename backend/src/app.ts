@@ -27,6 +27,4 @@ app.use("/", (req: express.Request, res: express.Response) => {
 })
 
 
-
-
 export default app;
