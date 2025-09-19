@@ -1,5 +1,5 @@
-import Category from "../models/inventoryCategory.shema.js";
-import type { ICategory } from "../models/inventoryCategory.shema.js";
+import Category from "../models/category.model.js";
+import type { ICategory } from "../models/category.model.js";
 
 export default class CategoryService {
   // CREATE category
