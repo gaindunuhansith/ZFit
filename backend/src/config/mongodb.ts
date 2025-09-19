@@ -5,8 +5,6 @@ if(!env.MongoDB_URI) {
     throw new Error('Please define the MongoDB_URI environment variable inside .env.<development/production>.local');
 }
 
-console.log(`Trying to connect to ${env.MongoDB_URI}`);
-
 const connectToMongoDB = async () => {
     try {
         await mongoose.connect(env.MongoDB_URI);
