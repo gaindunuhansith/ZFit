@@ -17,7 +17,7 @@ app.use(morgan("dev"));
 app.use('/api/v1/inventory', categoryRoutes);
 
 //API health check
-app.use("/api/v1/health", (req: express.Request, res: express.Response) => {
+app.use("/", (req: express.Request, res: express.Response) => {
     res.send("The API is running");
 })
 
