@@ -75,7 +75,8 @@ const userSchema = new mongoose.Schema<UserDocument>({
             }
         },
         dob: { 
-            type: Date 
+            type: Date,
+            required: false,
         },
         profile: {
             avatar: {
@@ -83,7 +84,7 @@ const userSchema = new mongoose.Schema<UserDocument>({
                 },
             address: { 
                 type: String, 
-                required: true
+                required: false,
             },
             emergencyContact: { 
                 type: String
