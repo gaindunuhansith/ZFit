@@ -1,5 +1,5 @@
-import Suppllier from "../models/inventorySupplier.schema.js";
-import type { IInventorySupplier } from "../models/inventorySupplier.schema.js";
+import Suppllier from "../models/supplier.model.js";
+import type { IInventorySupplier } from "../models/supplier.model.js";
 
 export default class SupplierService{
     //Cretate supplier
