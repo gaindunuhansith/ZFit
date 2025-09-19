@@ -2,7 +2,11 @@ import express from "express";
 import morgan from "morgan";
 import helmet from "helmet";
 import cors from "cors";
+
+import inventorySupplierRoutes from "./routes/inventorySuppliers.routes.js";
+
 import categoryRoutes from "./routes/inventoryCategory.routes.js";
+
 
 //creating a express app instance
 const app: express.Application = express();
@@ -22,6 +26,7 @@ app.use("/", (req: express.Request, res: express.Response) => {
 })
 
 //routes
+app.use("/api/v1/suppliers", inventorySupplierRoutes);
 
 
 export default app;
