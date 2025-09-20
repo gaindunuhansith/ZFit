@@ -6,16 +6,19 @@ import {
     updatePayment,
     deletePayment,
     processPayment
-} from '../controllers/payment.controller.js';
+} from '../controllers/payment.controller.js';  
+//middelware
 
 const router = Router();
 
-// All Routes need auth middleware
-router.post('/process', processPayment); // PayHere processing
-//router.get('/', getPayments);     // Get all payments
-router.get('/:id', getPaymentById); // Get payment by ID
-router.post('/', createPayment); // Create payment
-router.put('/:id', updatePayment); // Update payment
-router.delete('/:id', deletePayment); // Delete payment
+// All routes require auth
+/*
+router.post('/process', authMiddleware, processPayment); 
+router.get('/', authMiddleware, getPayments);  
+router.get('/:id', authMiddleware, getPaymentById);
+router.post('/', authMiddleware, createPayment);
+router.put('/:id', authMiddleware, updatePayment);
+router.delete('/:id', authMiddleware, deletePayment);
+*/
 
 export default router;

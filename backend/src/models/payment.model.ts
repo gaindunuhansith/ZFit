@@ -1,12 +1,12 @@
 import mongoose, { Document } from 'mongoose';
 
-interface IPayment extends Document {
+export interface IPayment extends Document {
     userId: mongoose.Types.ObjectId;
     amount: number;
     currency: string;
     type: 'membership' | 'inventory' | 'booking' | 'other';
     status: 'pending' | 'completed' | 'failed' | 'refunded';
-    method: 'card' | 'bank' | 'cash';
+    method: 'card' | 'bank-transfer' | 'cash';
     relatedId: mongoose.Types.ObjectId; // Ref to booking/inventory/etc.
     transactionId: string;
     gatewayTransactionId?: string; // PayHere transaction ID
