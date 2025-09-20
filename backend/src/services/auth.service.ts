@@ -5,6 +5,7 @@ import VerificationCodeModel from "../models/verficationCode.model.js";
 import AppAssert from "../util/AppAssert.js";
 import { oneYearFromNow } from "../util/date.util.js";
 import APP_ORIGIN from "../config/env.js";
+import { sendMail } from "../util/sendMail.util.js";
 
 type CreateAccountParams = {
     name: string;
@@ -49,7 +50,10 @@ export const createAccount = async (data: CreateAccountParams) => {
     const url = `${APP_ORIGIN}/email/verify/${verificationCode._id}`;
 
     //send verification email
-    const 
+    const { error } = await sendMail({
+        to: user.email,
+        ..
+    })
 
     console.log(user);
     console.log(verificationCode);
