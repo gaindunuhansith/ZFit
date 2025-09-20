@@ -1,15 +1,15 @@
 import { Router } from 'express';
 import {
-    createInvoice, getInvoices, getInvoicesById, updateInvoice, deleteInvoice
+    createInvoice, getInvoices, getInvoiceById, updateInvoice, deleteInvoice
 } from '../controllers/invoice.controller.js';
-//middleware
 
 const router = Router();
 
-//router.get('/',  getInvoices);
-router.get('/:id', getInvoicesById);
-//router.post('/',createInvoice);
+// Uncommented routes
+router.get('/', getInvoices);
+router.get('/:id', getInvoiceById);
+router.post('/', createInvoice);
 router.put('/:id', updateInvoice);
-router.delete('/:id',  deleteInvoice);
+router.delete('/:id', deleteInvoice);
 
 export default router;

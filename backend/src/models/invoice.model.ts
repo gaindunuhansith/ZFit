@@ -1,5 +1,20 @@
 import mongoose, { Document } from 'mongoose';
 
+// Counter interface for auto-incrementing invoice numbers
+interface ICounter extends Document {
+    _id: string;
+    seq: number;
+}
+
+// Counter schema for atomic number generation
+const counterSchema = new mongoose.Schema<ICounter>({
+    _id: { type: String, required: true },
+    seq: { type: Number, default: 0 }
+});
+
+// Counter model
+const Counter = mongoose.model<ICounter>('Counter', counterSchema);
+
 interface IInvoiceItem {
     description: string;
     quantity: number;
@@ -66,7 +81,7 @@ const invoiceSchema = new mongoose.Schema<IInvoice>({
     number: {
         type: String,
         unique: true,
-        required: true
+        // required: true  // Removed required since it's auto-generated
     },
     items: [invoiceItemSchema], // Embedded array
     subtotal: {
@@ -104,11 +119,21 @@ const invoiceSchema = new mongoose.Schema<IInvoice>({
     timestamps: true
 });
 
-// Auto-generate invoice number (as per docs)
+// Auto-generate invoice number with atomic counter to prevent race conditions
 invoiceSchema.pre<IInvoice>('save', async function(this: IInvoice, next: (err?: Error) => void) {
     if (!this.number) {
-        const count = await (this.constructor as mongoose.Model<IInvoice>).countDocuments();
-        this.number = `ZF-INV-${new Date().getFullYear()}-${String(count + 1).padStart(6, '0')}`;
+        try {
+            // Use findOneAndUpdate with upsert to atomically increment counter
+            const counter = await Counter.findOneAndUpdate(
+                { _id: 'invoice_number' },
+                { $inc: { seq: 1 } },
+                { upsert: true, new: true, setDefaultsOnInsert: true }
+            );
+
+            this.number = `ZF-INV-${new Date().getFullYear()}-${String(counter.seq).padStart(6, '0')}`;
+        } catch (error) {
+            return next(error as Error);
+        }
     }
     next();
 });
