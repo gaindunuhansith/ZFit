@@ -34,6 +34,7 @@ export const registerSchema = z.object({
         marketing: z.boolean(),
     }),
     role: z.string(),
+    userAgent: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, { message: "Passwords do not match", path: ["confirmPassword"]});
 
 export const verificationCodeSchema = z.string().min(1).max(24);
@@ -44,14 +45,17 @@ export const resetPasswordSchema = z.object({
 });
 
 
-export const registerHandler = async (req: express.Request , res: express.Response, next: NextFunction) => {
+export const registerHandler = async (req: express.Request , res: express.Response, next: express.NextFunction) => {
     try {
         const request = registerSchema.parse({
             ...req.body,
             userAgent: req.headers["user-agent"],
         });
 
-        createAccount(request);
+        const { user, accessToken, refreshToken } = await createAccount(request);
+        return setAuthCookies({ res, accessToken, refreshToken })
+        .status(CREATED)
+        .json(user);
     } catch (error) {
         next(error);
     }

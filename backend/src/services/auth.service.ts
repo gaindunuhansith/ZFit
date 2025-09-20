@@ -4,8 +4,11 @@ import UserModel from "../models/user.model.js";
 import VerificationCodeModel from "../models/verficationCode.model.js";
 import AppAssert from "../util/AppAssert.js";
 import { oneYearFromNow } from "../util/date.util.js";
-import APP_ORIGIN from "../config/env.js";
+import env from "../config/env.js";
 import { sendMail } from "../util/sendMail.util.js";
+import { getVerifyEmailTemplate } from "../util/emailTemplates.js";
+import SessionModel from "../models/session.model.js";
+import { refreshTokenSignOptions, signToken } from "../util/jwt.js";
 
 type CreateAccountParams = {
     name: string;
@@ -17,6 +20,7 @@ type CreateAccountParams = {
         marketing: boolean;
     },
     role: string;
+    userAgent?: string | undefined;
 }
 
 export const createAccount = async (data: CreateAccountParams) => {
@@ -47,13 +51,39 @@ export const createAccount = async (data: CreateAccountParams) => {
         expiresAt: oneYearFromNow(),
     });
 
-    const url = `${APP_ORIGIN}/email/verify/${verificationCode._id}`;
+    const url = `${env.APP_ORIGIN}/email/verify/${verificationCode._id}`;
 
     //send verification email
     const { error } = await sendMail({
         to: user.email,
-        ..
-    })
+        ...getVerifyEmailTemplate(url),
+    });
+
+    if (error) console.error(error);
+
+    //create session
+    const session = await SessionModel.create({
+        userId,
+        userAgent: data.userAgent,
+    });
+
+    const refreshToken = signToken(
+        {
+        sessionId: session._id,
+        },
+        refreshTokenSignOptions
+    );
+
+    const accessToken = signToken({
+        userId,
+        sessionId: session._id,
+    });
+
+    return {
+        user: user.omitPassword(),
+        accessToken,
+        refreshToken,
+    };
 
     console.log(user);
     console.log(verificationCode);
