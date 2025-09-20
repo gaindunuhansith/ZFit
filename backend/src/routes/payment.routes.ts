@@ -6,19 +6,14 @@ import {
     updatePayment,
     deletePayment,
     processPayment
-} from '../controllers/payment.controller.js';  
-//middelware
+} from '../controllers/payment.controller.js';
 
 const router = Router();
 
-// All routes require auth
-/*
-router.post('/process', authMiddleware, processPayment); 
-router.get('/', authMiddleware, getPayments);  
-router.get('/:id', authMiddleware, getPaymentById);
-router.post('/', authMiddleware, createPayment);
-router.put('/:id', authMiddleware, updatePayment);
-router.delete('/:id', authMiddleware, deletePayment);
-*/
-
-export default router;
+// Payment routes
+router.post('/process/:id', processPayment);
+router.get('/', getPayments);
+router.get('/:id', getPaymentById);
+router.post('/', createPayment);
+router.put('/:id', updatePayment);
+router.delete('/:id', deletePayment);export default router;

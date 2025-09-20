@@ -57,7 +57,8 @@ const paymentSchema = new mongoose.Schema<IPayment>({
     transactionId: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        index: true  // Keep this for performance
     },
     gatewayTransactionId: String, // PayHere transaction reference
     gatewayPaymentId: String, // PayHere payment ID
@@ -81,7 +82,7 @@ const paymentSchema = new mongoose.Schema<IPayment>({
 
 // Indexes for performance (as per docs)
 paymentSchema.index({ userId: 1, status: 1 });
-paymentSchema.index({ transactionId: 1 });
+// paymentSchema.index({ transactionId: 1 }); // Removed duplicate index
 paymentSchema.index({ date: 1, type: 1 });
 paymentSchema.index({ status: 1, date: -1 });
 
