@@ -1,5 +1,7 @@
 import Item from "../models/inventoryItem.schema.js";
 import type { IInventoryItem } from "../models/inventoryItem.schema.js";
+import "../models/category.model.js"; // Import to register Category model for population
+import "../models/supplier.model.js"; // Import to register Supplier model for population
 import type mongoose from "mongoose";
 
 export default class InventoryItemService {
