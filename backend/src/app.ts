@@ -6,6 +6,7 @@ import cors from "cors";
 import inventorySupplierRoutes from "./routes/inventorySuppliers.routes.js";
 import categoryRoutes from "./routes/inventoryCategory.routes.js";
 import itemsRoutes from "./routes/inventoryItems.routes.js";
+import stockRoutes from "./routes/inventoryStock.routes.js";
 
 
 //creating a express app instance
@@ -21,6 +22,7 @@ app.use(morgan("dev"));
 app.use('/api/v1/inventory', categoryRoutes);
 app.use("/api/v1/suppliers", inventorySupplierRoutes);
 app.use('/api/v1/inventory', itemsRoutes);
+app.use('/api/v1/stock', stockRoutes);
 
 
 //API health check
