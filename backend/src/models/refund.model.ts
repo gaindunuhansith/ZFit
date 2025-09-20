@@ -1,6 +1,6 @@
 import mongoose, { Document } from 'mongoose';
 
-interface IRefund extends Document {
+export interface IRefund extends Document {
     paymentId: mongoose.Types.ObjectId;
     userId: mongoose.Types.ObjectId;
     refundId: string; // Auto-generated
@@ -29,7 +29,7 @@ const refundSchema = new mongoose.Schema<IRefund>({
     refundId: {
         type: String,
         unique: true,
-        required: true
+        // required: true  // Removed required since it's auto-generated
     },
     originalAmount: {
         type: Number,

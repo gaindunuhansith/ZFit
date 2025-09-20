@@ -1,6 +1,12 @@
 import type { Request, Response } from 'express';
 import Refund from '../models/refund.model.js';
-//middleware
+import {
+    createRefundService,
+    getRefundsService,
+    getRefundByIdService,
+    updateRefundService,
+    deleteRefundService
+} from '../services/refund.services.js';
 
 interface AuthenticatedRequest extends Request {
     user: {
@@ -11,33 +17,43 @@ interface AuthenticatedRequest extends Request {
 
 // Added validation functions (adjust based on your Refund model fields)
 const validateCreateRefund = (data: any): string | null => {
-    if (!data.amount || !data.reason || !data.paymentId) return 'Missing required fields: amount, reason, and paymentId';
-    if (data.amount <= 0) return 'Amount must be positive';
-    if (!['pending', 'approved', 'rejected', 'completed'].includes(data.status)) return 'Invalid status';  // Adjust enum as per model.
+    if (!data.refundAmount || !data.originalAmount || !data.reason || !data.paymentId) return 'Missing required fields: refundAmount, originalAmount, reason, and paymentId';
+    if (data.refundAmount <= 0) return 'Refund amount must be positive';
+    if (data.originalAmount <= 0) return 'Original amount must be positive';
+    if (data.refundAmount > data.originalAmount) return 'Refund amount cannot exceed original amount';
+    if (data.status && !['pending', 'completed', 'failed'].includes(data.status)) return 'Invalid status - must be pending, completed, or failed';
     return null;
 };
 
 const validateUpdateRefund = (data: any): string | null => {
-    if (data.amount !== undefined && data.amount <= 0) return 'Amount must be positive';
-    if (data.status && !['pending', 'approved', 'rejected', 'completed'].includes(data.status)) return 'Invalid status';
+    if (data.refundAmount !== undefined && data.refundAmount <= 0) return 'Refund amount must be positive';
+    if (data.originalAmount !== undefined && data.originalAmount <= 0) return 'Original amount must be positive';
+    if (data.refundAmount && data.originalAmount && data.refundAmount > data.originalAmount) return 'Refund amount cannot exceed original amount';
+    if (data.status && !['pending', 'completed', 'failed'].includes(data.status)) return 'Invalid status - must be pending, completed, or failed';
     return null;
 };
 
-export const createRefund = async (req: AuthenticatedRequest, res: Response) => {
+export const createRefund = async (req: Request, res: Response) => {
     try {
         const error = validateCreateRefund(req.body);
         if (error) return res.status(400).json({ success: false, message: error });
-        const refund = new Refund({ ...req.body, userId: req.user.id });  
-        await refund.save();
+        
+        // Use authenticated user ID if available, otherwise allow manual specification
+        const userId = (req as any).user?.id || req.body.userId;
+        const refundData = { ...req.body, userId };
+        
+        const refund = await createRefundService(refundData);
         res.status(201).json({ success: true, data: refund });
     } catch (error) {
         res.status(400).json({ success: false, message: (error as Error).message });
     }
 };
 
-export const getRefunds = async (req: AuthenticatedRequest, res: Response) => {
+export const getRefunds = async (req: Request, res: Response) => {
     try {
-        const refunds = await Refund.find({ userId: req.user.id });
+        // Use authenticated user ID if available, otherwise get all refunds
+        const userId = (req as any).user?.id;
+        const refunds = await getRefundsService(userId);
         res.json({ success: true, data: refunds });
     } catch (error) {
         res.status(500).json({ success: false, message: (error as Error).message });
@@ -47,11 +63,10 @@ export const getRefunds = async (req: AuthenticatedRequest, res: Response) => {
 export const getRefundById = async (req: Request, res: Response) => {
     try {
         if (!req.params.id) return res.status(400).json({ success: false, message: 'Refund ID is required' });
-        const refund = await Refund.findById(req.params.id);
-        if (!refund) return res.status(404).json({ success: false, message: 'Refund not found' });
+        const refund = await getRefundByIdService(req.params.id);
         res.json({ success: true, data: refund });
     } catch (error) {
-        res.status(500).json({ success: false, message: (error as Error).message });
+        res.status(404).json({ success: false, message: (error as Error).message });
     }
 };
 
@@ -60,8 +75,7 @@ export const updateRefund = async (req: Request, res: Response) => {
         if (!req.params.id) return res.status(400).json({ success: false, message: 'Refund ID is required' });
         const error = validateUpdateRefund(req.body);
         if (error) return res.status(400).json({ success: false, message: error });
-        const refund = await Refund.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!refund) return res.status(404).json({ success: false, message: 'Refund not found' });
+        const refund = await updateRefundService(req.params.id, req.body);
         res.json({ success: true, data: refund });
     } catch (error) {
         res.status(400).json({ success: false, message: (error as Error).message });
@@ -71,9 +85,8 @@ export const updateRefund = async (req: Request, res: Response) => {
 export const deleteRefund = async (req: Request, res: Response) => {
     try {
         if (!req.params.id) return res.status(400).json({ success: false, message: 'Refund ID is required' });
-        const refund = await Refund.findByIdAndDelete(req.params.id);
-        if (!refund) return res.status(404).json({ success: false, message: 'Refund not found' });
-        res.json({ success: true, message: 'Refund deleted' });
+        const refund = await deleteRefundService(req.params.id);
+        res.json({ success: true, message: 'Refund deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: (error as Error).message });
     }

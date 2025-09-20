@@ -6,9 +6,9 @@ import {
 
 const router = Router();
 
-//router.get('/', getRefunds);
+router.get('/', getRefunds);
 router.get('/:id', getRefundById);
-//router.post('/', createRefund);
+router.post('/', createRefund);
 router.put('/:id',  updateRefund);
 router.delete('/:id', deleteRefund);
 
