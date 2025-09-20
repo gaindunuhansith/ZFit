@@ -8,7 +8,7 @@ interface IInvoiceItem {
     tax: number;
 }
 
-interface IInvoice extends Document {
+export interface IInvoice extends Document {
     paymentId: mongoose.Types.ObjectId;
     userId: mongoose.Types.ObjectId;
     number: string; // Auto-generated, unique
