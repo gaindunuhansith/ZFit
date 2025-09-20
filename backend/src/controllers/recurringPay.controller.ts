@@ -1,6 +1,13 @@
 import type { Request, Response } from 'express';
-import RecurringPayment from '../models/recurringPay.model.js';
-//middleware
+import {
+    createRecurringPaymentService,
+    getRecurringPaymentsService,
+    getRecurringPaymentByIdService,
+    updateRecurringPaymentService,
+    deleteRecurringPaymentService,
+    pauseRecurringPaymentService,
+    resumeRecurringPaymentService
+} from '../services/recurringPay.service.js';
 
 interface AuthenticatedRequest extends Request {
     user: {
@@ -9,19 +16,40 @@ interface AuthenticatedRequest extends Request {
     };
 }
 
-export const createRecurringPayment = async (req: AuthenticatedRequest, res: Response) => {
+// Validation functions
+const validateCreateRecurringPayment = (data: any): string | null => {
+    if (!data.userId || !data.membershipPlanId || !data.paymentMethodId || !data.amount || !data.frequency || !data.startDate || !data.nextPaymentDate) {
+        return 'Missing required fields: userId, membershipPlanId, paymentMethodId, amount, frequency, startDate, and nextPaymentDate';
+    }
+    if (data.amount <= 0) return 'Amount must be positive';
+    if (!['weekly', 'monthly', 'yearly'].includes(data.frequency)) return 'Invalid frequency - must be weekly, monthly, or yearly';
+    if (data.status && !['active', 'paused', 'cancelled'].includes(data.status)) return 'Invalid status - must be active, paused, or cancelled';
+    return null;
+};
+
+const validateUpdateRecurringPayment = (data: any): string | null => {
+    if (data.amount !== undefined && data.amount <= 0) return 'Amount must be positive';
+    if (data.frequency && !['weekly', 'monthly', 'yearly'].includes(data.frequency)) return 'Invalid frequency - must be weekly, monthly, or yearly';
+    if (data.status && !['active', 'paused', 'cancelled'].includes(data.status)) return 'Invalid status - must be active, paused, or cancelled';
+    return null;
+};
+
+export const createRecurringPayment = async (req: Request, res: Response) => {
     try {
-        const recurring = new RecurringPayment(req.body);
-        await recurring.save();
+        const error = validateCreateRecurringPayment(req.body);
+        if (error) return res.status(400).json({ success: false, message: error });
+        const recurring = await createRecurringPaymentService(req.body);
         res.status(201).json({ success: true, data: recurring });
     } catch (error) {
         res.status(400).json({ success: false, message: (error as Error).message });
     }
 };
 
-export const getRecurringPayments = async (req: AuthenticatedRequest, res: Response) => {
+export const getRecurringPayments = async (req: Request, res: Response) => {
     try {
-        const recurrings = await RecurringPayment.find({ userId: req.user.id });
+        // Use authenticated user ID if available, otherwise get all recurring payments
+        const userId = (req as any).user?.id;
+        const recurrings = await getRecurringPaymentsService(userId);
         res.json({ success: true, data: recurrings });
     } catch (error) {
         res.status(500).json({ success: false, message: (error as Error).message });
@@ -30,18 +58,20 @@ export const getRecurringPayments = async (req: AuthenticatedRequest, res: Respo
 
 export const getRecurringPaymentById = async (req: Request, res: Response) => {
     try {
-        const recurring = await RecurringPayment.findById(req.params.id);
-        if (!recurring) return res.status(404).json({ success: false, message: 'Recurring payment not found' });
+        if (!req.params.id) return res.status(400).json({ success: false, message: 'Recurring payment ID is required' });
+        const recurring = await getRecurringPaymentByIdService(req.params.id);
         res.json({ success: true, data: recurring });
     } catch (error) {
-        res.status(500).json({ success: false, message: (error as Error).message });
+        res.status(404).json({ success: false, message: (error as Error).message });
     }
 };
 
 export const updateRecurringPayment = async (req: Request, res: Response) => {
     try {
-        const recurring = await RecurringPayment.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!recurring) return res.status(404).json({ success: false, message: 'Recurring payment not found' });
+        if (!req.params.id) return res.status(400).json({ success: false, message: 'Recurring payment ID is required' });
+        const error = validateUpdateRecurringPayment(req.body);
+        if (error) return res.status(400).json({ success: false, message: error });
+        const recurring = await updateRecurringPaymentService(req.params.id, req.body);
         res.json({ success: true, data: recurring });
     } catch (error) {
         res.status(400).json({ success: false, message: (error as Error).message });
@@ -50,9 +80,9 @@ export const updateRecurringPayment = async (req: Request, res: Response) => {
 
 export const deleteRecurringPayment = async (req: Request, res: Response) => {
     try {
-        const recurring = await RecurringPayment.findByIdAndDelete(req.params.id);
-        if (!recurring) return res.status(404).json({ success: false, message: 'Recurring payment not found' });
-        res.json({ success: true, message: 'Recurring payment deleted' });
+        if (!req.params.id) return res.status(400).json({ success: false, message: 'Recurring payment ID is required' });
+        const recurring = await deleteRecurringPaymentService(req.params.id);
+        res.json({ success: true, message: 'Recurring payment deleted successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: (error as Error).message });
     }
@@ -60,7 +90,8 @@ export const deleteRecurringPayment = async (req: Request, res: Response) => {
 
 export const pauseRecurringPayment = async (req: Request, res: Response) => {
     try {
-        const recurring = await RecurringPayment.findByIdAndUpdate(req.params.id, { status: 'paused' }, { new: true });
+        if (!req.params.id) return res.status(400).json({ success: false, message: 'Recurring payment ID is required' });
+        const recurring = await pauseRecurringPaymentService(req.params.id);
         res.json({ success: true, data: recurring });
     } catch (error) {
         res.status(500).json({ success: false, message: (error as Error).message });
@@ -69,8 +100,8 @@ export const pauseRecurringPayment = async (req: Request, res: Response) => {
 
 export const resumeRecurringPayment = async (req: Request, res: Response) => {
     try {
-        const recurring = await RecurringPayment.findByIdAndUpdate(req.params.id, { status: 'active' }, { new: true });
-        if (!recurring) return res.status(404).json({ success: false, message: 'Recurring payment not found' });
+        if (!req.params.id) return res.status(400).json({ success: false, message: 'Recurring payment ID is required' });
+        const recurring = await resumeRecurringPaymentService(req.params.id);
         res.json({ success: true, data: recurring });
     } catch (error) {
         res.status(500).json({ success: false, message: (error as Error).message });

@@ -1,6 +1,6 @@
 import mongoose, { Document } from 'mongoose';
 
-interface IRecurringPayment extends Document {
+export interface IRecurringPayment extends Document {
     userId: mongoose.Types.ObjectId;
     membershipPlanId: mongoose.Types.ObjectId;
     paymentMethodId: mongoose.Types.ObjectId;

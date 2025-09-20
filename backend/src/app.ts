@@ -10,6 +10,7 @@ import stockRoutes from "./routes/inventoryStock.routes.js";
 import invoiceRoutes from "./routes/invoice.routes.js";  // Added invoice routes
 import paymentRoutes from "./routes/payment.routes.js";  // Added payment routes
 import payMethodRoutes from "./routes/payMethod.routes.js";  // Added payMethod routes
+import recurringPayRoutes from "./routes/recurringPay.routes.js";  // Added recurring pay routes
 
 
 
@@ -23,6 +24,7 @@ app.use(express.json());
 app.use(morgan("dev"));
 
 //routes
+app.use('/api/v1/recurring', recurringPayRoutes);  // Added recurring pay routes
 app.use('/api/v1/inventory', categoryRoutes);
 app.use("/api/v1/suppliers", inventorySupplierRoutes);
 app.use('/api/v1/inventory', itemsRoutes);
