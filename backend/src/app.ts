@@ -6,6 +6,7 @@ import cors from "cors";
 import inventorySupplierRoutes from "./routes/inventorySuppliers.routes.js";
 
 import categoryRoutes from "./routes/inventoryCategory.routes.js";
+import { registerHandler } from "./controllers/auth.controller.js";
 
 
 //creating a express app instance
@@ -20,6 +21,7 @@ app.use(morgan("dev"));
 //routes
 app.use('/api/v1/inventory', categoryRoutes);
 app.use("/api/v1/suppliers", inventorySupplierRoutes);
+app.post("/api/v1/auth/reg", registerHandler);
 
 //API health check
 app.use("/", (req: express.Request, res: express.Response) => {

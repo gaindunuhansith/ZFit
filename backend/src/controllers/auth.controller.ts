@@ -1,8 +1,9 @@
-import { Request, Response, NextFunction } from "express";
+import express from "express";
 import { z } from "zod"
 
 import { CREATED, OK, UNAUTHORIZED } from "../constants/http.js";
 import SessionModel from "../models/session.model.js";
+import { createAccount } from "../services/auth.service.js";
 
 export const emailSchema = z.email().min(1).max(255);
 
@@ -23,21 +24,17 @@ export const registerSchema = z.object({
     name: z.string().min(1, { message: "Name is required" }),
     email: emailSchema,
     password: passwordSchema,
-    confrimPassword: passwordSchema,
+    confirmPassword: passwordSchema,
     contactNo: z.string()
         .min(1, { message: "Phone number is required" })
         .regex(/^(?:\+94|0)[1-9]\d{8}$/, { message: "Enter a valid Sri Lanan Phone number" }),
     dob: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), { message: "Invalid date" }),
-    profile: z.object({
-        address: z.string().min(1).max(500).optional,
-        emergencyContact: z.string().optional(),
-    }),
     consent: z.object({
         gdpr: z.boolean(),
         marketing: z.boolean(),
     }),
     role: z.string(),
-}).refine((data) => data.password === data.confrimPassword, { message: "Passwords do not match", path: ["confirmPassword"]});
+}).refine((data) => data.password === data.confirmPassword, { message: "Passwords do not match", path: ["confirmPassword"]});
 
 export const verificationCodeSchema = z.string().min(1).max(24);
 
@@ -47,14 +44,14 @@ export const resetPasswordSchema = z.object({
 });
 
 
-export const loginHandler = async (req: Request , res: Response, next: NextFunction) => {
+export const registerHandler = async (req: express.Request , res: express.Response, next: NextFunction) => {
     try {
-        const request = loginSchema.parse({
+        const request = registerSchema.parse({
             ...req.body,
             userAgent: req.headers["user-agent"],
         });
 
-        const { accessToken, refreshToken } = await loginUser(request)
+        createAccount(request);
     } catch (error) {
         next(error);
     }

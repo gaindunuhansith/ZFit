@@ -5,6 +5,7 @@ import AppErrorCode from "../constants/appErrorCode.js";
 
 
 type AppAssert = (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     condition: any,
     httpStatusCode: HttpStatusCode,
     message: string,
