@@ -10,6 +10,25 @@ interface AuthenticatedRequest extends Request {
     };
 }
 
+// Manual validation functions
+const validateCreatePayment = (data: any): string | null => {
+    if (!data.userId || !data.amount || !data.type || !data.status || !data.method || !data.relatedId || !data.transactionId || !data.date) {
+        return 'Missing required fields';  //Checks all required fields.
+    }
+    if (data.amount < 0) return 'Amount must be non-negative';  //Matches schema min.
+    if (!['membership', 'inventory', 'booking', 'other'].includes(data.type)) return 'Invalid type';  
+    if (!['pending', 'completed', 'failed', 'refunded'].includes(data.status)) return 'Invalid status';  
+    if (!['card', 'bank-transfer', 'cash'].includes(data.method)) return 'Invalid method';  
+    return null; 
+};
+
+const validateUpdatePayment = (data: any): string | null => {
+    if (data.amount !== undefined && data.amount < 0) return 'Amount must be non-negative';  
+    if (data.type && !['membership', 'inventory', 'booking', 'other'].includes(data.type)) return 'Invalid type';  
+    if (data.status && !['pending', 'completed', 'failed', 'refunded'].includes(data.status)) return 'Invalid status';  
+    if (data.method && !['card', 'bank-transfer', 'cash'].includes(data.method)) return 'Invalid method';  
+    return null;  
+};
 
 export const createPayment = async (req: Request, res: Response) => {
     try {
