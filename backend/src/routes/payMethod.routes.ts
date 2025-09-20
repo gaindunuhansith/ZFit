@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
     createPaymentMethod, getPaymentMethods, getPaymentMethodById, updatePaymentMethod, deletePaymentMethod
-} from '../controllers/paymethod.controller.js';
+} from '../controllers/payMethod.controller.js';
 //middleware
 
 const router = Router();

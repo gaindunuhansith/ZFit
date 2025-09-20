@@ -46,9 +46,9 @@ const paymentMethodSchema = new mongoose.Schema<IPaymentMethod>({
     timestamps: true
 });
 
-// Ensure one default per user
+// Ensure one default per user (only for existing documents)
 paymentMethodSchema.pre<IPaymentMethod>('save', async function(this: IPaymentMethod, next: (err?: Error) => void) {
-    if (this.isDefault) {
+    if (this.isDefault && !this.isNew) {
         await (this.constructor as mongoose.Model<IPaymentMethod>).updateMany(
             { userId: this.userId, _id: { $ne: this._id } },
             { isDefault: false }
