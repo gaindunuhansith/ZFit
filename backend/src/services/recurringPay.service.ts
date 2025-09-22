@@ -1,7 +1,18 @@
 import mongoose from 'mongoose';
 import RecurringPayment from '../models/recurringPay.model.js';
 
-export const createRecurringPaymentService = async (data: any) => {
+interface RecurringPaymentData {
+    userId?: string;
+    membershipPlanId?: string;
+    paymentMethodId?: string;
+    amount?: number;
+    frequency?: string;
+    status?: string;
+    startDate?: Date;
+    nextPaymentDate?: Date;
+}
+
+export const createRecurringPaymentService = async (data: RecurringPaymentData) => {
     try {
         const recurringPayment = new RecurringPayment(data);
         return await recurringPayment.save();
@@ -34,7 +45,7 @@ export const getRecurringPaymentByIdService = async (id: string) => {
     }
 };
 
-export const updateRecurringPaymentService = async (id: string, data: any) => {
+export const updateRecurringPaymentService = async (id: string, data: RecurringPaymentData) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(id)) {
             throw new Error('Invalid recurring payment ID');
