@@ -8,7 +8,7 @@ import env from "../config/env.js";
 import { sendMail } from "../util/sendMail.util.js";
 import { getVerifyEmailTemplate } from "../util/emailTemplates.js";
 import SessionModel from "../models/session.model.js";
-import { refreshTokenSignOptions, signToken, type RefreshTokenPayload} from "../util/jwt.js";
+import { refreshTokenSignOptions, signToken, verifyToken, type RefreshTokenPayload} from "../util/jwt.js";
 
 type CreateAccountParams = {
     name: string;
@@ -123,6 +123,14 @@ export const loginUser = async ({ email, password, userAgent }: LoginParams) => 
     };
 
 };
+
+export const logoutUser = async (accessToken: string | undefined) => {
+    const { payload } = verifyToken(accessToken || "" );
+
+    if (payload) {
+        await SessionModel.findByIdAndDelete(payload.sessionId);
+    }
+}
 
 export const verifyEmail = async (code: string) => {
     
