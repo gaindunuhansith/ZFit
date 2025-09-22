@@ -27,7 +27,7 @@ export const registerSchema = z.object({
     confirmPassword: passwordSchema,
     contactNo: z.string()
         .min(1, { message: "Phone number is required" })
-        .regex(/^(?:\+94|0)[1-9]\d{8}$/, { message: "Enter a valid Sri Lanan Phone number" }),
+        .regex(/^(?:\+94|0)[1-9]\d{8}$/, { message: "Enter a valid Sri Lankan Phone number" }),
     dob: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), { message: "Invalid date" }),
     consent: z.object({
         gdpr: z.boolean(),
