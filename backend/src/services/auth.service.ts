@@ -9,6 +9,7 @@ import { sendMail } from "../util/sendMail.util.js";
 import { getPasswordResetTemplate, getVerifyEmailTemplate } from "../util/emailTemplates.js";
 import SessionModel from "../models/session.model.js";
 import { refreshTokenSignOptions, signToken, verifyToken, type RefreshTokenPayload} from "../util/jwt.js";
+import { hashValue } from "../util/bcrypt.util.js";
 
 type CreateAccountParams = {
     name: string;
@@ -220,5 +221,34 @@ export const sendPasswordResetEmail = async (email: string) => {
         return { url, emailId: data.id };
     } catch (error: any) {
         console.log("SendPasswordResetError: ", error.message);
-    }
+    };
+};
+
+
+type ResetPasswordParams = {
+    password: string;
+    verificationCode: string;
+};
+
+export const resetPassword = async ({ verificationCode, password }: ResetPasswordParams) => {
+    const validVerificationCode = await VerificationCodeModel.findOne({
+        _id: verificationCode,
+        type: VerificationCodeType.PasswordReset,
+        expiresAt: { $gt: new Date() },
+    });
+
+    AppAssert(validVerificationCode, NOT_FOUND, "Invalid or expired verification code");
+
+    const updatedUser = await UserModel.findByIdAndUpdate(validVerificationCode.userId, {
+        password: await hashValue(password),
+    });
+
+    AppAssert(updatedUser, INTERNAL_SERVER_ERROR, "Failed to reset password");
+
+    await validVerificationCode.deleteOne();
+
+    //delete all the sessions
+    await SessionModel.deleteMany({ userId: validVerificationCode.userId });
+
+    return { user: updatedUser.omitPassword() };
 }
