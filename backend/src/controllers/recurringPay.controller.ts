@@ -8,24 +8,9 @@ import {
     pauseRecurringPaymentService,
     resumeRecurringPaymentService
 } from '../services/recurringPay.service.js';
+import type { RecurringPaymentData, AuthenticatedRequest } from '../types/recurringPayment.types.js';
 
-interface RecurringPaymentData {
-    userId?: string;
-    membershipPlanId?: string;
-    paymentMethodId?: string;
-    amount?: number;
-    frequency?: string;
-    status?: string;
-    startDate?: Date;
-    nextPaymentDate?: Date;
-}
-
-interface AuthenticatedRequest extends Request {
-    user?: {
-        id: string;
-        role?: string;
-    };
-}
+interface AuthenticatedRequestExtended extends Request, AuthenticatedRequest {}
 
 // Validation functions
 const validateCreateRecurringPayment = (data: RecurringPaymentData): string | null => {
@@ -56,7 +41,7 @@ export const createRecurringPayment = async (req: Request, res: Response) => {
     }
 };
 
-export const getRecurringPayments = async (req: AuthenticatedRequest, res: Response) => {
+export const getRecurringPayments = async (req: AuthenticatedRequestExtended, res: Response) => {
     try {
         // Use authenticated user ID if available, otherwise get all recurring payments
         const userId = req.user?.id;

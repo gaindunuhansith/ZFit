@@ -1,16 +1,6 @@
 import mongoose from 'mongoose';
 import RecurringPayment from '../models/recurringPay.model.js';
-
-interface RecurringPaymentData {
-    userId?: string;
-    membershipPlanId?: string;
-    paymentMethodId?: string;
-    amount?: number;
-    frequency?: string;
-    status?: string;
-    startDate?: Date;
-    nextPaymentDate?: Date;
-}
+import type { RecurringPaymentData } from '../types/recurringPayment.types.js';
 
 export const createRecurringPaymentService = async (data: RecurringPaymentData) => {
     try {
