@@ -2,8 +2,11 @@ import { config } from 'dotenv';
 import { cleanEnv } from 'envalid'; 
 import { port, str } from 'envalid';
 
-//using the development or production env configurations
-config({ path: `.env.${process.env.NODE_ENV || 'development'}.local`})
+// Load .env first (shared defaults)
+config();
+
+// Then load environment-specific .env file (overrides)
+config({ path: `.env.${process.env.NODE_ENV || 'development'}.local` });
 
 //exporting the environmental variables
 export default cleanEnv(process.env, {
