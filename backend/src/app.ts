@@ -8,6 +8,7 @@ import inventorySupplierRoutes from "./routes/inventorySuppliers.routes.js";
 import categoryRoutes from "./routes/inventoryCategory.routes.js";
 import itemsRoutes from "./routes/inventoryItems.routes.js";
 import stockRoutes from "./routes/inventoryStock.routes.js";
+import inventoryReportRoutes from "./routes/inventoryReport.routes.js";  // Added inventory report routes
 import invoiceRoutes from "./routes/invoice.routes.js";  // Added invoice routes
 import paymentRoutes from "./routes/payment.routes.js";  // Added payment routes
 import payMethodRoutes from "./routes/payMethod.routes.js";  // Added payMethod routes
@@ -29,6 +30,7 @@ app.use("/api/v1/suppliers", inventorySupplierRoutes);
 app.use("/api/v1/auth", authRouter);
 app.use('/api/v1/inventory', itemsRoutes);
 app.use('/api/v1/stock', stockRoutes);
+app.use('/api/v1/inventory/reports', inventoryReportRoutes);  // Added inventory report routes
 app.use('/api/v1/invoices', invoiceRoutes);  // Added invoice routes
 app.use('/api/v1/payments', paymentRoutes);  // Added payment routes
 app.use('/api/v1/paymethods', payMethodRoutes);  // Added payMethod routes
