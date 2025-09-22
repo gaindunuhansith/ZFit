@@ -81,6 +81,16 @@ export const loginHandler = async (req: Request, res: Response, next: NextFuncti
     }
 };
 
+export const verifyEmailHandler = async ( req: Request, res: Response, next: NextFunction) => {
+    try {
+        const verificationCode = verificationCodeSchema.parse(req.params.code);
 
+        await verifyEmail(verificationCode);
+
+        return res.status(OK).json( {message: "Email was successfully verified"});
+    } catch (error) {
+        next(error);
+    }
+};
 
 
