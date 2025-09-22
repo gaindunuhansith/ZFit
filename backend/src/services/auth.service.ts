@@ -3,7 +3,7 @@ import VerificationCodeType from "../constants/verificationCodeType.js";
 import UserModel from "../models/user.model.js";
 import VerificationCodeModel from "../models/verficationCode.model.js";
 import AppAssert from "../util/AppAssert.js";
-import { oneYearFromNow } from "../util/date.util.js";
+import { ONE_DAY_MS, oneYearFromNow, thirtyDaysFromNow } from "../util/date.util.js";
 import env from "../config/env.js";
 import { sendMail } from "../util/sendMail.util.js";
 import { getVerifyEmailTemplate } from "../util/emailTemplates.js";
@@ -130,7 +130,7 @@ export const logoutUser = async (accessToken: string | undefined) => {
     if (payload) {
         await SessionModel.findByIdAndDelete(payload.sessionId);
     }
-}
+};
 
 export const verifyEmail = async (code: string) => {
     
@@ -152,4 +152,34 @@ export const verifyEmail = async (code: string) => {
         user: updatedUser.omitPassword()
     }
     
+};
+
+export const refreshAccessToken = async (refreshToken: string) => {
+    
+    const { payload } = verifyToken(refreshToken, {
+        secret: refreshTokenSignOptions.secret,
+    });
+
+    const session = await SessionModel.findById(payload?.sessionId);
+    const today = Date.now();
+
+    AppAssert(session && session.expiresAt.getTime() > today, UNAUTHORIZED, "Session Expired");
+
+    //refresh the token if it expires in the next 24 hours
+    const sessionNeedsRefresh = session.expiresAt.getTime() - today <= ONE_DAY_MS;
+    
+    if(sessionNeedsRefresh) {
+        session.expiresAt = thirtyDaysFromNow();
+        await session.save();
+    }
+
+    const newRefreshToken = sessionNeedsRefresh ? signToken({ sessionId: session._id, }, refreshTokenSignOptions): undefined;
+
+    const accessToken = signToken({ userId: session.userId, sessionId: session._id });
+
+    return {
+        accessToken,
+        newRefreshToken,
+    };
+;
 }
