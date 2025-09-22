@@ -2,7 +2,7 @@ import {type Request, type Response, type NextFunction } from "express";
 import { z } from "zod"
 
 import { CREATED, OK, UNAUTHORIZED } from "../constants/http.js";
-import { createAccount, loginUser, logoutUser, refreshAccessToken, sendPasswordResetEmail, verifyEmail } from "../services/auth.service.js";
+import { createAccount, loginUser, logoutUser, refreshAccessToken, resetPassword, sendPasswordResetEmail, verifyEmail } from "../services/auth.service.js";
 import { clearAuthcookies, getAccessTokenCookieOptions, getRefreshCookieOptions, setAuthCookies } from "../util/cookies.js"
 import AppAssert from "../util/AppAssert.js";
 
@@ -141,5 +141,16 @@ export const sendPasswordResetHandler = async (req: Request, res: Response, next
 };
 
 
+export const resetPasswordHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const request = resetPasswordSchema.parse(req.body);
+
+        await resetPassword(request);
+
+        return clearAuthcookies(res).status(OK).json({ message: "Password reset was successful" });
+    } catch (error) {
+        next(error);
+    }
+};
 
 
