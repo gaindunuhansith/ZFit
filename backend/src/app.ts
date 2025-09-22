@@ -2,6 +2,7 @@ import express from "express";
 import morgan from "morgan";
 import helmet from "helmet";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 import authRouter from "./routes/auth.route.js";
 import inventorySupplierRoutes from "./routes/inventorySuppliers.routes.js";
@@ -19,6 +20,7 @@ import refundRoutes from "./routes/refund.routes.js";  // Added refund routes
 const app: express.Application = express();
 
 //global middleware
+app.use(cookieParser());
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
