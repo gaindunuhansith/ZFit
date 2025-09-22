@@ -1,9 +1,9 @@
-import express from "express";
+import {type Request, type Response, type NextFunction } from "express";
 import { z } from "zod"
 
 import { CREATED, OK, UNAUTHORIZED } from "../constants/http.js";
 import SessionModel from "../models/session.model.js";
-import { createAccount } from "../services/auth.service.js";
+import { createAccount, loginUser } from "../services/auth.service.js";
 import { clearAuthcookies, getAccessTokenCookieOptions, getRefreshCookieOptions, setAuthCookies } from "../util/cookies.js"
 
 export const emailSchema = z.email().min(1).max(255);
@@ -46,7 +46,7 @@ export const resetPasswordSchema = z.object({
 });
 
 
-export const registerHandler = async (req: express.Request , res: express.Response, next: express.NextFunction) => {
+export const registerHandler = async (req: Request , res: Response, next: NextFunction) => {
     try {
         const request = registerSchema.parse({
             ...req.body,
@@ -57,6 +57,25 @@ export const registerHandler = async (req: express.Request , res: express.Respon
         return setAuthCookies({ res, accessToken, refreshToken })
         .status(CREATED)
         .json(user);
+    } catch (error) {
+        next(error);
+    }
+}
+
+
+export const loginHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const request = loginSchema.parse({
+            ...req.body,
+            userAgen: req.headers["user-agent"],
+        });
+
+        const { user, accessToken, refreshToken } = await loginUser(request);
+
+        return setAuthCookies({ res, accessToken, refreshToken })
+            .status(OK)
+            .json({ message: "login was successful ", user: user});
+
     } catch (error) {
         next(error);
     }

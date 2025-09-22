@@ -90,7 +90,7 @@ export const createAccount = async (data: CreateAccountParams) => {
 type LoginParams = {
     email: string;
     password: string;
-    userAgent?: string;
+    userAgent?: string | undefined;
 };
 
 export const loginUser = async ({ email, password, userAgent }: LoginParams) => {
