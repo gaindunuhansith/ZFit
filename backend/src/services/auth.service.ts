@@ -84,9 +84,4 @@ export const createAccount = async (data: CreateAccountParams) => {
         accessToken,
         refreshToken,
     };
-
-    console.log(user);
-    console.log(verificationCode);
-
-
 }

@@ -3,9 +3,9 @@ import morgan from "morgan";
 import helmet from "helmet";
 import cors from "cors";
 
+import authRouter from "./routes/auth.route.js";
 import inventorySupplierRoutes from "./routes/inventorySuppliers.routes.js";
 import categoryRoutes from "./routes/inventoryCategory.routes.js";
-import { registerHandler } from "./controllers/auth.controller.js";
 import itemsRoutes from "./routes/inventoryItems.routes.js";
 import stockRoutes from "./routes/inventoryStock.routes.js";
 import invoiceRoutes from "./routes/invoice.routes.js";  // Added invoice routes
@@ -26,7 +26,7 @@ app.use(morgan("dev"));
 //routes
 app.use('/api/v1/inventory', categoryRoutes);
 app.use("/api/v1/suppliers", inventorySupplierRoutes);
-app.post("/api/v1/auth/reg", registerHandler);
+app.use("/api/v1/auth", authRouter);
 app.use('/api/v1/inventory', itemsRoutes);
 app.use('/api/v1/stock', stockRoutes);
 app.use('/api/v1/invoices', invoiceRoutes);  // Added invoice routes

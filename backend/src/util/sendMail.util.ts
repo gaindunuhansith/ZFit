@@ -9,7 +9,7 @@ type Params = {
 };
 
 const getFromEmail = () => 
-    env.NODE_ENV === "development" ? "zfit.synerge.digital" : env.EMAIL_SENDER;
+    env.NODE_ENV === "development" ? "onboarding@zfit.synerge.digital" : env.EMAIL_SENDER;
 
 const getToEmail = (to: string) => 
     env.NODE_ENV === "development" ? "delivered@resend.dev" : to;
