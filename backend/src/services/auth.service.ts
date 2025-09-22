@@ -1,4 +1,4 @@
-import { CONFLICT } from "../constants/http.js";
+import { CONFLICT, UNAUTHORIZED } from "../constants/http.js";
 import VerificationCodeType from "../constants/verificationCodeType.js";
 import UserModel from "../models/user.model.js";
 import VerificationCodeModel from "../models/verficationCode.model.js";
@@ -8,7 +8,7 @@ import env from "../config/env.js";
 import { sendMail } from "../util/sendMail.util.js";
 import { getVerifyEmailTemplate } from "../util/emailTemplates.js";
 import SessionModel from "../models/session.model.js";
-import { refreshTokenSignOptions, signToken } from "../util/jwt.js";
+import { refreshTokenSignOptions, signToken, type RefreshTokenPayload} from "../util/jwt.js";
 
 type CreateAccountParams = {
     name: string;
@@ -77,6 +77,7 @@ export const createAccount = async (data: CreateAccountParams) => {
     const accessToken = signToken({
         userId,
         sessionId: session._id,
+        role: user.role,
     });
 
     return {
@@ -84,4 +85,41 @@ export const createAccount = async (data: CreateAccountParams) => {
         accessToken,
         refreshToken,
     };
+}
+
+type LoginParams = {
+    email: string;
+    password: string;
+    userAgent?: string;
+};
+
+export const loginUser = async ({ email, password, userAgent }: LoginParams) => {
+
+    const user = await UserModel.findOne({ email });
+    AppAssert(user, UNAUTHORIZED , "Invalid email or password");
+
+    const isValid = user.comparePassword(password);
+    AppAssert(isValid, UNAUTHORIZED, "Invalid email or password");
+
+    const userId = user._id;
+    
+    const session = await SessionModel.create({
+        userId,
+        userAgent,
+    });
+
+   
+    const refreshToken = signToken({ sessionId: session._id }, refreshTokenSignOptions );
+    const accessToken = signToken({
+        userId,
+        sessionId: session._id,
+        role: user.role,
+    });
+
+    return { 
+        user: user.omitPassword(),
+        accessToken,
+        refreshToken
+    };
+
 }
