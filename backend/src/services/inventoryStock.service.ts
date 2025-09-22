@@ -1,5 +1,6 @@
 import Item from "../models/inventoryItem.schema.js";
 import type{ IInventoryItem } from "../models/inventoryItem.schema.js";
+import InventoryTransaction from "../models/inventoryTransaction.model.js";
 import mongoose from "mongoose";
 
 
@@ -20,7 +21,16 @@ export default class StockService {
         }
         
         item.updatedAt = new Date();
-        return await item.save();
+        const updatedItem = await item.save();
+
+        // Log transaction
+        await InventoryTransaction.create({
+            itemID: itemId,
+            transactionType: operation,
+            quantityChanged: quantity
+        });
+
+        return updatedItem;
     }
 
     async getLowStockItems(): Promise<IInventoryItem[]> {
