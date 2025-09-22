@@ -1,4 +1,4 @@
-import { CONFLICT, UNAUTHORIZED } from "../constants/http.js";
+import { CONFLICT, INTERNAL_SERVER_ERROR, NOT_FOUND, UNAUTHORIZED } from "../constants/http.js";
 import VerificationCodeType from "../constants/verificationCodeType.js";
 import UserModel from "../models/user.model.js";
 import VerificationCodeModel from "../models/verficationCode.model.js";
@@ -51,7 +51,7 @@ export const createAccount = async (data: CreateAccountParams) => {
         expiresAt: oneYearFromNow(),
     });
 
-    const url = `${env.APP_ORIGIN}/email/verify/${verificationCode._id}`;
+    const url = `${env.APP_ORIGIN}api/v1/auth/email/verify/${verificationCode._id}`;
 
     //send verification email
     const { error } = await sendMail({
@@ -122,4 +122,26 @@ export const loginUser = async ({ email, password, userAgent }: LoginParams) => 
         refreshToken
     };
 
+};
+
+export const verifyEmail = async (code: string) => {
+    
+    const validCode = await VerificationCodeModel.findOne({
+        _id: code,
+        type: VerificationCodeType.EmailVerification,
+        expiresAt: { $gt: new Date() },
+    });
+
+    AppAssert(validCode, NOT_FOUND, "Invalid or expired verificaiton code");
+
+    const updatedUser = await UserModel.findByIdAndUpdate(validCode.userId, { verified: true }, { new: true });
+
+    AppAssert(updatedUser, INTERNAL_SERVER_ERROR, "Failed to verify email");
+
+    await validCode.deleteOne();
+
+    return {
+        user: updatedUser.omitPassword()
+    }
+    
 }

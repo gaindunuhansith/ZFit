@@ -3,7 +3,7 @@ import { z } from "zod"
 
 import { CREATED, OK, UNAUTHORIZED } from "../constants/http.js";
 import SessionModel from "../models/session.model.js";
-import { createAccount, loginUser } from "../services/auth.service.js";
+import { createAccount, loginUser, verifyEmail } from "../services/auth.service.js";
 import { clearAuthcookies, getAccessTokenCookieOptions, getRefreshCookieOptions, setAuthCookies } from "../util/cookies.js"
 
 export const emailSchema = z.email().min(1).max(255);
@@ -60,7 +60,7 @@ export const registerHandler = async (req: Request , res: Response, next: NextFu
     } catch (error) {
         next(error);
     }
-}
+};
 
 
 export const loginHandler = async (req: Request, res: Response, next: NextFunction) => {
@@ -79,7 +79,8 @@ export const loginHandler = async (req: Request, res: Response, next: NextFuncti
     } catch (error) {
         next(error);
     }
-}
+};
+
 
 
 
