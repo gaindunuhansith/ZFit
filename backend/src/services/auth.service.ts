@@ -4,12 +4,14 @@ import SessionModel from "../models/session.model.js";
 import VerificationCodeModel from "../models/verficationCode.model.js";
 import AppAssert from "../util/AppAssert.js";
 import VerificationCodeType from "../constants/verificationCodeType.js";
+
 import { fiveMinutesAgo, ONE_DAY_MS, oneHourFromNow, oneYearFromNow, thirtyDaysFromNow } from "../util/date.util.js";
 import { sendMail } from "../util/sendMail.util.js";
 import { getPasswordResetTemplate, getVerifyEmailTemplate } from "../util/emailTemplates.js";
 import { refreshTokenSignOptions, signToken, verifyToken} from "../util/jwt.js";
 import { hashValue } from "../util/bcrypt.util.js";
 import { CONFLICT, INTERNAL_SERVER_ERROR, NOT_FOUND, TOO_MANY_REQUESTS, UNAUTHORIZED } from "../constants/http.js";
+
 
 type CreateAccountParams = {
     name: string;
@@ -209,7 +211,7 @@ export const sendPasswordResetEmail = async (email: string) => {
             expiresAt,
         });
 
-        const url = `${env.APP_ORIGIN}/api/v1/auth/password/reset?code=${verficationCode._id}&exp=${expiresAt.getTime()}`;
+        const url = `${env.APP_ORIGIN}/my-account/forgot-password/reset?code=${verficationCode._id}&exp=${expiresAt.getTime()}`;
 
         const { data, error } = await sendMail({
             to: email,
