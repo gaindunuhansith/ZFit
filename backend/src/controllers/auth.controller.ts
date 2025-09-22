@@ -2,8 +2,7 @@ import {type Request, type Response, type NextFunction } from "express";
 import { z } from "zod"
 
 import { CREATED, OK, UNAUTHORIZED } from "../constants/http.js";
-import SessionModel from "../models/session.model.js";
-import { createAccount, loginUser, verifyEmail } from "../services/auth.service.js";
+import { createAccount, loginUser, logoutUser, verifyEmail } from "../services/auth.service.js";
 import { clearAuthcookies, getAccessTokenCookieOptions, getRefreshCookieOptions, setAuthCookies } from "../util/cookies.js"
 
 export const emailSchema = z.email().min(1).max(255);
@@ -80,6 +79,14 @@ export const loginHandler = async (req: Request, res: Response, next: NextFuncti
         next(error);
     }
 };
+
+export const logoutHandler = async (req: Request, res: Response, next: NextFunction) => {
+    const accessToken = req.cookies.accessToken as string | undefined;
+
+    await logoutUser(accessToken);
+
+    return clearAuthcookies(res).status(OK).json({ message: "Logout successful" });
+}
 
 export const verifyEmailHandler = async ( req: Request, res: Response, next: NextFunction) => {
     try {
