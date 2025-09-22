@@ -82,11 +82,15 @@ export const loginHandler = async (req: Request, res: Response, next: NextFuncti
 };
 
 export const logoutHandler = async (req: Request, res: Response, next: NextFunction) => {
-    const accessToken = req.cookies.accessToken as string | undefined;
+    try {
+        const accessToken = req.cookies.accessToken as string | undefined;
 
-    await logoutUser(accessToken);
+        await logoutUser(accessToken);
 
-    return clearAuthcookies(res).status(OK).json({ message: "Logout successful" });
+        return clearAuthcookies(res).status(OK).json({ message: "Logout successful" });
+    } catch (error) {
+        next(error)
+    }
 }
 
 export const verifyEmailHandler = async (req: Request, res: Response, next: NextFunction) => {
