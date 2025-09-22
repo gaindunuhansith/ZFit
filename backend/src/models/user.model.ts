@@ -69,13 +69,14 @@ const userSchema = new mongoose.Schema<UserDocument>({
             required: true,
             validate: {
                 validator: function(v: string) {
-                    return /^\+?[1-9]\d{1,14}$/.test(v);
+                    return /^(?:\+94|0)[1-9]\d{8}$/.test(v);
                 },
                 message: 'Invalid phone number'
             }
         },
         dob: { 
-            type: Date 
+            type: Date,
+            required: false,
         },
         profile: {
             avatar: {
@@ -83,7 +84,7 @@ const userSchema = new mongoose.Schema<UserDocument>({
                 },
             address: { 
                 type: String, 
-                required: true
+                required: false,
             },
             emergencyContact: { 
                 type: String
@@ -101,7 +102,8 @@ const userSchema = new mongoose.Schema<UserDocument>({
             },
             date: {
                 type: Date,
-                required: true
+                required: true,
+                default: Date.now()
             }
         },
         role: {
@@ -112,7 +114,7 @@ const userSchema = new mongoose.Schema<UserDocument>({
         },
         qrCode: {
             type: String,
-            required: true
+            required: false
         },
         status: {
             type: String,
