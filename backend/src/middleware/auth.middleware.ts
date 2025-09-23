@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction, RequestHandler } from "express";
 import AppAssert from "../util/AppAssert.js";
 import { FORBIDDEN, UNAUTHORIZED } from "../constants/http.js";
 import { verifyToken } from "../util/jwt.js";
@@ -15,7 +15,7 @@ type AccessTokenPayload = {
     role: string;
 };
 
-const authenticate = (allowedRoles?: string[]) => (req: AuthenticationRequest , res: Response, next: NextFunction) => {
+const authenticate = (allowedRoles?: string[]): RequestHandler => (req: Request , res: Response, next: NextFunction) => {
 
     try {
         const accessToken = req.cookies.accessToken as string | undefined;
@@ -30,8 +30,10 @@ const authenticate = (allowedRoles?: string[]) => (req: AuthenticationRequest , 
             AppAssert(allowedRoles.includes(payload.role), FORBIDDEN, "Insufficient permissions");
         }
 
-    req.userId = payload.userId;
-    req.sessionId = payload.sessionId;
+        const authReq = req as AuthenticationRequest;
+
+    authReq.userId = payload.userId;
+    authReq.sessionId = payload.sessionId;
     next();
     } catch (error) {
         next(error);
