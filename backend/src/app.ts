@@ -36,7 +36,7 @@ app.use('/api/v1/inventory', itemsRoutes);
 app.use('/api/v1/stock', stockRoutes);
 app.use('/api/v1/inventory/reports', inventoryReportRoutes);  // Added inventory report routes
 app.use('/api/v1/cart', cartRoutes);
-app.use('api/v1/orders',orderRouter);
+app.use('/api/v1/orders', orderRouter);
 app.use('/api/v1/invoices', invoiceRoutes);  // Added invoice routes
 app.use('/api/v1/payments', paymentRoutes);  // Added payment routes
 app.use('/api/v1/paymethods', payMethodRoutes);  // Added payMethod routes
