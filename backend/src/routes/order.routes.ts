@@ -1,0 +1,13 @@
+import { Router } from "express";
+import {
+    checkout,
+    getMemberOrders
+} from "../controllers/order.controller.js";
+
+const router = Router();
+
+// Order routes
+router.post("/checkout/:memberId", checkout);        // POST /api/v1/orders/checkout/{memberId}
+router.get("/member/:memberId", getMemberOrders);    // GET /api/v1/orders/member/{memberId}
+
+export default router;
