@@ -38,7 +38,7 @@ export const addToCart = async (req: Request, res: Response) => {
   }
 };
 
-// 2. Get all cart items for a member
+//  Get all cart items for a member
 export const getCartByMember = async (req: Request, res: Response) => {
   try {
     const { memberId } = z.object({ memberId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid member ID format") }).parse(req.params);
