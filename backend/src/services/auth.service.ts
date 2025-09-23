@@ -54,7 +54,7 @@ export const createAccount = async (data: CreateAccountParams) => {
         expiresAt: oneYearFromNow(),
     });
 
-    const url = `${env.APP_ORIGIN}api/v1/auth/email/verify/${verificationCode._id}`;
+    const url = `${env.APP_ORIGIN}/api/v1/auth/email/verify/${verificationCode._id}`;
 
     //send verification email
     const { error } = await sendMail({
