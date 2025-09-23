@@ -16,7 +16,15 @@ export const createRecurringPaymentService = async (data: Partial<IRecurringPaym
 // Get all recurring payments for a user
 export const getRecurringPaymentsService = async (userId?: string) => {
     try {
-        const query = userId ? { userId } : {};
+        let query = {};
+        if (userId) {
+            if (mongoose.Types.ObjectId.isValid(userId)) {
+                query = { userId: new mongoose.Types.ObjectId(userId) };
+            } else {
+                // If userId is not a valid ObjectId, return empty array
+                return [];
+            }
+        }
         return await RecurringPayment.find(query)
             .populate('userId', 'name email')
             .populate('paymentMethodId', 'name type')
@@ -121,14 +129,35 @@ export const getDueRecurringPaymentsService = async () => {
 
 // Process a recurring payment (create actual payment)
 export const processRecurringPaymentService = async (recurringPaymentId: string) => {
+    let recurringPayment = null;
+
     try {
-        const recurringPayment = await RecurringPayment.findById(recurringPaymentId);
+        // Validate ObjectId first
+        if (!mongoose.Types.ObjectId.isValid(recurringPaymentId)) {
+            throw new Error('Invalid recurring payment ID format');
+        }
+
+        recurringPayment = await RecurringPayment.findById(recurringPaymentId);
         if (!recurringPayment) {
             throw new Error('Recurring payment not found');
         }
 
         if (recurringPayment.status !== 'active') {
             throw new Error('Recurring payment is not active');
+        }
+
+        // Check if payment is due
+        const now = new Date();
+        if (recurringPayment.nextPaymentDate > now) {
+            throw new Error('Recurring payment is not due yet');
+        }
+
+        // Check if max failures exceeded
+        if (recurringPayment.failureCount >= recurringPayment.maxFailures) {
+            await RecurringPayment.findByIdAndUpdate(recurringPaymentId, {
+                status: 'cancelled'
+            });
+            throw new Error('Recurring payment cancelled due to maximum failures exceeded');
         }
 
         // Create the actual payment
@@ -159,10 +188,24 @@ export const processRecurringPaymentService = async (recurringPaymentId: string)
 
         return { recurringPayment, payment: savedPayment };
     } catch (error) {
-        // Increment failure count
-        await RecurringPayment.findByIdAndUpdate(recurringPaymentId, {
-            $inc: { failureCount: 1 }
-        });
+        // Increment failure count only if we have a valid recurring payment
+        if (recurringPayment && mongoose.Types.ObjectId.isValid(recurringPaymentId)) {
+            try {
+                const updatedPayment = await RecurringPayment.findByIdAndUpdate(recurringPaymentId, {
+                    $inc: { failureCount: 1 }
+                }, { new: true });
+
+                // Check if we should cancel due to max failures
+                if (updatedPayment && updatedPayment.failureCount >= updatedPayment.maxFailures) {
+                    await RecurringPayment.findByIdAndUpdate(recurringPaymentId, {
+                        status: 'cancelled'
+                    });
+                }
+            } catch (updateError) {
+                // Log but don't throw - we don't want to mask the original error
+                console.error('Failed to update failure count:', updateError);
+            }
+        }
 
         throw new Error(`Failed to process recurring payment: ${(error as Error).message}`);
     }
@@ -195,8 +238,12 @@ const calculateNextPaymentDate = (currentDate: Date, frequency: string): Date =>
 // Get recurring payments by related entity
 export const getRecurringPaymentsByRelatedService = async (relatedId: string, relatedType: string) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(relatedId)) {
+            throw new Error('Invalid related ID format');
+        }
+
         return await RecurringPayment.find({
-            relatedId,
+            relatedId: new mongoose.Types.ObjectId(relatedId),
             relatedType,
             status: { $ne: 'cancelled' }
         })

@@ -15,13 +15,31 @@ import {
 
 // Validation functions
 const validateCreateRecurringPayment = (data: any): string | null => {
-    if (!data.amount || !data.frequency || !data.nextPaymentDate || !data.paymentMethodId || !data.relatedId || !data.relatedType) {
+    if (!data.amount || !data.frequency || !data.nextPaymentDate || !data.paymentMethodId || !data.relatedId || !data.relatedType || !data.userId) {
         return 'Missing required fields';
     }
     if (data.amount < 0) return 'Amount must be non-negative';
     if (!['monthly', 'quarterly', 'yearly', 'weekly'].includes(data.frequency)) return 'Invalid frequency';
     if (!['membership', 'booking', 'other'].includes(data.relatedType)) return 'Invalid related type';
     if (!['active', 'paused', 'cancelled', 'completed'].includes(data.status || 'active')) return 'Invalid status';
+
+    // Validate ObjectIds
+    if (!mongoose.Types.ObjectId.isValid(data.userId)) return 'Invalid user ID format';
+    if (!mongoose.Types.ObjectId.isValid(data.paymentMethodId)) return 'Invalid payment method ID format';
+    if (!mongoose.Types.ObjectId.isValid(data.relatedId)) return 'Invalid related ID format';
+
+    // Validate nextPaymentDate
+    const nextPaymentDate = new Date(data.nextPaymentDate);
+    if (isNaN(nextPaymentDate.getTime())) return 'Invalid next payment date';
+    if (nextPaymentDate <= new Date()) return 'Next payment date must be in the future';
+
+    // Validate endDate if provided
+    if (data.endDate) {
+        const endDate = new Date(data.endDate);
+        if (isNaN(endDate.getTime())) return 'Invalid end date';
+        if (endDate <= nextPaymentDate) return 'End date must be after next payment date';
+    }
+
     return null;
 };
 
@@ -30,6 +48,26 @@ const validateUpdateRecurringPayment = (data: any): string | null => {
     if (data.frequency && !['monthly', 'quarterly', 'yearly', 'weekly'].includes(data.frequency)) return 'Invalid frequency';
     if (data.relatedType && !['membership', 'booking', 'other'].includes(data.relatedType)) return 'Invalid related type';
     if (data.status && !['active', 'paused', 'cancelled', 'completed'].includes(data.status)) return 'Invalid status';
+
+    // Validate ObjectIds if provided
+    if (data.userId && !mongoose.Types.ObjectId.isValid(data.userId)) return 'Invalid user ID format';
+    if (data.paymentMethodId && !mongoose.Types.ObjectId.isValid(data.paymentMethodId)) return 'Invalid payment method ID format';
+    if (data.relatedId && !mongoose.Types.ObjectId.isValid(data.relatedId)) return 'Invalid related ID format';
+
+    // Validate nextPaymentDate if provided
+    if (data.nextPaymentDate) {
+        const nextPaymentDate = new Date(data.nextPaymentDate);
+        if (isNaN(nextPaymentDate.getTime())) return 'Invalid next payment date';
+        if (nextPaymentDate <= new Date()) return 'Next payment date must be in the future';
+    }
+
+    // Validate endDate if provided
+    if (data.endDate) {
+        const endDate = new Date(data.endDate);
+        if (isNaN(endDate.getTime())) return 'Invalid end date';
+        // Note: For updates, we don't check against nextPaymentDate as it might not be updated
+    }
+
     return null;
 };
 
@@ -40,8 +78,7 @@ export const createRecurringPayment = async (req: Request, res: Response) => {
         if (error) return res.status(400).json({ success: false, message: error });
 
         const recurringPaymentData = {
-            ...req.body,
-            userId: req.body.userId || new mongoose.Types.ObjectId().toString() // Dummy for testing
+            ...req.body
         };
 
         const recurringPayment = await createRecurringPaymentService(recurringPaymentData);
