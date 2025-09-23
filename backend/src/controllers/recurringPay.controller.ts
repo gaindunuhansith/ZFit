@@ -20,8 +20,36 @@ interface AuthenticatedRequest extends Request {
     };
 }
 
+interface CreateRecurringPaymentRequest {
+    userId: string;
+    membershipPlanId: string;
+    paymentMethodId: string;
+    amount: number;
+    frequency: 'weekly' | 'monthly' | 'yearly';
+    startDate: string;
+    nextPaymentDate: string;
+    status?: 'active' | 'paused' | 'cancelled' | 'expired';
+    currency?: string;
+    endDate?: string;
+    gatewaySubscriptionId?: string;
+    gatewayToken?: string;
+}
+
+interface UpdateRecurringPaymentRequest {
+    amount?: number;
+    frequency?: 'weekly' | 'monthly' | 'yearly';
+    status?: 'active' | 'paused' | 'cancelled' | 'expired';
+    userId?: string;
+    membershipPlanId?: string;
+    paymentMethodId?: string;
+    nextPaymentDate?: string;
+    endDate?: string;
+    gatewaySubscriptionId?: string;
+    gatewayToken?: string;
+}
+
 // Validation functions
-const validateCreateRecurringPayment = (data: any): string | null => {
+const validateCreateRecurringPayment = (data: CreateRecurringPaymentRequest): string | null => {
     if (!data.userId || !data.membershipPlanId || !data.paymentMethodId || !data.amount || !data.frequency || !data.startDate || !data.nextPaymentDate) {
         return 'Missing required fields: userId, membershipPlanId, paymentMethodId, amount, frequency, startDate, and nextPaymentDate';
     }
@@ -34,7 +62,7 @@ const validateCreateRecurringPayment = (data: any): string | null => {
     return null;
 };
 
-const validateUpdateRecurringPayment = (data: any): string | null => {
+const validateUpdateRecurringPayment = (data: UpdateRecurringPaymentRequest): string | null => {
     if (data.amount !== undefined && data.amount <= 0) return 'Amount must be positive';
     if (data.frequency && !['weekly', 'monthly', 'yearly'].includes(data.frequency)) return 'Invalid frequency - must be weekly, monthly, or yearly';
     if (data.status && !['active', 'paused', 'cancelled', 'expired'].includes(data.status)) return 'Invalid status';

@@ -137,7 +137,7 @@ export const updatePaymentStatsService = async (id: string, amount: number, succ
             throw new Error('Invalid recurring payment ID');
         }
 
-        const updateData: Record<string, any> = {
+        const updateData: Record<string, number | Date | object> = {
             lastPaymentDate: new Date(),
             lastPaymentAmount: amount,
         };
