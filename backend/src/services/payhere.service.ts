@@ -1,5 +1,5 @@
 import axios from 'axios';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import payHereConfig from '../config/payhere.js';
 
 export class PayHereService {
