@@ -8,6 +8,8 @@ import {
     deletePaymentService,
     processPaymentService
 } from '../services/payment.services.js';
+import payHereService from '../services/payhere.service.js';
+import RecurringPayment from '../models/recurringPayment.model.js';
 
 interface AuthenticatedRequest extends Request {
     user: {
@@ -119,5 +121,54 @@ export const processPayment = async (req: Request, res: Response) => {
         res.json({ success: true, data: payment });
     } catch (error) {
         res.status(500).json({ success: false, message: (error as Error).message });
+    }
+};
+
+// PayHere webhook handler
+export const payHereWebhook = async (req: Request, res: Response) => {
+    try {
+        const { signature, ...paymentData } = req.body;
+
+        // Verify webhook signature
+        if (!payHereService.verifyWebhookSignature(paymentData, signature)) {
+            return res.status(400).json({ error: 'Invalid signature' });
+        }
+
+        const { order_id, payment_id, payhere_amount, payhere_currency, status_code, status_message, token } = paymentData;
+
+        // Find payment by transaction ID
+        const payment = await mongoose.model('Payment').findOne({ transactionId: order_id });
+        if (!payment) {
+            return res.status(404).json({ error: 'Payment not found' });
+        }
+
+        // Update payment status based on PayHere response
+        if (status_code === 2) { // Success
+            payment.status = 'completed';
+            payment.gatewayTransactionId = payment_id;
+            payment.gatewayResponse = paymentData;
+        } else if (status_code === -1 || status_code === -2) { // Failed
+            payment.status = 'failed';
+            payment.failureReason = status_message;
+            payment.gatewayResponse = paymentData;
+        }
+
+        await payment.save();
+
+        // If this was a recurring payment setup and we got a token, save it
+        if (token && payment.type === 'recurring_setup') {
+            await RecurringPayment.findOneAndUpdate(
+                { _id: payment.relatedId },
+                {
+                    paymentToken: token,
+                    status: 'active'
+                }
+            );
+        }
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error('PayHere webhook error:', error);
+        res.status(500).json({ error: 'Webhook processing failed' });
     }
 };

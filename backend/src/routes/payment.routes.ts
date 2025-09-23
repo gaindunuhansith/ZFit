@@ -5,7 +5,8 @@ import {
     getPaymentById,
     updatePayment,
     deletePayment,
-    processPayment
+    processPayment,
+    payHereWebhook
 } from '../controllers/payment.controller.js';
 
 const router = Router();
@@ -16,4 +17,9 @@ router.get('/', getPayments);
 router.get('/:id', getPaymentById);
 router.post('/', createPayment);
 router.put('/:id', updatePayment);
-router.delete('/:id', deletePayment);export default router;
+router.delete('/:id', deletePayment);
+
+// PayHere webhook (no auth required)
+router.post('/webhook/payhere', payHereWebhook);
+
+export default router;
