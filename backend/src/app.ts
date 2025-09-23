@@ -14,6 +14,7 @@ import invoiceRoutes from "./routes/invoice.routes.js";  // Added invoice routes
 import paymentRoutes from "./routes/payment.routes.js";  // Added payment routes
 import payMethodRoutes from "./routes/payMethod.routes.js";  // Added payMethod routes
 import refundRoutes from "./routes/refund.routes.js";  // Added refund routes
+import recurringPaymentRoutes from "./routes/recurringPayment.routes.js";  // Added recurring payment routes
 import cartRoutes from "./routes/cart.routes.js";
 
 
@@ -39,6 +40,7 @@ app.use('/api/v1/invoices', invoiceRoutes);  // Added invoice routes
 app.use('/api/v1/payments', paymentRoutes);  // Added payment routes
 app.use('/api/v1/paymethods', payMethodRoutes);  // Added payMethod routes
 app.use('/api/v1/refunds', refundRoutes);  // Added refund routes
+app.use('/api/v1/recurring-payments', recurringPaymentRoutes);  // Added recurring payment routes
 
 //API health check
 app.get("/", (req: express.Request, res: express.Response) => {  // Changed from app.use to app.get

@@ -76,7 +76,7 @@ export const getRecurringPayments = async (req: Request, res: Response) => {
 };
 
 // Get single recurring payment by ID
-export const getRecurringPaymentById = async (req: AuthenticatedRequest, res: Response) => {
+export const getRecurringPaymentById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         if (!id) {
@@ -95,15 +95,6 @@ export const getRecurringPaymentById = async (req: AuthenticatedRequest, res: Re
             });
         }
 
-        // Check if user owns this recurring payment or is admin
-        if (recurringPayment.userId.toString() !== req.user.id &&
-            req.user.role !== 'manager' && req.user.role !== 'staff') {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied'
-            });
-        }
-
         res.status(200).json({
             success: true,
             data: recurringPayment
@@ -117,7 +108,7 @@ export const getRecurringPaymentById = async (req: AuthenticatedRequest, res: Re
 };
 
 // Update recurring payment
-export const updateRecurringPayment = async (req: AuthenticatedRequest, res: Response) => {
+export const updateRecurringPayment = async (req: Request, res: Response) => {
     try {
         const error = validateUpdateRecurringPayment(req.body);
         if (error) return res.status(400).json({ success: false, message: error });
@@ -139,15 +130,6 @@ export const updateRecurringPayment = async (req: AuthenticatedRequest, res: Res
             });
         }
 
-        // Check permissions
-        if (recurringPayment.userId.toString() !== req.user.id &&
-            req.user.role !== 'manager' && req.user.role !== 'staff') {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied'
-            });
-        }
-
         const updatedRecurringPayment = await updateRecurringPaymentService(id, req.body);
         res.status(200).json({
             success: true,
@@ -163,7 +145,7 @@ export const updateRecurringPayment = async (req: AuthenticatedRequest, res: Res
 };
 
 // Delete recurring payment (cancel)
-export const deleteRecurringPayment = async (req: AuthenticatedRequest, res: Response) => {
+export const deleteRecurringPayment = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         if (!id) {
@@ -179,15 +161,6 @@ export const deleteRecurringPayment = async (req: AuthenticatedRequest, res: Res
             return res.status(404).json({
                 success: false,
                 message: 'Recurring payment not found'
-            });
-        }
-
-        // Check permissions
-        if (recurringPayment.userId.toString() !== req.user.id &&
-            req.user.role !== 'manager' && req.user.role !== 'staff') {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied'
             });
         }
 
@@ -206,7 +179,7 @@ export const deleteRecurringPayment = async (req: AuthenticatedRequest, res: Res
 };
 
 // Pause recurring payment
-export const pauseRecurringPayment = async (req: AuthenticatedRequest, res: Response) => {
+export const pauseRecurringPayment = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         if (!id) {
@@ -222,15 +195,6 @@ export const pauseRecurringPayment = async (req: AuthenticatedRequest, res: Resp
             return res.status(404).json({
                 success: false,
                 message: 'Recurring payment not found'
-            });
-        }
-
-        // Check permissions
-        if (recurringPayment.userId.toString() !== req.user.id &&
-            req.user.role !== 'manager' && req.user.role !== 'staff') {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied'
             });
         }
 
@@ -249,7 +213,7 @@ export const pauseRecurringPayment = async (req: AuthenticatedRequest, res: Resp
 };
 
 // Resume recurring payment
-export const resumeRecurringPayment = async (req: AuthenticatedRequest, res: Response) => {
+export const resumeRecurringPayment = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         if (!id) {
@@ -268,15 +232,6 @@ export const resumeRecurringPayment = async (req: AuthenticatedRequest, res: Res
             });
         }
 
-        // Check permissions
-        if (recurringPayment.userId.toString() !== req.user.id &&
-            req.user.role !== 'manager' && req.user.role !== 'staff') {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied'
-            });
-        }
-
         const resumedRecurringPayment = await resumeRecurringPaymentService(id);
         res.status(200).json({
             success: true,
@@ -292,16 +247,8 @@ export const resumeRecurringPayment = async (req: AuthenticatedRequest, res: Res
 };
 
 // Process recurring payment (admin/staff only)
-export const processRecurringPayment = async (req: AuthenticatedRequest, res: Response) => {
+export const processRecurringPayment = async (req: Request, res: Response) => {
     try {
-        // Check if user has permission to process payments
-        if (req.user.role !== 'manager' && req.user.role !== 'staff') {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied. Only managers and staff can process recurring payments.'
-            });
-        }
-
         const { id } = req.params;
         if (!id) {
             return res.status(400).json({
@@ -326,16 +273,8 @@ export const processRecurringPayment = async (req: AuthenticatedRequest, res: Re
 };
 
 // Get due recurring payments (admin/staff only)
-export const getDueRecurringPayments = async (req: AuthenticatedRequest, res: Response) => {
+export const getDueRecurringPayments = async (req: Request, res: Response) => {
     try {
-        // Check if user has permission
-        if (req.user.role !== 'manager' && req.user.role !== 'staff') {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied'
-            });
-        }
-
         const duePayments = await getDueRecurringPaymentsService();
         res.status(200).json({
             success: true,
@@ -350,7 +289,7 @@ export const getDueRecurringPayments = async (req: AuthenticatedRequest, res: Re
 };
 
 // Get recurring payments by related entity
-export const getRecurringPaymentsByRelated = async (req: AuthenticatedRequest, res: Response) => {
+export const getRecurringPaymentsByRelated = async (req: Request, res: Response) => {
     try {
         const { relatedId, relatedType } = req.params;
 
@@ -358,14 +297,6 @@ export const getRecurringPaymentsByRelated = async (req: AuthenticatedRequest, r
             return res.status(400).json({
                 success: false,
                 message: 'Related ID and type are required'
-            });
-        }
-
-        // Check permissions - users can only see their own, staff/manager can see all
-        if (req.user.role !== 'manager' && req.user.role !== 'staff') {
-            return res.status(403).json({
-                success: false,
-                message: 'Access denied'
             });
         }
 
