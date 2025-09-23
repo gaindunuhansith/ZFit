@@ -1,22 +1,41 @@
-import type { RequestHandler, Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from "express";
 import AppAssert from "../util/AppAssert.js";
-import { UNAUTHORIZED } from "../constants/http.js";
+import { FORBIDDEN, UNAUTHORIZED } from "../constants/http.js";
 import { verifyToken } from "../util/jwt.js";
 import AppErrorCode from "../constants/appErrorCode.js";
 
-const authenticate: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+export interface AuthenticationRequest extends Request {
+    userId: string;
+    sessionId: string;
+};
 
-    const accessToken = req.cookies.accessToken as string | undefined;
+type AccessTokenPayload = {
+    userId: string;
+    sessionId: string;
+    role: string;
+};
 
-    AppAssert(accessToken, UNAUTHORIZED, "Unauthorized");
+const authenticate = (allowedRoles?: string[]) => (req: AuthenticationRequest , res: Response, next: NextFunction) => {
 
-    const { error, payload } = verifyToken(accessToken);
+    try {
+        const accessToken = req.cookies.accessToken as string | undefined;
 
-    AppAssert(payload, UNAUTHORIZED, error === "jwt expired" ? "Token expired" : "Invalid token", AppErrorCode.InvalidAccessToken);
+        AppAssert(accessToken, UNAUTHORIZED, "Unauthorized");
+
+        const { error, payload } = verifyToken<AccessTokenPayload>(accessToken);
+
+        AppAssert(payload, UNAUTHORIZED, error === "jwt expired" ? "Token expired" : "Invalid token", AppErrorCode.InvalidAccessToken);
+
+        if (allowedRoles) {
+            AppAssert(allowedRoles.includes(payload.role), FORBIDDEN, "Insufficient permissions");
+        }
 
     req.userId = payload.userId;
     req.sessionId = payload.sessionId;
     next();
+    } catch (error) {
+        next(error);
+    }
 
 };
 
