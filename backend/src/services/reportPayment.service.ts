@@ -82,7 +82,6 @@ export class ReportPaymentService {
             const trendData = await Payment.aggregate([
                 {
                     $match: {
-                        status: 'completed',
                         date: {
                             $gte: startDate,
                             $lte: endDate
