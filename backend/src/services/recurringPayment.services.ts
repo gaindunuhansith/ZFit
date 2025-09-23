@@ -182,6 +182,7 @@ export const processRecurringPaymentService = async (recurringPaymentId: string)
             method: 'card',
             relatedId: recurringPayment.relatedId,
             transactionId: payHereResult.order_id,
+            refundedAmount: 0,
             date: new Date()
         };
 
@@ -200,10 +201,10 @@ export const processRecurringPaymentService = async (recurringPaymentId: string)
 
         return { recurringPayment, payment: savedPayment };
     } catch (error) {
-        // Increment failure count
-        if (recurringPayment && mongoose.Types.ObjectId.isValid(recurringPaymentId)) {
+        // Increment failure count if we have a valid recurring payment
+        if (recurringPayment && recurringPayment._id) {
             try {
-                await RecurringPayment.findByIdAndUpdate(recurringPaymentId, {
+                await RecurringPayment.findByIdAndUpdate(recurringPayment._id, {
                     $inc: { failureCount: 1 }
                 });
             } catch (updateError) {
@@ -217,7 +218,7 @@ export const processRecurringPaymentService = async (recurringPaymentId: string)
 
 // Helper function to calculate next payment date
 const calculateNextPaymentDate = (currentDate: Date, frequency: string): Date => {
-    const date = new Date(currentDate);
+    const date = new Date(currentDate.getTime()); // Create a copy to avoid modifying original
 
     switch (frequency) {
         case 'weekly':

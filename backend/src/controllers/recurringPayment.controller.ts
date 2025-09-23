@@ -53,7 +53,7 @@ const validateUpdateRecurringPayment = (data: any): string | null => {
     if (data.nextPaymentDate) {
         const nextPaymentDate = new Date(data.nextPaymentDate);
         if (isNaN(nextPaymentDate.getTime())) return 'Invalid next payment date';
-        if (nextPaymentDate <= new Date()) return 'Next payment date must be in the future';
+        // For updates, allow past dates (e.g., rescheduling)
     }
 
     if (data.endDate) {
