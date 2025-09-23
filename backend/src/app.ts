@@ -15,6 +15,7 @@ import paymentRoutes from "./routes/payment.routes.js";  // Added payment routes
 import payMethodRoutes from "./routes/payMethod.routes.js";  // Added payMethod routes
 import refundRoutes from "./routes/refund.routes.js";  // Added refund routes
 import cartRoutes from "./routes/cart.routes.js";
+import orderRouter from "./routes/order.routes.js"
 
 
 //creating a express app instance
@@ -35,6 +36,7 @@ app.use('/api/v1/inventory', itemsRoutes);
 app.use('/api/v1/stock', stockRoutes);
 app.use('/api/v1/inventory/reports', inventoryReportRoutes);  // Added inventory report routes
 app.use('/api/v1/cart', cartRoutes);
+app.use('/api/v1/orders', orderRouter);
 app.use('/api/v1/invoices', invoiceRoutes);  // Added invoice routes
 app.use('/api/v1/payments', paymentRoutes);  // Added payment routes
 app.use('/api/v1/paymethods', payMethodRoutes);  // Added payMethod routes
