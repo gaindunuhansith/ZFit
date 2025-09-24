@@ -18,4 +18,6 @@ export default cleanEnv(process.env, {
     JWT_REFRESH_SECRET: str(),
     RESEND_API_KEY: str(),
     EMAIL_SENDER: str(),
+    PAYHERE_MERCHANT_ID: str(),
+    PAYHERE_MERCHANT_SECRET: str(),
 });
