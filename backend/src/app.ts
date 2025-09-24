@@ -15,6 +15,7 @@ import paymentRoutes from "./routes/payment.routes.js";  // Added payment routes
 import payMethodRoutes from "./routes/payMethod.routes.js";  // Added payMethod routes
 import refundRoutes from "./routes/refund.routes.js";  // Added refund routes
 import recurringPaymentRoutes from "./routes/recurringPayment.routes.js";  // Added recurring payment routes
+import gatewayRoutes from "./routes/gateway.routes.js";  // Added gateway routes for PayHere
 import cartRoutes from "./routes/cart.routes.js";
 import orderRouter from "./routes/order.routes.js"
 
@@ -43,10 +44,11 @@ app.use('/api/v1/payments', paymentRoutes);  // Added payment routes
 app.use('/api/v1/paymethods', payMethodRoutes);  // Added payMethod routes
 app.use('/api/v1/refunds', refundRoutes);  // Added refund routes
 app.use('/api/v1/recurring-payments', recurringPaymentRoutes);  // Added recurring payment routes
+app.use('/api/v1/gateways', gatewayRoutes);  // Added gateway routes for PayHere
 
 //API health check
 app.get("/", (req: express.Request, res: express.Response) => {  // Changed from app.use to app.get
-    res.send("The API is running");
+    res.send("The API is running - PayHere Integration Ready");
 })
 
 
