@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { ClassService } from '../services/class.service.js';
 
 export class ClassController {
@@ -35,7 +35,7 @@ export class ClassController {
     // Get class by ID
     static async getClassById(req: Request, res: Response, next: NextFunction) {
         try {
-            const { id } = req.params;
+            const id  = req.params?.id as string;
             const classInstance = await ClassService.getClassById(id);
             
             res.status(200).json({
@@ -51,7 +51,7 @@ export class ClassController {
     // Update class
     static async updateClass(req: Request, res: Response, next: NextFunction) {
         try {
-            const { id } = req.params;
+            const id  = req.params?.id as string;
             const classInstance = await ClassService.updateClass(id, req.body);
             
             res.status(200).json({
@@ -67,7 +67,7 @@ export class ClassController {
     // Delete class
     static async deleteClass(req: Request, res: Response, next: NextFunction) {
         try {
-            const { id } = req.params;
+            const id  = req.params?.id as string;
             const result = await ClassService.deleteClass(id);
             
             res.status(200).json({

@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
-import ClassModel, { ClassDocument } from '../models/class.model.js';
-import { AppError } from '../util/AppError.js';
+import type { Request, Response } from 'express';
+import ClassModel, { type ClassDocument } from '../models/class.model.js';
+import { type AppError } from '../util/AppError.js';
 import mongoose from 'mongoose';
 
 export class ClassService {

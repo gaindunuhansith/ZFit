@@ -1,82 +1,52 @@
-import { Request, Response, NextFunction } from 'express';
-import { TrainerService } from '../services/trainer.service.js';
+import type { Request, Response } from 'express';
+import { TrainerService } from '../services/Trainer.service.js';
 
 export class TrainerController {
-    // Create a new trainer
-    static async createTrainer(req: Request, res: Response, next: NextFunction) {
+    static async createTrainer(req: Request, res: Response) {
         try {
             const trainer = await TrainerService.createTrainer(req.body);
-            
-            res.status(201).json({
-                success: true,
-                message: 'Trainer created successfully',
-                data: trainer
-            });
+            res.status(201).json({ message: 'Trainer created successfully', trainer });
         } catch (error: any) {
-            next(error);
+            res.status(error.statusCode || 500).json({ message: error.message });
         }
     }
 
-    // Get all trainers
-    static async getTrainers(req: Request, res: Response, next: NextFunction) {
+    static async getAllTrainers(_req: Request, res: Response) {
         try {
-            const trainers = await TrainerService.getTrainers();
-            
-            res.status(200).json({
-                success: true,
-                message: 'Trainers retrieved successfully',
-                data: trainers
-            });
+            const trainers = await TrainerService.getAllTrainers();
+            res.json(trainers);
         } catch (error: any) {
-            next(error);
+            res.status(error.statusCode || 500).json({ message: error.message });
         }
     }
 
-    // Get trainer by ID
-    static async getTrainerById(req: Request, res: Response, next: NextFunction) {
+    static async getTrainerById(req: Request, res: Response) {
         try {
-            const { id } = req.params;
+            const id  = req.params?.id as string;
             const trainer = await TrainerService.getTrainerById(id);
-            
-            res.status(200).json({
-                success: true,
-                message: 'Trainer retrieved successfully',
-                data: trainer
-            });
+            res.json(trainer);
         } catch (error: any) {
-            next(error);
+            res.status(error.statusCode || 500).json({ message: error.message });
         }
     }
 
-    // Update trainer
-    static async updateTrainer(req: Request, res: Response, next: NextFunction) {
+    static async updateTrainer(req: Request, res: Response) {
         try {
-            const { id } = req.params;
+            const  id  = req.params?.id as string;
             const trainer = await TrainerService.updateTrainer(id, req.body);
-            
-            res.status(200).json({
-                success: true,
-                message: 'Trainer updated successfully',
-                data: trainer
-            });
+            res.json({ message: 'Trainer updated successfully', trainer });
         } catch (error: any) {
-            next(error);
+            res.status(error.statusCode || 500).json({ message: error.message });
         }
     }
 
-    // Delete trainer
-    static async deleteTrainer(req: Request, res: Response, next: NextFunction) {
+    static async deleteTrainer(req: Request, res: Response) {
         try {
-            const { id } = req.params;
-            const result = await TrainerService.deleteTrainer(id);
-            
-            res.status(200).json({
-                success: true,
-                message: result.message,
-                data: null
-            });
+            const id  = req.params?.id as string;
+            await TrainerService.deleteTrainer(id);
+            res.json({ message: 'Trainer deleted successfully' });
         } catch (error: any) {
-            next(error);
+            res.status(error.statusCode || 500).json({ message: error.message });
         }
     }
 }

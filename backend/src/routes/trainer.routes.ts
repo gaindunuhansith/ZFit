@@ -1,21 +1,13 @@
-import express from 'express';
-import { TrainerController } from '../controllers/trainer.controller.js';
+import { Router } from 'express';
+import { TrainerController } from '../controllers/Trainer.controller.js';
 
-const router = express.Router();
+const router = Router();
 
-// Create a new trainer
+// CRUD routes
 router.post('/', TrainerController.createTrainer);
-
-// Get all trainers
-router.get('/', TrainerController.getTrainers);
-
-// Get trainer by ID
+router.get('/', TrainerController.getAllTrainers);
 router.get('/:id', TrainerController.getTrainerById);
-
-// Update trainer
 router.put('/:id', TrainerController.updateTrainer);
-
-// Delete trainer
 router.delete('/:id', TrainerController.deleteTrainer);
 
 export default router;

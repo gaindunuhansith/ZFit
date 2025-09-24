@@ -1,97 +1,84 @@
-import { Request, Response } from 'express';
-import TrainerModel, { TrainerDocument } from '../models/trainer.model.js';
-import { AppError } from '../util/AppError.js';
+import TrainerModel, { type TrainerDocument } from '../models/trainer.model.js';
+import AppError from '../util/AppError.js';
+import { NOT_FOUND, BAD_REQUEST, INTERNAL_SERVER_ERROR } from '../constants/http.js';
 import mongoose from 'mongoose';
 
 export class TrainerService {
     // Create a new trainer
-    static async createTrainer(trainerData: Partial<TrainerDocument>) {
+    static async createTrainer(data: Partial<TrainerDocument>) {
         try {
-            // Validate user exists
-            const userExists = await mongoose.model('User').findById(trainerData.userId);
-            if (!userExists) {
-                throw new AppError('User not found', 404);
-            }
+            if (!data.userId) throw new AppError(BAD_REQUEST, 'userId is required');
 
-            // Check if user is already a trainer
-            const existingTrainer = await TrainerModel.findOne({ userId: trainerData.userId });
-            if (existingTrainer) {
-                throw new AppError('User is already registered as a trainer', 400);
-            }
+            const exists = await TrainerModel.findOne({ userId: data.userId });
+            if (exists) throw new AppError(BAD_REQUEST, 'Trainer already exists for this user');
 
-            const trainer = new TrainerModel(trainerData);
+            const trainer = new TrainerModel(data);
             await trainer.save();
-            
-            // Populate user reference
-            await trainer.populate('userId', 'name email');
-            
             return trainer;
         } catch (error: any) {
             if (error instanceof AppError) throw error;
-            throw new AppError(error.message, 400);
+            throw new AppError(BAD_REQUEST, error.message);
         }
     }
 
     // Get all trainers
-    static async getTrainers() {
+    static async getAllTrainers() {
         try {
-            const trainers = await TrainerModel.find({ status: 'active' })
+            return await TrainerModel.find()
                 .populate('userId', 'name email')
                 .sort({ createdAt: -1 });
-            
-            return trainers;
         } catch (error: any) {
-            throw new AppError(error.message, 500);
+            throw new AppError(INTERNAL_SERVER_ERROR, error.message);
         }
     }
 
     // Get trainer by ID
     static async getTrainerById(id: string) {
         try {
-            const trainer = await TrainerModel.findById(id)
-                .populate('userId', 'name email');
-                
-            if (!trainer) {
-                throw new AppError('Trainer not found', 404);
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                throw new AppError(BAD_REQUEST, 'Invalid trainer ID');
             }
+
+            const trainer = await TrainerModel.findById(id).populate('userId', 'name email');
+            if (!trainer) throw new AppError(NOT_FOUND, 'Trainer not found');
             return trainer;
         } catch (error: any) {
             if (error instanceof AppError) throw error;
-            throw new AppError('Invalid trainer ID', 400);
+            throw new AppError(BAD_REQUEST, error.message);
         }
     }
 
     // Update trainer
-    static async updateTrainer(id: string, updateData: Partial<TrainerDocument>) {
+    static async updateTrainer(id: string, data: Partial<TrainerDocument>) {
         try {
-            const trainer = await TrainerModel.findByIdAndUpdate(
-                id,
-                updateData,
-                { new: true, runValidators: true }
-            ).populate('userId', 'name email');
-            
-            if (!trainer) {
-                throw new AppError('Trainer not found', 404);
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                throw new AppError(BAD_REQUEST, 'Invalid trainer ID');
             }
-            
+
+            const trainer = await TrainerModel.findByIdAndUpdate(id, data, { new: true, runValidators: true })
+                .populate('userId', 'name email');
+
+            if (!trainer) throw new AppError(NOT_FOUND, 'Trainer not found');
             return trainer;
         } catch (error: any) {
             if (error instanceof AppError) throw error;
-            throw new AppError(error.message, 400);
+            throw new AppError(BAD_REQUEST, error.message);
         }
     }
 
     // Delete trainer
     static async deleteTrainer(id: string) {
         try {
-            const trainer = await TrainerModel.findByIdAndDelete(id);
-            if (!trainer) {
-                throw new AppError('Trainer not found', 404);
+            if (!mongoose.Types.ObjectId.isValid(id)) {
+                throw new AppError(BAD_REQUEST, 'Invalid trainer ID');
             }
-            return { message: 'Trainer deleted successfully' };
+
+            const trainer = await TrainerModel.findByIdAndDelete(id);
+            if (!trainer) throw new AppError(NOT_FOUND, 'Trainer not found');
+            return trainer;
         } catch (error: any) {
             if (error instanceof AppError) throw error;
-            throw new AppError('Invalid trainer ID', 400);
+            throw new AppError(BAD_REQUEST, error.message);
         }
     }
 }

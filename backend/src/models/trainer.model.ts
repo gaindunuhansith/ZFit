@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 export interface TrainerDocument extends mongoose.Document {
     userId: mongoose.Types.ObjectId;
     specialization: string;
-    experience: number; // years
+    experience: number;
     bio: string;
     status: 'active' | 'inactive';
     createdAt: Date;
