@@ -1,64 +1,13 @@
-import type { Request, Response } from 'express';
-import FacilityModel, { type FacilityDocument } from '../models/facility.model.js';
-import AppAssert from '../util/AppAssert.js';
+import Facility, { type IFacility } from "../models/facility.model.js";
 
-export class FacilityService {
-    // Create a new facility
-    static async createFacility(facilityData: Partial<FacilityDocument>) {
-        try {
-            const facility = new FacilityModel(facilityData);
-            await facility.save();
-            return facility;
-        } catch (error: any) {
-            AppAssert(false, 400, error.message); 
-        }
-    }
+export const createFacility = async (data: Partial<IFacility>) => Facility.create(data);
 
-    // Get all facilities
-    static async getFacilities() {
-        try {
-            const facilities = await FacilityModel.find({ status: 'active' }).sort({ name: 1 });
-            return facilities;
-        } catch (error: any) {
-            AppAssert(false, 500, error.message);
-        }
-    }
+export const getFacilities = async () => Facility.find().populate("equipments");
 
-    // Get facility by ID
-    static async getFacilityById(id: string) {
-        try {
-            const facility = await FacilityModel.findById(id);
-            AppAssert(facility, 404, 'Facility not found');
-            return facility;
-        } catch (error: any) {
-            AppAssert(false, 400, 'Invalid facility ID');
-        }
-    }
+export const getFacilityById = async (id: string) => Facility.findById(id).populate("equipments");
 
-    // Update facility
-    static async updateFacility(id: string, updateData: Partial<FacilityDocument>) {
-        try {
-            const facility = await FacilityModel.findByIdAndUpdate(
-                id,
-                updateData,
-                { new: true, runValidators: true }
-            );
+export const updateFacility = async (id: string, data: Partial<IFacility>) =>
+  Facility.findByIdAndUpdate(id, data, { new: true });
 
-            AppAssert(facility, 404, 'Facility not found');
-            return facility;
-        } catch (error: any) {
-            AppAssert(false, 400, error.message);
-        }
-    }
-
-    // Delete facility
-    static async deleteFacility(id: string) {
-        try {
-            const facility = await FacilityModel.findByIdAndDelete(id);
-            AppAssert(facility, 404, 'Facility not found');
-            return { message: 'Facility deleted successfully' };
-        } catch (error: any) {
-            AppAssert(false, 400, 'Invalid facility ID');
-        }
-    }
-}
+export const deleteFacility = async (id: string) =>
+  Facility.findByIdAndDelete(id);

@@ -1,38 +1,51 @@
 import Booking, { type IBooking } from "../models/Booking.model.js";
-import mongoose from "mongoose";
 
-export class BookingService {
-  // Create booking with conflict check
-  static async createBooking(data: Partial<IBooking>) {
-    const conflict = await Booking.findOne({
-      resourceId: data.resourceId,
-      date: data.date,
-      startTime: { $lt: data.endTime },
-      endTime: { $gt: data.startTime },
-    });
+// Create
+export const createBooking = async (data: Partial<IBooking>) =>
+  Booking.create(data);
 
-    if (conflict) throw new Error("This resource is already booked for the selected time");
+// Get all
+export const getBookings = async () =>
+  Booking.find().populate("class trainer facility");
 
-    return await Booking.create(data);
+// Get all bookings by member
+export const getBookingsByMember = async (memberId: string) =>
+  Booking.find({ member: memberId }).populate("class trainer facility");
+
+// Get by ID
+export const getBookingById = async (id: string) =>
+  Booking.findById(id).populate("class trainer facility");
+
+// Update
+export const updateBooking = async (id: string, data: Partial<IBooking>) =>
+  Booking.findByIdAndUpdate(id, data, { new: true });
+
+// Delete
+export const deleteBooking = async (id: string) =>
+  Booking.findByIdAndDelete(id);
+
+// Cancel
+export const cancelBooking = async (id: string) => {
+  const booking = await Booking.findById(id);
+  if (!booking) throw new Error("Booking not found");
+
+  const now = new Date();
+  if (booking.cancellationDeadline.getTime() <= now.getTime()) {
+    throw new Error("Cancellation deadline passed (cannot cancel within 24 hours of booking date)");
   }
 
-  static async getBookings() {
-    return await Booking.find().populate("memberId").populate("resourceId");
-  }
+  booking.status = "cancelled";
+  return booking.save();
+};
 
-  static async getBookingById(id: string) {
-    if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Booking ID");
-    return await Booking.findById(id).populate("memberId").populate("resourceId");
-  }
+// Reschedule
+export const rescheduleBooking = async (id: string, newDate: Date) => {
+  const booking = await Booking.findById(id);
+  if (!booking) throw new Error("Booking not found");
 
-  static async updateBooking(id: string, data: Partial<IBooking>) {
-    if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Booking ID");
-    return await Booking.findByIdAndUpdate(id, data, { new: true });
-  }
+  booking.bookingDate = newDate;
+  booking.cancellationDeadline = new Date(newDate.getTime() - 24 * 60 * 60 * 1000);
+  booking.status = "rescheduled";
 
-  static async deleteBooking(id: string) {
-    if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Booking ID");
-    await Booking.findByIdAndDelete(id);
-    return { message: "Booking deleted successfully" };
-  }
-}
+  return booking.save();
+};

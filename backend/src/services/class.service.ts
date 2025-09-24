@@ -1,6 +1,6 @@
-import Class, {type IClass } from '../models/class.model.js';
+import Class, { type IClass } from "../models/class.model.js";
 
-export const createClass = async (data: Omit<IClass,'createdAt'|'updatedAt'>) => {
+export const createClass = async (data: Partial<IClass>) => {
   return await Class.create(data);
 };
 
@@ -12,7 +12,7 @@ export const getClassById = async (id: string) => {
   return await Class.findById(id);
 };
 
-export const updateClass = async (id: string, data: Partial<Omit<IClass,'createdAt'|'updatedAt'>>) => {
+export const updateClass = async (id: string, data: Partial<IClass>) => {
   return await Class.findByIdAndUpdate(id, data, { new: true });
 };
 

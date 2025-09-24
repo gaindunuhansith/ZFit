@@ -1,7 +1,7 @@
-import { z } from 'zod';
-import type { Request, Response, NextFunction } from 'express';
-import * as TrainerService from '../services/Trainer.service.js';
-import { type ITrainer } from '../models/Trainer.model.js';
+import { z } from "zod";
+import type { Request, Response, NextFunction } from "express";
+import * as TrainerService from "../services/Trainer.service.js";
+import type { ITrainer } from "../models/Trainer.model.js";
 
 interface TrainerParams { id: string }
 
@@ -11,21 +11,19 @@ export class TrainerController {
   static async createTrainer(req: Request, res: Response, next: NextFunction) {
     try {
       const schema = z.object({
-        name: z.string().min(1, "Name is required"),
-        specialty: z.string().min(1, "Specialty is required"),
-        experience: z.number().min(0, "Experience must be 0 or more"),
-        status: z.enum(['active','inactive']).optional()
+        name: z.string().min(1, "Trainer name is required"),
+        specialization: z.string().min(1, "Specialization is required"),
+        experience: z.number().min(0).optional(),
+        status: z.enum(["active", "inactive"]).optional()
       });
 
-      const validatedData = schema.parse(req.body) as Omit<ITrainer,'createdAt'|'updatedAt'>;
-      const trainer = await TrainerService.createTrainer(validatedData);
-
+      const validated = schema.parse(req.body)as Omit<ITrainer, 'createdAt'|'updatedAt'>;
+      const trainer = await TrainerService.createTrainer(validated);
       res.status(201).json({ success: true, data: trainer });
 
     } catch (err) {
-      if (err instanceof z.ZodError) {
+      if (err instanceof z.ZodError)
         return res.status(400).json({ success: false, errors: err.flatten() });
-      }
       next(err);
     }
   }
@@ -35,21 +33,16 @@ export class TrainerController {
     try {
       const trainers = await TrainerService.getTrainers();
       res.status(200).json({ success: true, data: trainers });
-    } catch (err) {
-      next(err);
-    }
+    } catch (err) { next(err); }
   }
 
   // GET TRAINER BY ID
   static async getTrainerById(req: Request<TrainerParams>, res: Response, next: NextFunction) {
     try {
       const trainer = await TrainerService.getTrainerById(req.params.id);
-      if (!trainer) return res.status(404).json({ success: false, message: 'Trainer not found' });
-
+      if (!trainer) return res.status(404).json({ success: false, message: "Trainer not found" });
       res.status(200).json({ success: true, data: trainer });
-    } catch (err) {
-      next(err);
-    }
+    } catch (err) { next(err); }
   }
 
   // UPDATE TRAINER
@@ -57,19 +50,19 @@ export class TrainerController {
     try {
       const schema = z.object({
         name: z.string().min(1).optional(),
-        specialty: z.string().min(1).optional(),
+        specialization: z.string().min(1).optional(),
         experience: z.number().min(0).optional(),
-        status: z.enum(['active','inactive']).optional()
+        status: z.enum(["active", "inactive"]).optional()
       });
 
-      const validatedData = schema.parse(req.body) as Partial<ITrainer>;
-      const updatedTrainer = await TrainerService.updateTrainer(req.params.id, validatedData);
+      const validated = schema.parse(req.body) as Partial<ITrainer>;
+      const updated = await TrainerService.updateTrainer(req.params.id, validated);
+      if (!updated) return res.status(404).json({ success: false, message: "Trainer not found" });
+      res.status(200).json({ success: true, data: updated });
 
-      if (!updatedTrainer) return res.status(404).json({ success: false, message: 'Trainer not found' });
-
-      res.status(200).json({ success: true, data: updatedTrainer });
     } catch (err) {
-      if (err instanceof z.ZodError) return res.status(400).json({ success: false, errors: err.flatten() });
+      if (err instanceof z.ZodError)
+        return res.status(400).json({ success: false, errors: err.flatten() });
       next(err);
     }
   }
@@ -77,12 +70,9 @@ export class TrainerController {
   // DELETE TRAINER
   static async deleteTrainer(req: Request<TrainerParams>, res: Response, next: NextFunction) {
     try {
-      const deletedTrainer = await TrainerService.deleteTrainer(req.params.id);
-      if (!deletedTrainer) return res.status(404).json({ success: false, message: 'Trainer not found' });
-
-      res.status(200).json({ success: true, message: 'Trainer deleted successfully', data: deletedTrainer });
-    } catch (err) {
-      next(err);
-    }
+      const deleted = await TrainerService.deleteTrainer(req.params.id);
+      if (!deleted) return res.status(404).json({ success: false, message: "Trainer not found" });
+      res.status(200).json({ success: true, message: "Trainer deleted successfully", data: deleted });
+    } catch (err) { next(err); }
   }
 }

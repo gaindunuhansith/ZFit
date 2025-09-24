@@ -1,51 +1,19 @@
+import mongoose, { Schema, Document } from "mongoose";
 
-import mongoose from 'mongoose';
-
-export interface FacilityDocument extends mongoose.Document {
-    name: string;
-    description: string;
-    type: string;
-    location: string;
-    capacity: number;
-    status: 'active' | 'inactive';
-    createdAt: Date;
-    updatedAt: Date;
+export interface IFacility extends Document {
+  name: string;
+  capacity: number;
+  status: "active" | "inactive";
+  equipments: string[]; // references to Equipment IDs
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const facilitySchema = new mongoose.Schema<FacilityDocument>({
-    name: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    description: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    type: {
-        type: String,
-        required: true,
-        enum: ['gym', 'pool', 'studio', 'court', 'other'],
-        default: 'gym'
-    },
-    location: {
-        type: String,
-        required: true
-    },
-    capacity: {
-        type: Number,
-        required: true,
-        min: 1
-    },
-    status: {
-        type: String,
-        enum: ['active', 'inactive'],
-        default: 'active'
-    }
-}, {
-    timestamps: true
-});
+const FacilitySchema: Schema = new Schema<IFacility>({
+  name: { type: String, required: true },
+  capacity: { type: Number, required: true },
+  status: { type: String, enum: ["active", "inactive"], default: "active" },
+  equipments: [{ type: Schema.Types.ObjectId, ref: "Equipment" }]
+}, { timestamps: true });
 
-const FacilityModel = mongoose.model<FacilityDocument>("Facility", facilitySchema);
-export default FacilityModel;
+export default mongoose.model<IFacility>("Facility", FacilitySchema);

@@ -1,29 +1,29 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IBooking extends Document {
-  memberId: mongoose.Types.ObjectId;
-  resourceType: "class" | "trainer" | "equipment" | "gymSession";
-  resourceId: mongoose.Types.ObjectId;
-  date: Date;
-  startTime: string;
-  endTime: string;
-  status: "pending" | "confirmed" | "cancelled";
+  member: string;
+  class?: string;
+  trainer?: string;
+  facility?: string;
+  bookingDate: Date;
+  cancellationDeadline: Date;
+  status: "booked" | "cancelled" | "rescheduled" | "completed";
   createdAt: Date;
+  updatedAt: Date;
 }
 
-const BookingSchema = new Schema<IBooking>({
-  memberId: { type: Schema.Types.ObjectId, ref: "Member", required: true },
-  resourceType: {
+const BookingSchema: Schema = new Schema<IBooking>({
+  member: { type: String, required: true },
+  class: { type: Schema.Types.ObjectId, ref: "Class" },
+  trainer: { type: Schema.Types.ObjectId, ref: "Trainer" },
+  facility: { type: Schema.Types.ObjectId, ref: "Facility" },
+  bookingDate: { type: Date, required: true },
+  cancellationDeadline: { type: Date, required: true },
+  status: {
     type: String,
-    enum: ["class", "trainer", "equipment", "gymSession"],
-    required: true,
-  },
-  resourceId: { type: Schema.Types.ObjectId, required: true },
-  date: { type: Date, required: true },
-  startTime: { type: String, required: true },
-  endTime: { type: String, required: true },
-  status: { type: String, enum: ["pending", "confirmed", "cancelled"], default: "pending" },
-  createdAt: { type: Date, default: Date.now },
-});
+    enum: ["booked", "cancelled", "rescheduled", "completed"],
+    default: "booked"
+  }
+}, { timestamps: true });
 
 export default mongoose.model<IBooking>("Booking", BookingSchema);
