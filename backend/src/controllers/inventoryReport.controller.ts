@@ -1,11 +1,11 @@
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import ReportService from "../services/reportService.js";
 
 // Create an instance of the service
 const reportService = new ReportService();
 
 // Get stock levels report
-export const getStockLevelsReport = async (req: Request, res: Response) => {
+export const getStockLevelsReport = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const report = await reportService.getStockLevels();
         res.status(200).json({
@@ -13,15 +13,12 @@ export const getStockLevelsReport = async (req: Request, res: Response) => {
             data: report
         });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: (error as Error).message
-        });
+        next(error);
     }
 };
 
 // Get usage trends report
-export const getUsageTrendsReport = async (req: Request, res: Response) => {
+export const getUsageTrendsReport = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const report = await reportService.getUsageTrends();
         res.status(200).json({
@@ -29,9 +26,6 @@ export const getUsageTrendsReport = async (req: Request, res: Response) => {
             data: report
         });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: (error as Error).message
-        });
+        next(error);
     }
 };

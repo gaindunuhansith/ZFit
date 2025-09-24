@@ -1,6 +1,7 @@
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import CartService from "../services/cart.service.js";
+
 
 // create an instance of the service
 const cartService = new CartService();
@@ -23,7 +24,7 @@ const cartIdSchema = z.object({
 
 
 //  Add item to cart
-export const addToCart = async (req: Request, res: Response) => {
+export const addToCart = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validated = addToCartSchema.parse(req.body);
     const cartItem = await cartService.addItem(validated.memberId, validated.itemId, validated.quantity);
@@ -34,12 +35,12 @@ export const addToCart = async (req: Request, res: Response) => {
       data: cartItem,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 };
 
 //  Get all cart items for a member
-export const getCartByMember = async (req: Request, res: Response) => {
+export const getCartByMember = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { memberId } = z.object({ memberId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid member ID format") }).parse(req.params);
     const cart = await cartService.getCart(memberId);
@@ -59,12 +60,12 @@ export const getCartByMember = async (req: Request, res: Response) => {
       count: cart.items.length,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 };
 
 //  Update cart item quantity
-export const updateCartItem = async (req: Request, res: Response) => {
+export const updateCartItem = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { memberId, itemId } = z.object({ 
       memberId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid member ID format"),
@@ -83,12 +84,12 @@ export const updateCartItem = async (req: Request, res: Response) => {
       data: updatedCart,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 };
 
 //  Remove cart item
-export const removeCartItem = async (req: Request, res: Response) => {
+export const removeCartItem = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { memberId, itemId } = z.object({ 
       memberId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid member ID format"),
@@ -107,12 +108,12 @@ export const removeCartItem = async (req: Request, res: Response) => {
       data: updatedCart,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 };
 
 // Clear cart for a member
-export const clearCart = async (req: Request, res: Response) => {
+export const clearCart = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { memberId } = z.object({ memberId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid member ID format") }).parse(req.params);
     const clearedCart = await cartService.clearCart(memberId);
@@ -123,27 +124,6 @@ export const clearCart = async (req: Request, res: Response) => {
       data: clearedCart,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
-};
-
-// Centralized error handler
-const handleError = (res: Response, error: unknown) => {
-  console.error("Error:", error);
-
-  if (error instanceof z.ZodError) {
-    return res.status(400).json({
-      success: false,
-      message: "Validation failed",
-      errors: error.issues.map((e) => ({
-        field: e.path.join("."),
-        message: e.message,
-      })),
-    });
-  }
-
-  res.status(500).json({
-    success: false,
-    message: "Internal server error",
-  });
 };

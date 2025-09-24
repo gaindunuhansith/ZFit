@@ -18,7 +18,8 @@ import recurringPaymentRoutes from "./routes/recurringPayment.routes.js";  // Ad
 import gatewayRoutes from "./routes/gateway.routes.js";  // Added gateway routes for PayHere
 import paymentReportRoutes from "./routes/paymentReport.routes.js";  // Added payment report routes
 import cartRoutes from "./routes/cart.routes.js";
-import orderRouter from "./routes/order.routes.js"
+import orderRouter from "./routes/order.routes.js";
+import errorMiddleware from "./middleware/error.middleware.js";
 
 
 //creating a express app instance
@@ -55,5 +56,7 @@ app.get("/", (req: express.Request, res: express.Response) => {  // Changed from
     res.send("The API is running - PayHere Integration Ready");
 })
 
+// Error handling middleware (must be last)
+app.use(errorMiddleware);
 
 export default app;

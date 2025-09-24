@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import StockService from "../services/inventoryStock.service.js";
 
@@ -17,7 +17,7 @@ const updateMaintenanceSchema = z.object({
 });
 
 // Update stock (increment or decrement)
-export const updateStock = async (req: Request, res: Response) => {
+export const updateStock = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         
@@ -37,12 +37,12 @@ export const updateStock = async (req: Request, res: Response) => {
             data: item
         });
     } catch (error) {
-        handleError(res, error);
+        next(error);
     }
 };
 
 // Get low stock items
-export const getLowStockItems = async (req: Request, res: Response) => {
+export const getLowStockItems = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const items = await stockService.getLowStockItems();
         res.status(200).json({
@@ -51,12 +51,12 @@ export const getLowStockItems = async (req: Request, res: Response) => {
             data: items
         });
     } catch (error) {
-        handleError(res, error);
+        next(error);
     }
 };
 
 // Get maintenance alerts
-export const getMaintenanceAlerts = async (req: Request, res: Response) => {
+export const getMaintenanceAlerts = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const items = await stockService.getMaintenanceAlerts();
         res.status(200).json({
@@ -65,12 +65,12 @@ export const getMaintenanceAlerts = async (req: Request, res: Response) => {
             data: items
         });
     } catch (error) {
-        handleError(res, error);
+        next(error);
     }
 };
 
 // Update maintenance status
-export const updateMaintenance = async (req: Request, res: Response) => {
+export const updateMaintenance = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         
@@ -90,49 +90,6 @@ export const updateMaintenance = async (req: Request, res: Response) => {
             data: item
         });
     } catch (error) {
-        handleError(res, error);
+        next(error);
     }
-};
-
-// Purchase item (decrement stock) - COMMENTED OUT until order flow is integrated
-/*
-const purchaseSchema = z.object({
-    quantity: z.number().min(1)
-});
-
-export const purchaseItem = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        
-        // Validate that id is provided
-        if (!id) {
-            return res.status(400).json({
-                success: false,
-                message: "Item ID is required"
-            });
-        }
-
-        const { quantity } = purchaseSchema.parse(req.body);
-        
-        // Decrement stock when item is purchased
-        const item = await stockService.updateStock(id, quantity, "decrement");
-        
-        res.status(200).json({
-            success: true,
-            message: "Item purchased successfully",
-            data: item
-        });
-    } catch (error) {
-        handleError(res, error);
-    }
-};
-*/
-
-// Centralized error handler
-const handleError = (res: Response, error: unknown) => {
-    console.error("Error:", error);
-    res.status(500).json({
-        success: false,
-        message: (error as Error).message || "Internal server error"
-    });
 };

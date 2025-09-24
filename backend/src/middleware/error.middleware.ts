@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { ZodError } from "zod";
 
 //customer error interface 
 interface CustomError extends Error {
@@ -16,6 +17,20 @@ const errorMiddleware = (err: CustomError, req: Request, res: Response, next: Ne
         error.message = err.message;
         
         console.error(err);
+
+        //Zod validation error
+        if(err instanceof ZodError) {
+            const message = 'Validation failed';
+            const validationErrors = err.issues.map((issue) => ({
+                field: issue.path.join('.'),
+                message: issue.message
+            }));
+            return res.status(400).json({
+                success: false,
+                message,
+                errors: validationErrors
+            });
+        }
 
         //Mongoose bad ObjectId
         if(err.name === 'CastError'){
