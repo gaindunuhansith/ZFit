@@ -1,4 +1,4 @@
-import TrainerModel, { type TrainerDocument } from '../models/trainer.model.js';
+import TrainerModel, { type TrainerDocument } from '../models/Trainer.model.js';
 import AppError from '../util/AppError.js';
 import { NOT_FOUND, BAD_REQUEST, INTERNAL_SERVER_ERROR } from '../constants/http.js';
 import mongoose from 'mongoose';

@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import FacilityModel, { type FacilityDocument } from '../models/Facility.model.js';
+import FacilityModel, { type FacilityDocument } from '../models/facility.model.js';
 import AppAssert from '../util/AppAssert.js';
 
 export class FacilityService {

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { TrainerController } from '../controllers/Trainer.controller.js';
+import { validateBody, createTrainerSchema, updateTrainerSchema, validateIdParam } from  '../validations/Zod-validation.js';
 
 const router = Router();
 

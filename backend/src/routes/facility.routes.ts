@@ -1,7 +1,14 @@
 
 
 import express from 'express';
-import { FacilityController } from '../controllers/Facility.controller.js';
+import { FacilityController } from '../controllers/facility.controller.js';
+import {
+  validateBody,
+  createFacilitySchema,
+  updateFacilitySchema,
+  validateIdParam,
+} from "../validations/Zod-validation.js";
+
 
 const router = express.Router();
 

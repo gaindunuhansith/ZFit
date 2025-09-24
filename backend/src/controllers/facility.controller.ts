@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { FacilityService } from '../services/Facility.service.js';
+import { FacilityService } from '../services/facility.service.js';
 
 export class FacilityController {
     // Create a new facility

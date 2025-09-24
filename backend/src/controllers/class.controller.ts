@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ClassService } from '../services/class.service.js';
+import {createClassSchema } from '../validations/Zod-validation.js';
 
 export class ClassController {
     // Create a new class

@@ -1,5 +1,6 @@
 import express from 'express';
 import { ClassController } from '../controllers/class.controller.js';
+import { validateBody, createClassSchema, updateClassSchema, validateIdParam } from '../validations/Zod-validation.js';
 
 const router = express.Router();
 
