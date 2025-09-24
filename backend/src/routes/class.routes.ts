@@ -1,6 +1,5 @@
 import express from 'express';
 import { ClassController } from '../controllers/class.controller.js';
-import { validateBody, createClassSchema, updateClassSchema, validateIdParam } from '../validations/Zod-validation.js';
 
 const router = express.Router();
 
@@ -13,10 +12,10 @@ router.get('/', ClassController.getClasses);
 // Get class by ID
 router.get('/:id', ClassController.getClassById);
 
-// Update class
-router.put('/:id', ClassController.updateClass);
+// Update class by ID
+router.patch('/:id', ClassController.updateClass);
 
-// Delete class
+// Delete class by ID
 router.delete('/:id', ClassController.deleteClass);
 
 export default router;

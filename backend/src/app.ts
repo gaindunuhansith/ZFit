@@ -18,7 +18,7 @@ import cartRoutes from "./routes/cart.routes.js";
 import facilityRoutes from "./routes/facility.routes.js";
 import classRoutes from "./routes/Class.routes.js";
 import trainerRoutes from "./routes/Trainer.routes.js";
-
+import BookingRoutes from "./routes/Booking.routes.js";
 
 //creating a express app instance
 const app: express.Application = express();
@@ -45,6 +45,7 @@ app.use('/api/v1/refunds', refundRoutes);  // Added refund routes
 app.use('/api/v1/facilities', facilityRoutes);
 app.use('/api/v1/classes', classRoutes);
 app.use('/api/v1/trainers', trainerRoutes);
+app.use('/api/v1/Booking', BookingRoutes);
 
 
 //API health check
