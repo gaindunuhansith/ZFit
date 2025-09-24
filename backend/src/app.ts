@@ -15,7 +15,7 @@ import paymentRoutes from "./routes/payment.routes.js";  // Added payment routes
 import payMethodRoutes from "./routes/payMethod.routes.js";  // Added payMethod routes
 import refundRoutes from "./routes/refund.routes.js";  // Added refund routes
 import cartRoutes from "./routes/cart.routes.js";
-import facilityRoutes from "./routes/facility.routes.js";
+import facilityRoutes from "./routes/Facility.routes.js";
 import classRoutes from "./routes/class.routes.js";
 import trainerRoutes from "./routes/Trainer.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
