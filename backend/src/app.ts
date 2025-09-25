@@ -5,6 +5,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 
 import authRouter from "./routes/auth.route.js";
+import membershipRouter from "./routes/membership.routes.js";  // Added membership routes
 import inventoryRoutes from "./routes/inventory.routes.js";  // Consolidated inventory routes
 import invoiceRoutes from "./routes/invoice.routes.js";  // Added invoice routes
 import paymentRoutes from "./routes/payment.routes.js";  // Added payment routes
@@ -29,8 +30,9 @@ app.use(express.json());
 app.use(morgan("dev"));
 
 //routes
-app.use('/api/v1/inventory', inventoryRoutes);  // Consolidated inventory routes (categories, suppliers, items, stock, reports, cart, orders)
 app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/memberships", membershipRouter);  // Added membership routes
+app.use('/api/v1/inventory', inventoryRoutes);  // Consolidated inventory routes (categories, suppliers, items, stock, reports, cart, orders)
 app.use('/api/v1/invoices', invoiceRoutes);  // Added invoice routes
 app.use('/api/v1/payments', paymentRoutes);  // Added payment routes
 app.use('/api/v1/paymethods', payMethodRoutes);  // Added payMethod routes
