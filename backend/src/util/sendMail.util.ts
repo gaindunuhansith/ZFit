@@ -15,6 +15,7 @@ const getToEmail = (to: string) =>
     env.NODE_ENV === "development" ? "delivered@resend.dev" : to;
 
 export const sendMail = async ({ to, subject, text, html }: Params) => {
+
     return await resend.emails.send({
         from: getFromEmail(),
         to: getToEmail(to),

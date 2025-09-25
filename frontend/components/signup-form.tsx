@@ -13,23 +13,30 @@ const signupSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"),
   password: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Must contain uppercase letter")
-    .regex(/[a-z]/, "Must contain lowercase letter")
-    .regex(/[0-9]/, "Must contain number")
-    .regex(/[^A-Za-z0-9]/, "Must contain special character"),
+    .min(8, "Password must be at least 8 characters long")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
   confirmPassword: z.string(),
   contactNo: z.string()
     .min(1, "Phone number is required")
-    .regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan phone number"),
+    .regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan Phone number"),
   dob: z.string().optional(),
-  address: z.string().optional(),
-  emergencyContact: z.string().optional(),
-  gdpr: z.boolean().refine(val => val === true, "You must accept the GDPR terms"),
-  marketing: z.boolean(),
+  profile: z.object({
+    address: z.string().optional(),
+    emergencyContact: z.string().optional()
+  }).optional(),
+  consent: z.object({
+    gdpr: z.boolean(),
+    marketing: z.boolean(),
+  }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
+}).refine((data) => data.consent.gdpr === true, {
+  message: "You must accept the GDPR terms",
+  path: ["consent", "gdpr"],
 })
 
 type SignupFormData = z.infer<typeof signupSchema>
@@ -51,10 +58,14 @@ export function SignupForm() {
     confirmPassword: "",
     contactNo: "",
     dob: "",
-    address: "",
-    emergencyContact: "",
-    gdpr: false,
-    marketing: false,
+    profile: {
+      address: "",
+      emergencyContact: "",
+    },
+    consent: {
+      gdpr: false,
+      marketing: false,
+    },
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -86,9 +97,58 @@ export function SignupForm() {
   const passwordStrength = getPasswordStrength(formData.password)
 
   const handleInputChange = (field: keyof SignupFormData, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData(prev => {
+      if (field === "profile") {
+        return {
+          ...prev,
+          profile: value as SignupFormData["profile"]
+        };
+      }
+      if (field === "consent") {
+        return {
+          ...prev,
+          consent: value as SignupFormData["consent"]
+        };
+      }
+      return {
+        ...prev,
+        [field]: value
+      };
+    });
+    if (fieldErrors[field as string]) {
+      setFieldErrors(prev => ({ ...prev, [field as string]: "" }))
+    }
+  }
+
+  const handleProfileChange = (field: "address" | "emergencyContact", value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      profile: {
+        ...prev.profile,
+        [field]: value
+      }
+    }));
     if (fieldErrors[field]) {
       setFieldErrors(prev => ({ ...prev, [field]: "" }))
+    }
+  }
+
+  const handleConsentChange = (field: "gdpr" | "marketing", value: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      consent: {
+        ...prev.consent,
+        [field]: value
+      }
+    }));
+    if (fieldErrors.consent?.[field]) {
+      setFieldErrors(prev => ({
+        ...prev,
+        consent: prev.consent ? {
+          ...prev.consent,
+          [field]: ""
+        } : { gdpr: "", marketing: "" }
+      }))
     }
   }
 
@@ -167,13 +227,12 @@ export function SignupForm() {
           confirmPassword: validatedData.confirmPassword,
           contactNo: validatedData.contactNo,
           dob: validatedData.dob || undefined,
-          address: validatedData.address || undefined,
-          emergencyContact: validatedData.emergencyContact || undefined,
-          consent: {
-            gdpr: validatedData.gdpr,
-            marketing: validatedData.marketing,
-          },
-          role: "user", // Default role
+          profile: validatedData.profile ? {
+            address: validatedData.profile.address || undefined,
+            emergencyContact: validatedData.profile.emergencyContact || undefined,
+          } : undefined,
+          consent: validatedData.consent,
+          role: "member",
         }),
       })
 
@@ -190,16 +249,8 @@ export function SignupForm() {
         return
       }
 
-      // Success - handle registration
-      console.log("Registration successful:", data)
-
-      // Store token if provided
-      if (data.token) {
-        localStorage.setItem("token", data.token)
-      }
-
-      // Redirect to dashboard or verification page
-      window.location.href = "/"
+      // Success - redirect to email verification page
+      window.location.href = "/signup/verify-email"
 
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -429,8 +480,8 @@ export function SignupForm() {
                 id="address"
                 type="text"
                 placeholder="Your Address"
-                value={formData.address}
-                onChange={(e) => handleInputChange("address", e.target.value)}
+                value={formData.profile?.address || ""}
+                onChange={(e) => handleProfileChange("address", e.target.value)}
                 className="h-12 pl-10 bg-[#202022] border-gray-700 text-white placeholder:text-gray-500 focus:border-[#AAFF69] focus:ring-[#AAFF69]"
                 disabled={isLoading}
               />
@@ -445,8 +496,8 @@ export function SignupForm() {
                 id="emergencyContact"
                 type="tel"
                 placeholder="Emergency Contact Number"
-                value={formData.emergencyContact}
-                onChange={(e) => handleInputChange("emergencyContact", e.target.value.replace(/\D/g, ""))}
+                value={formData.profile?.emergencyContact || ""}
+                onChange={(e) => handleProfileChange("emergencyContact", e.target.value.replace(/\D/g, ""))}
                 className="h-12 pl-10 bg-[#202022] border-gray-700 text-white placeholder:text-gray-500 focus:border-[#AAFF69] focus:ring-[#AAFF69]"
                 disabled={isLoading}
                 maxLength={10}
@@ -458,8 +509,8 @@ export function SignupForm() {
             <div className="flex items-start space-x-3">
               <Checkbox
                 id="gdpr"
-                checked={formData.gdpr}
-                onCheckedChange={(checked) => handleInputChange("gdpr", checked as boolean)}
+                checked={formData.consent.gdpr}
+                onCheckedChange={(checked) => handleConsentChange("gdpr", checked as boolean)}
                 disabled={isLoading}
                 className="mt-1"
               />
@@ -481,8 +532,8 @@ export function SignupForm() {
             <div className="flex items-start space-x-3">
               <Checkbox
                 id="marketing"
-                checked={formData.marketing}
-                onCheckedChange={(checked) => handleInputChange("marketing", checked as boolean)}
+                checked={formData.consent.marketing}
+                onCheckedChange={(checked) => handleConsentChange("marketing", checked as boolean)}
                 disabled={isLoading}
                 className="mt-1"
               />
