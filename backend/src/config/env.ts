@@ -20,4 +20,8 @@ export default cleanEnv(process.env, {
     EMAIL_SENDER: str(),
     PAYHERE_MERCHANT_ID: str(),
     PAYHERE_MERCHANT_SECRET: str(),
+    PAYHERE_RETURN_URL: str(),
+    PAYHERE_CANCEL_URL: str(),
+    PAYHERE_NOTIFY_URL: str(),
+    PAYHERE_ENV: str(),
 });
