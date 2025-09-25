@@ -1,11 +1,11 @@
-import { LoginForm } from "@/components/login-form"
+import { SignupForm } from "@/components/signup-form"
 import Link from "next/link"
 
-export default function LoginPage() {
+export default function SignupPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 flex items-center justify-center bg-black px-4">
-        <LoginForm />
+        <SignupForm />
       </div>
       <div className="pb-8 text-center">
         <div className="flex justify-center space-x-6 text-xs">
