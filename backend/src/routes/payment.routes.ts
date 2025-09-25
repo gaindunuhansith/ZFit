@@ -13,12 +13,12 @@ const router = Router();
 
 // Payment routes
 // Process payment (accessible by manager and staff)
-router.post('/process/:id', authenticate(["manager","staff"]), processPayment);
+router.post('/payment/process/:id', authenticate(["manager","staff"]), processPayment);
 //get all payments
-router.get('/', authenticate(["manager","staff"]), getPayments);
-router.get('/:id', authenticate(["manager","staff"]), getPaymentById);
+router.get('/payment/', authenticate(["manager","staff"]), getPayments);
+router.get('/payment/:id', authenticate(["manager","staff"]), getPaymentById);
 
-router.post('/', authenticate(["manager"]), createPayment);
-router.put('/:id', authenticate(["manager"]), updatePayment);
-router.delete('/:id', authenticate(["manager"]), deletePayment);
+router.post('/payment/', authenticate(["manager"]), createPayment);
+router.put('/payment/:id', authenticate(["manager"]), updatePayment);
+router.delete('/payment/:id', authenticate(["manager"]), deletePayment);
 export default router;
