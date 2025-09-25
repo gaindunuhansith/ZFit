@@ -18,6 +18,10 @@ type CreateAccountParams = {
     email: string;
     password: string;
     contactNo: string;
+    profile?: {
+        address?: string | undefined;
+        emergencyContact?: string | undefined;
+    } | undefined,
     consent: {
         gdpr: boolean;
         marketing: boolean;
@@ -39,6 +43,10 @@ export const createAccount = async (data: CreateAccountParams) => {
         email: data.email,
         password: data.password,
         contactNo: data.contactNo,
+        profile: {
+            address: data.profile?.address,
+            emergencyContact: data.profile?.emergencyContact
+        },
         consent: {
             gdpr: data.consent.gdpr,
             marketing: data.consent.marketing
