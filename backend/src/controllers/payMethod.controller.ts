@@ -1,4 +1,5 @@
-import type { Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
+import { z } from 'zod';
 import mongoose from 'mongoose';
 import {
     createPaymentMethodService,
@@ -8,54 +9,66 @@ import {
     deletePaymentMethodService
 } from '../services/payMethod.services.js';
 
-interface AuthenticatedRequest extends Request {
-    user: {
-        id: string;
-        role?: string;
-    };
-}
 
-// Added validation functions
-const validateCreatePaymentMethod = (data: any): string | null => {
-    if (!data.provider || !data.type) return 'Missing required fields: provider and type';
-    if (!['card', 'bank-transfer', 'cash'].includes(data.type)) return 'Invalid type';
-    return null;
-};
+// Zod validation schemas
+const createPaymentMethodSchema = z.object({
+    type: z.enum(['card', 'bank-transfer', 'cash']),
+    provider: z.string().min(1, 'Provider is required'),
+    maskedNumber: z.string().optional(),
+    expiryMonth: z.string().optional(),
+    expiryYear: z.string().optional(),
+    gatewayToken: z.string().optional(),
+    isDefault: z.boolean().optional(),
+    isActive: z.boolean().optional()
+});
 
-const validateUpdatePaymentMethod = (data: any): string | null => {
-    if (data.type && !['card', 'bank-transfer', 'cash'].includes(data.type)) return 'Invalid type';
-    return null;
-};
+const updatePaymentMethodSchema = z.object({
+    type: z.enum(['card', 'bank-transfer', 'cash']).optional(),
+    provider: z.string().min(1).optional(),
+    maskedNumber: z.string().optional(),
+    expiryMonth: z.string().optional(),
+    expiryYear: z.string().optional(),
+    gatewayToken: z.string().optional(),
+    isDefault: z.boolean().optional(),
+    isActive: z.boolean().optional()
+});
 
-export const createPaymentMethod = async (req: Request, res: Response) => {
+export const createPaymentMethod = async (req: Request, res: Response,next: NextFunction) => {
     try {
-        const error = validateCreatePaymentMethod(req.body);
-        if (error) return res.status(400).json({ success: false, message: error });
+        const validated = createPaymentMethodSchema.parse(req.body);
 
-        // For testing purposes, use a dummy userId if not provided
-        const methodData = { ...req.body };
-        if (!methodData.userId) {
-            methodData.userId = new mongoose.Types.ObjectId().toString(); // Dummy ObjectId as string
-        }
+        const methodData = { 
+            ...validated,
+            userId: (req as any).userId // From auth middleware
+        };
 
-        const method = await createPaymentMethodService(methodData.userId, methodData);
+        const method = await createPaymentMethodService((req as any).userId, validated);
         res.status(201).json({ success: true, data: method });
     } catch (error) {
-        res.status(400).json({ success: false, message: (error as Error).message });
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors: error.issues.map((e) => ({
+                    field: e.path.join('.'),
+                    message: e.message,
+                })),
+            });
+        }
+        next(error);
     }
 };
 
-export const getPaymentMethods = async (req: Request, res: Response) => {
+export const getPaymentMethods = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        // For testing without auth, get all payment methods (normally would use userId from auth)
-        const methods = await getPaymentMethodsService(''); // Empty string to get all
+        const methods = await getPaymentMethodsService((req as any).userId);
         res.json({ success: true, data: methods });
     } catch (error) {
-        res.status(500).json({ success: false, message: (error as Error).message });
+        next(error);
     }
 };
 
-export const getPaymentMethodById = async (req: Request, res: Response) => {
+export const getPaymentMethodById = async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.params.id) {
             return res.status(400).json({ success: false, message: 'Payment method ID is required' });
@@ -64,28 +77,42 @@ export const getPaymentMethodById = async (req: Request, res: Response) => {
         if (!method) return res.status(404).json({ success: false, message: 'Payment method not found' });
         res.json({ success: true, data: method });
     } catch (error) {
-        res.status(500).json({ success: false, message: (error as Error).message });
+        next(error);
     }
 };
 
-export const updatePaymentMethod = async (req: Request, res: Response) => {
+export const updatePaymentMethod = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const error = validateUpdatePaymentMethod(req.body);
-        if (error) return res.status(400).json({ success: false, message: error });
+        const validated = updatePaymentMethodSchema.parse(req.body);
 
         if (!req.params.id) {
             return res.status(400).json({ success: false, message: 'Payment method ID is required' });
         }
 
-        const method = await updatePaymentMethodService(req.params.id, req.body);
+        // Filter out undefined values to comply with exactOptionalPropertyTypes
+        const updateData = Object.fromEntries(
+            Object.entries(validated).filter(([, value]) => value !== undefined)
+        );
+
+        const method = await updatePaymentMethodService(req.params.id, updateData);
         if (!method) return res.status(404).json({ success: false, message: 'Payment method not found' });
         res.json({ success: true, data: method });
     } catch (error) {
-        res.status(400).json({ success: false, message: (error as Error).message });
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors: error.issues.map((e) => ({
+                    field: e.path.join('.'),
+                    message: e.message,
+                })),
+            });
+        }
+        next(error);
     }
 };
 
-export const deletePaymentMethod = async (req: Request, res: Response) => {
+export const deletePaymentMethod = async (req: Request, res: Response,next: NextFunction) => {
     try {
         if (!req.params.id) {
             return res.status(400).json({ success: false, message: 'Payment method ID is required' });
@@ -95,6 +122,6 @@ export const deletePaymentMethod = async (req: Request, res: Response) => {
         if (!method) return res.status(404).json({ success: false, message: 'Payment method not found' });
         res.json({ success: true, message: 'Payment method deleted' });
     } catch (error) {
-        res.status(500).json({ success: false, message: (error as Error).message });
+       next(error);
     }
 };

@@ -57,6 +57,5 @@ paymentMethodSchema.pre<IPaymentMethod>('save', async function(this: IPaymentMet
     next();
 });
 
-paymentMethodSchema.index({ userId: 1, isActive: 1 });
 
 export default mongoose.model<IPaymentMethod>('PaymentMethod', paymentMethodSchema);
