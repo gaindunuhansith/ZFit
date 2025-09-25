@@ -49,9 +49,6 @@ export const createRefund = async (req: Request, res: Response, next: NextFuncti
         const refund = await createRefundService(refundData);
         res.status(201).json({ success: true, data: refund });
     } catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({ success: false, message: error.issues?.[0]?.message || 'Validation error' });
-        }
         next(error);
     }
 };
@@ -85,9 +82,6 @@ export const updateRefund = async (req: Request, res: Response, next: NextFuncti
         const refund = await updateRefundService(req.params.id, validatedData);
         res.json({ success: true, data: refund });
     } catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({ success: false, message: error.issues?.[0]?.message || 'Validation error' });
-        }
         next(error);
     }
 };

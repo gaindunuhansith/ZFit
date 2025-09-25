@@ -64,16 +64,6 @@ export const createPayment = async (req: Request, res: Response, next: NextFunct
             data: payment 
         });
     } catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation failed',
-                errors: error.issues.map((e) => ({
-                    field: e.path.join('.'),
-                    message: e.message,
-                })),
-            });
-        }
         next(error); 
     }
 };
@@ -99,16 +89,6 @@ export const getPaymentById = async (req: Request, res: Response, next: NextFunc
 
         res.json({ success: true, data: payment });
     } catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation failed',
-                errors: error.issues.map((e) => ({
-                    field: e.path.join('.'),
-                    message: e.message,
-                })),
-            });
-        }
         next(error); 
     }
 };
@@ -138,16 +118,6 @@ export const updatePayment = async (req: Request, res: Response, next: NextFunct
             data: payment 
         });
     } catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation failed',
-                errors: error.issues.map((e) => ({
-                    field: e.path.join('.'),
-                    message: e.message,
-                })),
-            });
-        }
         next(error); 
     }
 };
@@ -162,16 +132,6 @@ export const deletePayment = async (req: Request, res: Response, next: NextFunct
 
         res.json({ success: true, message: 'Payment deleted successfully' });
     } catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation failed',
-                errors: error.issues.map((e) => ({
-                    field: e.path.join('.'),
-                    message: e.message,
-                })),
-            });
-        }
         next(error); 
     }
 };
@@ -191,16 +151,6 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
             data: payment 
         });
     } catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation failed',
-                errors: error.issues.map((e) => ({
-                    field: e.path.join('.'),
-                    message: e.message,
-                })),
-            });
-        }
         next(error); 
     }
 };

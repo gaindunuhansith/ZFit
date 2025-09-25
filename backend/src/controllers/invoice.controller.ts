@@ -115,16 +115,6 @@ export const updateInvoice = async (req: Request, res: Response, next: NextFunct
         if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found' });
         res.json({ success: true, data: invoice });
     } catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation failed',
-                errors: error.issues.map((e) => ({
-                    field: e.path.join('.'),
-                    message: e.message,
-                })),
-            });
-        }
         next(error);
     }
 };
