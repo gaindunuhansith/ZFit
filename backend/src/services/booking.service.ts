@@ -1,60 +1,41 @@
-import Booking, { type IBooking } from "../models/Booking.model.js";
+import { Booking, type IBooking } from "../models/Booking.model.js";
+import mongoose from "mongoose";
 
-export default class BookingService {
-  async createBooking(data: Partial<IBooking>) {
-    return await Booking.create(data);
-  }
+// Create Booking
+export const createBooking = async (data: IBooking) => {
+  data.cancellationDeadline = new Date(data.scheduledDate);
+  data.cancellationDeadline.setDate(data.scheduledDate.getDate() - 1);
+  return await Booking.create(data);
+};
 
-  async getBookings() {
-    return await Booking.find()
-      .populate("class")
-      .populate("trainer")
-      .populate("facility");
-  }
+// Get all bookings
+export const getAllBookings = async () => {
+  return await Booking.find()
+    .populate("memberId")
+    .populate("classId")
+    .populate("trainerId")
+    .populate("facilityId");
+};
 
-  async getBookingsByMember(memberId: string) {
-    return await Booking.find({ member: memberId })
-      .populate("class")
-      .populate("trainer")
-      .populate("facility");
-  }
+// Get by ID
+export const getBookingById = async (id: string) => {
+  return await Booking.findById(id)
+    .populate("memberId")
+    .populate("classId")
+    .populate("trainerId")
+    .populate("facilityId");
+};
 
-  async getBookingById(id: string) {
-    return await Booking.findById(id)
-      .populate("class")
-      .populate("trainer")
-      .populate("facility");
-  }
+// Update Booking
+export const updateBooking = async (id: string, data: Partial<IBooking>) => {
+  return await Booking.findByIdAndUpdate(id, data, { new: true })
+    .populate("memberId")
+    .populate("classId")
+    .populate("trainerId")
+    .populate("facilityId");
+};
 
-  async updateBooking(id: string, data: Partial<IBooking>) {
-    return await Booking.findByIdAndUpdate(id, data, { new: true });
-  }
-
-  async deleteBooking(id: string) {
-    return await Booking.findByIdAndDelete(id);
-  }
-
-  async cancelBooking(id: string) {
-    const booking = await Booking.findById(id);
-    if (!booking) throw new Error("Booking not found");
-
-    const now = new Date();
-    if (booking.cancellationDeadline.getTime() <= now.getTime()) {
-      throw new Error("Cancellation deadline passed");
-    }
-
-    booking.status = "cancelled";
-    return await booking.save();
-  }
-
-  async rescheduleBooking(id: string, newDate: Date) {
-    const booking = await Booking.findById(id);
-    if (!booking) throw new Error("Booking not found");
-
-    booking.bookingDate = newDate;
-    booking.cancellationDeadline = new Date(newDate.getTime() - 24 * 60 * 60 * 1000);
-    booking.status = "rescheduled";
-
-    return await booking.save();
-  }
-}
+// Delete Booking
+export const deleteBooking = async (id: string) => {
+  return await Booking.findByIdAndDelete(id);
+};

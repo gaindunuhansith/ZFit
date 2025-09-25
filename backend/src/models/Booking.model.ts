@@ -1,29 +1,29 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-export interface IBooking extends Document {
-  member: string;
-  class?: string;
-  trainer?: string;
-  facility?: string;
-  bookingDate: Date;
-  cancellationDeadline: Date;
-  status: "booked" | "cancelled" | "rescheduled" | "completed";
-  createdAt: Date;
-  updatedAt: Date;
+export interface IBooking {
+  _id?: mongoose.Types.ObjectId;
+  memberId: mongoose.Types.ObjectId;
+  classId: mongoose.Types.ObjectId;
+  trainerId: mongoose.Types.ObjectId;
+  facilityId: mongoose.Types.ObjectId;
+  scheduledDate: Date;
+  cancellationDeadline?: Date;
+  status?: "pending" | "confirmed" | "cancelled" | "completed";
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-const BookingSchema: Schema = new Schema<IBooking>({
-  member: { type: String, required: true },
-  class: { type: Schema.Types.ObjectId, ref: "Class" },
-  trainer: { type: Schema.Types.ObjectId, ref: "Trainer" },
-  facility: { type: Schema.Types.ObjectId, ref: "Facility" },
-  bookingDate: { type: Date, required: true },
-  cancellationDeadline: { type: Date, required: true },
-  status: {
-    type: String,
-    enum: ["booked", "cancelled", "rescheduled", "completed"],
-    default: "booked"
-  }
-}, { timestamps: true });
+const BookingSchema = new Schema<IBooking>(
+  {
+    memberId: { type: Schema.Types.ObjectId, ref: "Member", required: true, index: true },
+    classId: { type: Schema.Types.ObjectId, ref: "Class", required: true },
+    trainerId: { type: Schema.Types.ObjectId, ref: "Trainer", required: true },
+    facilityId: { type: Schema.Types.ObjectId, ref: "Facility", required: true },
+    scheduledDate: { type: Date, required: true },
+    cancellationDeadline: { type: Date },
+    status: { type: String, enum: ["pending","confirmed","cancelled","completed"], default: "confirmed", index: true }
+  },
+  { timestamps: true }
+);
 
-export default mongoose.model<IBooking>("Booking", BookingSchema);
+export const Booking = mongoose.model<IBooking>("Booking", BookingSchema);

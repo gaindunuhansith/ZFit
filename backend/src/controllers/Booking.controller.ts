@@ -1,112 +1,151 @@
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
-import BookingService from "../services/booking.service.js";
+import mongoose from "mongoose";
+import * as BookingService from "../services/booking.service.js";
 
-const bookingService = new BookingService();
-
-// ---------------- SCHEMAS ----------------
-const createBookingSchema = z.object({
-  member: z.string().min(1, "Member ID is required"),
-  class: z.string().optional(),
-  trainer: z.string().optional(),
-  facility: z.string().optional(),
-  bookingDate: z.preprocess(
-    (v) => (v ? new Date(v as string) : undefined),
-    z.date({ invalid_type_error: "Booking date must be a valid date" })
-  ),
-}).refine(val => !!(val.class || val.trainer || val.facility), "Provide at least class, trainer, or facility");
-
-const bookingIdSchema = z.object({
-  id: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid booking ID")
+// Zod schema
+const bookingSchema = z.object({
+  memberId: z.string().min(1),
+  classId: z.string().min(1),
+  trainerId: z.string().min(1),
+  facilityId: z.string().min(1),
+  scheduledDate: z.string().refine(d => !isNaN(Date.parse(d)), "Invalid date"),
+  status: z.enum(["pending","confirmed","cancelled","completed"]).optional()
 });
 
-// ---------------- CONTROLLERS ----------------
+type BookingInput = z.infer<typeof bookingSchema>;
 
-// Create booking
-export const createBooking = async (req: Request, res: Response) => {
+// Create
+export const createBooking = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const validated = createBookingSchema.parse(req.body);
-    const cancellationDeadline = new Date(validated.bookingDate.getTime() - 24*60*60*1000);
+    const data: BookingInput = bookingSchema.parse(req.body);
 
-    const booking = await bookingService.createBooking({
-      ...validated,
-      cancellationDeadline,
-      status: "booked"
+    ["memberId","classId","trainerId","facilityId"].forEach(key => {
+      if (!mongoose.Types.ObjectId.isValid(data[key as keyof BookingInput] as string)) {
+        throw new Error(`Invalid ${key}`);
+      }
     });
 
-    res.status(201).json({
-      success: true,
-      message: "Booking created",
-      cancellationDeadline,
-      data: booking
+    const booking = await BookingService.createBooking({
+      memberId: new mongoose.Types.ObjectId(data.memberId),
+      classId: new mongoose.Types.ObjectId(data.classId),
+      trainerId: new mongoose.Types.ObjectId(data.trainerId),
+      facilityId: new mongoose.Types.ObjectId(data.facilityId),
+      scheduledDate: new Date(data.scheduledDate),
+      status: data.status || "confirmed"
     });
-  } catch (error) {
-    handleError(res, error);
-  }
+
+    res.status(201).json({ success: true, data: booking });
+  } catch (err) { next(err); }
 };
 
-// Get all bookings or by member
-export const getBookings = async (req: Request, res: Response) => {
+// Get All
+export const getAllBookings = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const memberId = req.query.member as string | undefined;
-    const bookings = memberId 
-      ? await bookingService.getBookingsByMember(memberId) 
-      : await bookingService.getBookings();
-
+    const bookings = await BookingService.getAllBookings();
     res.status(200).json({ success: true, data: bookings });
-  } catch (error) {
-    handleError(res, error);
-  }
+  } catch (err) { next(err); }
 };
 
-// Cancel booking (before deadline)
-export const cancelBooking = async (req: Request, res: Response) => {
+// Get by ID
+export const getBookingById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = bookingIdSchema.parse({ id: req.params.id });
-    const booking = await bookingService.getBookingById(id);
+    const { id } = req.params;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: "Invalid Booking ID" });
 
+    const booking = await BookingService.getBookingById(id);
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
 
-    if (new Date() > booking.cancellationDeadline)
-      return res.status(400).json({ success: false, message: "Cannot cancel after deadline" });
-
-    const cancelled = await bookingService.cancelBooking(id);
-    res.status(200).json({ success: true, message: "Booking cancelled", data: cancelled });
-  } catch (error) {
-    handleError(res, error);
-  }
+    res.status(200).json({ success: true, data: booking });
+  } catch (err) { next(err); }
 };
 
-// Reschedule booking
-export const rescheduleBooking = async (req: Request, res: Response) => {
+// Update
+export const updateBooking = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = bookingIdSchema.parse({ id: req.params.id });
-    const booking = await bookingService.getBookingById(id);
+    const { id } = req.params;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: "Invalid Booking ID" });
 
+    const data: Partial<BookingInput> = bookingSchema.partial().parse(req.body) as Partial<BookingInput>;
+
+    const updateData: any = {};
+    if (data.memberId) updateData.memberId = new mongoose.Types.ObjectId(data.memberId);
+    if (data.classId) updateData.classId = new mongoose.Types.ObjectId(data.classId);
+    if (data.trainerId) updateData.trainerId = new mongoose.Types.ObjectId(data.trainerId);
+    if (data.facilityId) updateData.facilityId = new mongoose.Types.ObjectId(data.facilityId);
+    if (data.scheduledDate) {
+      updateData.scheduledDate = new Date(data.scheduledDate);
+      const cd = new Date(data.scheduledDate);
+      cd.setDate(cd.getDate() - 1);
+      updateData.cancellationDeadline = cd;
+    }
+    if (data.status) updateData.status = data.status;
+
+    const booking = await BookingService.updateBooking(id, updateData);
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
-    if (new Date() > booking.cancellationDeadline)
-      return res.status(400).json({ success: false, message: "Cannot reschedule after deadline" });
 
-    const { bookingDate } = z.object({
-      bookingDate: z.preprocess(v => new Date(v as string), z.date({ invalid_type_error: "Invalid date" }))
-    }).parse(req.body);
-
-    const newDeadline = new Date(bookingDate.getTime() - 24*60*60*1000);
-    const updated = await bookingService.rescheduleBooking(id, bookingDate, newDeadline);
-
-    res.status(200).json({ success: true, message: "Booking rescheduled", cancellationDeadline: newDeadline, data: updated });
-  } catch (error) {
-    handleError(res, error);
-  }
+    res.status(200).json({ success: true, data: booking });
+  } catch (err) { next(err); }
 };
 
-// ---------------- ERROR HANDLER ----------------
-const handleError = (res: Response, error: unknown) => {
-  if (error instanceof z.ZodError) {
-    return res.status(400).json({
-      success: false,
-      errors: error.issues.map(e => ({ field: e.path.join("."), message: e.message }))
+// Delete
+export const deleteBooking = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: "Invalid Booking ID" });
+
+    const booking = await BookingService.deleteBooking(id);
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+    res.status(200).json({ success: true, data: booking });
+  } catch (err) { next(err); }
+};
+
+// Cancel
+export const cancelBooking = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: "Invalid Booking ID" });
+
+    const booking = await BookingService.getBookingById(id);
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+    const now = new Date();
+    if (booking.cancellationDeadline && now > booking.cancellationDeadline) {
+      return res.status(400).json({ success: false, message: "Cancellation deadline passed" });
+    }
+
+    const cancelledBooking = await BookingService.updateBooking(id, { status: "cancelled" });
+    res.status(200).json({ success: true, data: cancelledBooking, message: "Booking cancelled" });
+  } catch (err) { next(err); }
+};
+
+// Reschedule
+export const rescheduleBooking = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { scheduledDate } = req.body;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: "Invalid Booking ID" });
+    if (!scheduledDate || isNaN(Date.parse(scheduledDate))) return res.status(400).json({ success: false, message: "Invalid scheduledDate" });
+
+    const booking = await BookingService.getBookingById(id);
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+    const now = new Date();
+    if (booking.cancellationDeadline && now > booking.cancellationDeadline) {
+      return res.status(400).json({ success: false, message: "Reschedule deadline passed" });
+    }
+
+    const newDate = new Date(scheduledDate);
+    const newDeadline = new Date(newDate);
+    newDeadline.setDate(newDate.getDate() - 1);
+
+    const updatedBooking = await BookingService.updateBooking(id, {
+      scheduledDate: newDate,
+      cancellationDeadline: newDeadline,
+      status: "confirmed"
     });
-  }
-  res.status(500).json({ success: false, message: (error as Error).message || "Server error" });
+
+    res.status(200).json({ success: true, data: updatedBooking, message: "Booking rescheduled" });
+  } catch (err) { next(err); }
 };
