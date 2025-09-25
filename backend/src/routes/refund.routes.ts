@@ -2,14 +2,14 @@ import { Router } from 'express';
 import {
     createRefund, getRefunds, getRefundById, updateRefund, deleteRefund
 } from '../controllers/refund.controller.js';
-//middleware
+import authenticate from '../middleware/auth.middleware.js';
 
 const router = Router();
 
-router.get('/', getRefunds);
-router.get('/:id', getRefundById);
-router.post('/', createRefund);
-router.put('/:id',  updateRefund);
-router.delete('/:id', deleteRefund);
+router.get('/', authenticate(["manager","staff"]), getRefunds);
+router.get('/:id', authenticate(["manager","staff"]), getRefundById);
+router.post('/', authenticate(["manager","staff"]), createRefund);
+router.put('/:id', authenticate(["manager","staff"]), updateRefund);
+router.delete('/:id', authenticate(["manager","staff"]), deleteRefund);
 
 export default router;
