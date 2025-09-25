@@ -52,3 +52,17 @@ const updateMembershipSchema = z.object({
 const membershipIdSchema = z.string().min(1, "Membership ID is required");
 const categorySchema = z.enum(["weights", "crossfit", "yoga", "mma", "other"]);
 
+// Controller handlers
+export const getAllMembershipsHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const memberships = await getAllMemberships();
+        
+        return res.status(OK).json({
+            success: true,
+            data: memberships
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
