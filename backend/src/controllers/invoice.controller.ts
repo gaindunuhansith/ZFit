@@ -1,4 +1,5 @@
-import type { Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
+import { z } from 'zod';
 import mongoose from 'mongoose';
 import {
     createInvoiceService,
@@ -8,60 +9,74 @@ import {
     deleteInvoiceService
 } from '../services/invoice.services.js';
 
-interface AuthenticatedRequest extends Request {
-    user: {
-        id: string;
-        role?: string;
-    };
-}
 
-// Updated validation functions to match the Invoice model fields
-const validateCreateInvoice = (data: any): string | null => {
-    if (!data.paymentId || !data.items || !data.subtotal || !data.total || !data.status || !data.generatedAt) {
-        return 'Missing required fields: paymentId, items, subtotal, total, status, and generatedAt';
-    }
-    if (data.total <= 0) return 'Total must be positive';
-    if (!['draft', 'sent', 'paid', 'overdue'].includes(data.status)) return 'Invalid status'; 
-    if (!Array.isArray(data.items) || data.items.length === 0) return 'Items must be a non-empty array';
-    return null;
-};
+// Zod validation schemas
+const invoiceItemSchema = z.object({
+    description: z.string().min(1, 'Description is required'),
+    quantity: z.number().min(1, 'Quantity must be at least 1'),
+    unitPrice: z.number().min(0, 'Unit price must be non-negative'),
+    total: z.number().min(0, 'Total must be non-negative'),
+    tax: z.number().min(0, 'Tax must be non-negative').optional().default(0)
+});
 
-const validateUpdateInvoice = (data: any): string | null => {
-    if (data.total !== undefined && data.total <= 0) return 'Total must be positive';
-    if (data.status && !['draft', 'sent', 'paid', 'overdue'].includes(data.status)) return 'Invalid status';  
-    if (data.items && (!Array.isArray(data.items) || data.items.length === 0)) return 'Items must be a non-empty array';
-    return null;
-};
+const createInvoiceSchema = z.object({
+    paymentId: z.string().min(1, 'Payment ID is required'),
+    items: z.array(invoiceItemSchema).min(1, 'At least one item is required'),
+    subtotal: z.number().min(0, 'Subtotal must be non-negative'),
+    tax: z.number().min(0, 'Tax must be non-negative'),
+    discount: z.number().min(0, 'Discount must be non-negative').optional().default(0),
+    total: z.number().min(0, 'Total must be non-negative'),
+    dueDate: z.string().optional(),
+    status: z.enum(['draft', 'sent', 'paid', 'overdue']),
+    generatedAt: z.string().min(1, 'Generated date is required'),
+    pdfUrl: z.string().optional()
+});
 
-export const createInvoice = async (req: Request, res: Response) => {
+const updateInvoiceSchema = z.object({
+    paymentId: z.string().optional(),
+    items: z.array(invoiceItemSchema).min(1).optional(),
+    subtotal: z.number().min(0).optional(),
+    tax: z.number().min(0).optional(),
+    discount: z.number().min(0).optional(),
+    total: z.number().min(0).optional(),
+    dueDate: z.string().optional(),
+    status: z.enum(['draft', 'sent', 'paid', 'overdue']).optional(),
+    generatedAt: z.string().optional(),
+    pdfUrl: z.string().optional()
+});
+
+export const createInvoice = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const error = validateCreateInvoice(req.body);
-        if (error) return res.status(400).json({ success: false, message: error });
+        const validated = createInvoiceSchema.parse(req.body);
 
-        // For testing purposes, use a dummy userId if not provided
-        const invoiceData = { ...req.body };
-        if (!invoiceData.userId) {
-            invoiceData.userId = new mongoose.Types.ObjectId().toString(); // Dummy ObjectId as string
+        const invoiceData: any = {
+            ...validated,
+            paymentId: new mongoose.Types.ObjectId(validated.paymentId),
+            generatedAt: new Date(validated.generatedAt)
+        };
+
+        if (validated.dueDate) {
+            invoiceData.dueDate = new Date(validated.dueDate);
         }
 
-        const invoice = await createInvoiceService(invoiceData.userId, invoiceData);
+        const invoice = await createInvoiceService((req as any).userId, invoiceData);
         res.status(201).json({ success: true, data: invoice });
     } catch (error) {
-        res.status(400).json({ success: false, message: (error as Error).message });
+        next(error);
     }
 };
 
-export const getInvoices = async (req: Request, res: Response) => {
+export const getInvoices = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        // For testing without auth, get all invoices (normally would use userId from auth)
-        const invoices = await getInvoicesService(''); // Empty string to get all
+        const invoices = await getInvoicesService((req as any).userId);
         res.json({ success: true, data: invoices });
     } catch (error) {
-        res.status(500).json({ success: false, message: (error as Error).message });
+        next(error);
     }
+     
 };
 
-export const getInvoiceById = async (req: Request, res: Response) => {
+export const getInvoiceById = async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.params.id) {
             return res.status(400).json({ success: false, message: 'Invoice ID is required' });
@@ -70,28 +85,51 @@ export const getInvoiceById = async (req: Request, res: Response) => {
         if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found' });
         res.json({ success: true, data: invoice });
     } catch (error) {
-        res.status(500).json({ success: false, message: (error as Error).message });
+        next(error);
     }
 };
 
-export const updateInvoice = async (req: Request, res: Response) => {
+export const updateInvoice = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const error = validateUpdateInvoice(req.body);
-        if (error) return res.status(400).json({ success: false, message: error });
+        const validated = updateInvoiceSchema.parse(req.body);
 
         if (!req.params.id) {
             return res.status(400).json({ success: false, message: 'Invoice ID is required' });
         }
 
-        const invoice = await updateInvoiceService(req.params.id, req.body);
+        // Filter out undefined values and convert types
+        const updateData: any = {};
+        Object.entries(validated).forEach(([key, value]) => {
+            if (value !== undefined) {
+                if (key === 'paymentId') {
+                    updateData[key] = new mongoose.Types.ObjectId(value as string);
+                } else if (key === 'generatedAt' || key === 'dueDate') {
+                    updateData[key] = new Date(value as string);
+                } else {
+                    updateData[key] = value;
+                }
+            }
+        });
+
+        const invoice = await updateInvoiceService(req.params.id, updateData);
         if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found' });
         res.json({ success: true, data: invoice });
     } catch (error) {
-        res.status(400).json({ success: false, message: (error as Error).message });
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors: error.issues.map((e) => ({
+                    field: e.path.join('.'),
+                    message: e.message,
+                })),
+            });
+        }
+        next(error);
     }
 };
 
-export const deleteInvoice = async (req: Request, res: Response) => {
+export const deleteInvoice = async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.params.id) {
             return res.status(400).json({ success: false, message: 'Invoice ID is required' });
@@ -101,6 +139,6 @@ export const deleteInvoice = async (req: Request, res: Response) => {
         if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found' });
         res.json({ success: true, message: 'Invoice deleted' });
     } catch (error) {
-        res.status(500).json({ success: false, message: (error as Error).message });
+        next(error);
     }
 };
