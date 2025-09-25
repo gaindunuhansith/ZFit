@@ -11,10 +11,21 @@ type CreateMembershipParams = {
     category: string;
 };
 
+type UpdateMembershipParams = {
+    name?: string | undefined;
+    description?: string | undefined;
+    price?: number | undefined;
+    currency?: string | undefined;
+    durationInDays?: number | undefined;
+    category?: string | undefined;
+};
+
+
 export const getAllMemberships = async () => {
     const memberships = await MembershipPlanModel.find();
     return memberships;
 };
+
 
 export const getMembershipById = async (membershipId: string) => {
     const membership = await MembershipPlanModel.findById(membershipId);
@@ -22,14 +33,18 @@ export const getMembershipById = async (membershipId: string) => {
     return membership;
 };
 
+
 export const getMembershipsByCategory = async (category: string) => {
     const memberships = await MembershipPlanModel.find({ category });
     return memberships;
 };
 
+
 export const createMembership = async (data: CreateMembershipParams) => {
-    // Check if membership with same name already exists
+
+    
     const existingMembership = await MembershipPlanModel.findOne({ name: data.name });
+
     AppAssert(!existingMembership, CONFLICT, "Membership with this name already exists");
 
     const membership = await MembershipPlanModel.create(data);
@@ -38,12 +53,12 @@ export const createMembership = async (data: CreateMembershipParams) => {
     return membership;
 };
 
-export const updateMembership = async (membershipId: string, updateData: Partial<CreateMembershipParams>) => {
-    // Check if membership exists
+
+export const updateMembership = async (membershipId: string, updateData: UpdateMembershipParams) => {
+    
     const existingMembership = await MembershipPlanModel.findById(membershipId);
     AppAssert(existingMembership, NOT_FOUND, "Membership not found");
 
-    // If updating name, check for duplicates
     if (updateData.name) {
         const duplicateName = await MembershipPlanModel.findOne({ 
             name: updateData.name, 
@@ -62,14 +77,18 @@ export const updateMembership = async (membershipId: string, updateData: Partial
     return updatedMembership;
 };
 
+
 export const deleteMembership = async (membershipId: string) => {
+
     const membership = await MembershipPlanModel.findById(membershipId);
+
     AppAssert(membership, NOT_FOUND, "Membership not found");
 
     await MembershipPlanModel.findByIdAndDelete(membershipId);
     
     return { message: "Membership deleted successfully" };
 };
+
 
 export const getMembershipCategories = () => {
     return ["weights", "crossfit", "yoga", "mma", "other"];
