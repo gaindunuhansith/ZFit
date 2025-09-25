@@ -62,7 +62,7 @@ export const createAccount = async (data: CreateAccountParams) => {
         expiresAt: oneYearFromNow(),
     });
 
-    const url = `${env.APP_ORIGIN}/auth/verify-email/${verificationCode._id}`;
+    const url = `${env.FRONTEND_APP_ORIGIN}/auth/verify-email/${verificationCode._id}`;
 
     //send verification email
     const { error } = await sendMail({
@@ -219,7 +219,7 @@ export const sendPasswordResetEmail = async (email: string) => {
             expiresAt,
         });
 
-        const url = `${env.APP_ORIGIN}/my-account/forgot-password/reset?code=${verficationCode._id}&exp=${expiresAt.getTime()}`;
+        const url = `${env.FRONTEND_APP_ORIGIN}/my-account/forgot-password/reset?code=${verficationCode._id}&exp=${expiresAt.getTime()}`;
 
         const { data, error } = await sendMail({
             to: email,
