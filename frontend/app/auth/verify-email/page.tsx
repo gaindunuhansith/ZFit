@@ -22,7 +22,7 @@ export default function EmailVerificationPage() {
           {/* Actions Section */}
           <div className="space-y-6">
             <button
-              onClick={() => window.location.href = '/login'}
+              onClick={() => window.location.href = '/auth/login'}
               className="w-full bg-white hover:bg-gray-100 text-black font-medium py-3 px-4 rounded-md transition-colors"
             >
               Back to Login

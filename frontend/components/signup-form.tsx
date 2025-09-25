@@ -250,7 +250,7 @@ export function SignupForm() {
       }
 
       // Success - redirect to email verification page
-      window.location.href = "/signup/verify-email"
+      window.location.href = "/auth/verify-email"
 
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -566,7 +566,7 @@ export function SignupForm() {
       <div className="mt-6 text-center">
         <p className="text-gray-400">
           Already have an account?{" "}
-          <Link href="/login" className="text-gray-400 hover:text-gray-200 underline">
+          <Link href="/auth/login" className="text-gray-400 hover:text-gray-200 underline">
             Log In
           </Link>
         </p>
