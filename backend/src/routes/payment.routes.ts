@@ -11,17 +11,14 @@ import authenticate from '../middleware/auth.middleware.js';
 
 const router = Router();
 
-// Apply authentication to all payment routes
-router.use(authenticate);
-
 // Payment routes
 // Process payment (accessible by manager and staff)
-router.post('/process/:id',authenticate(["manager","staff"]), processPayment);
-//get all payements
-router.get('/', getPayments);
-router.get('/:id', getPaymentById);
+router.post('/process/:id', authenticate(["manager","staff"]), processPayment);
+//get all payments
+router.get('/', authenticate(["manager","staff"]), getPayments);
+router.get('/:id', authenticate(["manager","staff"]), getPaymentById);
 
-router.post('/', authenticate(["manager"]),createPayment);
-router.put('/:id', authenticate(["manager"]),updatePayment);
-router.delete('/:id', authenticate(["manager"]),deletePayment);
+router.post('/', authenticate(["manager"]), createPayment);
+router.put('/:id', authenticate(["manager"]), updatePayment);
+router.delete('/:id', authenticate(["manager"]), deletePayment);
 export default router;

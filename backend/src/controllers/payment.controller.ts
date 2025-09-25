@@ -22,7 +22,6 @@ const createPaymentSchema = z.object({
     userId: z.string().optional(),
     currency: z.string().optional(),
     description: z.string().optional(),
-    metadata: z.record(z.string(), z.any()).optional()
 });
 
 const updatePaymentSchema = z.object({
@@ -34,8 +33,7 @@ const updatePaymentSchema = z.object({
     transactionId: z.string().optional(),
     date: z.string().optional(),
     currency: z.string().optional(),
-    description: z.string().optional(),
-    metadata: z.record(z.string(), z.any()).optional()
+    description: z.string().optional()
 });
 
 const paymentIdSchema = z.object({

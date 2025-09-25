@@ -43,7 +43,7 @@ export const deletePaymentService = async (id: string) => {
 };
 
 // Process payment (mark as completed & store gateway response)
-export const processPaymentService = async (id: string, response: any) => {
+export const processPaymentService = async (id: string, response: Record<string, unknown>) => {
         if (!mongoose.Types.ObjectId.isValid(id)) {
             throw new Error('Invalid payment ID format');
         }
