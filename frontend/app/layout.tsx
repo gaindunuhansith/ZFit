@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ZFit - Fitness Management Dashboard",
-  description: "Comprehensive fitness center management system with member tracking, attendance monitoring, and analytics",
+  title: "ZFit",
+  description: "ZFit Gym Dashboard",
 };
 
 export default function RootLayout({
