@@ -58,8 +58,14 @@ export interface PayHereWebhookData {
  * PayHere Payment Gateway Service
  */
 export class PayHereService {
-    private static readonly PAYHERE_CHECKOUT_URL = 'https://sandbox.payhere.lk/pay/checkout'; // Use sandbox for testing
-    private static readonly PRODUCTION_URL = 'https://www.payhere.lk/pay/checkout';
+    private static readonly PAYHERE_CHECKOUT_URL_SANDBOX = 'https://sandbox.payhere.lk/pay/checkout';
+    private static readonly PAYHERE_CHECKOUT_URL_PRODUCTION = 'https://www.payhere.lk/pay/checkout';
+
+    private getCheckoutUrl(): string {
+        return env.PAYHERE_ENV === 'production' 
+            ? PayHereService.PAYHERE_CHECKOUT_URL_PRODUCTION 
+            : PayHereService.PAYHERE_CHECKOUT_URL_SANDBOX;
+    }
 
     /**
      * Initialize PayHere payment and create payment record
@@ -91,9 +97,9 @@ export class PayHereService {
             // Prepare PayHere payment data
             const payhereData: PayHerePaymentData = {
                 merchant_id: env.PAYHERE_MERCHANT_ID,
-                return_url: `${env.APP_ORIGIN}/payment/success?order_id=${orderId}`,
-                cancel_url: `${env.APP_ORIGIN}/payment/cancel?order_id=${orderId}`,
-                notify_url: `${env.APP_ORIGIN}/api/v1/gateways/webhook/payhere`,
+                return_url: env.PAYHERE_RETURN_URL,
+                cancel_url: env.PAYHERE_CANCEL_URL,
+                notify_url: env.PAYHERE_NOTIFY_URL,
                 order_id: orderId,
                 items: paymentRequest.description,
                 currency: paymentRequest.currency,
@@ -120,9 +126,7 @@ export class PayHereService {
             return {
                 payment,
                 paymentData: payhereData,
-                checkoutUrl: env.NODE_ENV === 'production' 
-                    ? PayHereService.PRODUCTION_URL 
-                    : PayHereService.PAYHERE_CHECKOUT_URL
+                checkoutUrl: this.getCheckoutUrl()
             };
         } catch (error) {
             throw new Error(`PayHere payment initiation failed: ${(error as Error).message}`);

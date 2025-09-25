@@ -211,7 +211,7 @@ export const testPayHereConfig = async (req: Request, res: Response) => {
             config: {
                 merchantId: process.env.PAYHERE_MERCHANT_ID ? '***configured***' : 'not configured',
                 merchantSecret: process.env.PAYHERE_MERCHANT_SECRET ? '***configured***' : 'not configured',
-                environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
+                environment: process.env.PAYHERE_ENV || 'sandbox'
             }
         });
     } catch (error) {
