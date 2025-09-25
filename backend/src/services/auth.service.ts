@@ -18,6 +18,10 @@ type CreateAccountParams = {
     email: string;
     password: string;
     contactNo: string;
+    profile?: {
+        address?: string | undefined;
+        emergencyContact?: string | undefined;
+    } | undefined,
     consent: {
         gdpr: boolean;
         marketing: boolean;
@@ -39,6 +43,10 @@ export const createAccount = async (data: CreateAccountParams) => {
         email: data.email,
         password: data.password,
         contactNo: data.contactNo,
+        profile: {
+            address: data.profile?.address,
+            emergencyContact: data.profile?.emergencyContact
+        },
         consent: {
             gdpr: data.consent.gdpr,
             marketing: data.consent.marketing
@@ -54,7 +62,7 @@ export const createAccount = async (data: CreateAccountParams) => {
         expiresAt: oneYearFromNow(),
     });
 
-    const url = `${env.APP_ORIGIN}/api/v1/auth/email/verify/${verificationCode._id}`;
+    const url = `${env.FRONTEND_APP_ORIGIN}/auth/verify-email/${verificationCode._id}`;
 
     //send verification email
     const { error } = await sendMail({
@@ -101,7 +109,7 @@ export const loginUser = async ({ email, password, userAgent }: LoginParams) => 
     const user = await UserModel.findOne({ email });
     AppAssert(user, UNAUTHORIZED , "Invalid email or password");
 
-    const isValid = user.comparePassword(password);
+    const isValid = await user.comparePassword(password);
     AppAssert(isValid, UNAUTHORIZED, "Invalid email or password");
 
     const userId = user._id;
@@ -211,7 +219,7 @@ export const sendPasswordResetEmail = async (email: string) => {
             expiresAt,
         });
 
-        const url = `${env.APP_ORIGIN}/my-account/forgot-password/reset?code=${verficationCode._id}&exp=${expiresAt.getTime()}`;
+        const url = `${env.FRONTEND_APP_ORIGIN}/my-account/forgot-password/reset?code=${verficationCode._id}&exp=${expiresAt.getTime()}`;
 
         const { data, error } = await sendMail({
             to: email,
