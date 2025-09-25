@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
+import { BAD_REQUEST } from "../constants/http.js";
 
 //customer error interface 
 interface CustomError extends Error {
@@ -12,6 +13,21 @@ interface CustomError extends Error {
 //error handling middleware function
 const errorMiddleware = (err: CustomError, req: Request, res: Response, next: NextFunction) => {
     try {
+
+        //handleing zod errors
+        if(err instanceof ZodError){
+            const errors = err.issues.map((error) => ({
+                path: error.path,
+                message: error.message,
+            }))
+
+            return res.status(BAD_REQUEST).json({
+                success: false,
+                error: "Validation error",
+                details: errors
+            });
+        }
+
         let error = { ...err };
 
         error.message = err.message;

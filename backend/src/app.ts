@@ -39,12 +39,6 @@ app.use('/api/v1/reports', paymentReportRoutes);  // Added payment report routes
 app.use('/api/v1/analytics', paymentReportRoutes);  // Added payment analytics routes
 
 
-//API health check
-app.get("/", (req: express.Request, res: express.Response) => {  // Changed from app.use to app.get
-    res.send("The API is running - PayHere Integration Ready");
-})
 
-// Error handling middleware (must be last)
-app.use(errorMiddleware);
 
 export default app;
