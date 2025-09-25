@@ -94,3 +94,61 @@ export const getMembershipsByCategoryHandler = async (req: Request, res: Respons
     }
 };
 
+export const createMembershipHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const membershipData = createMembershipSchema.parse(req.body);
+        const membership = await createMembership(membershipData);
+        
+        return res.status(CREATED).json({
+            success: true,
+            message: "Membership created successfully",
+            data: membership
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const updateMembershipHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const membershipId = membershipIdSchema.parse(req.params.id);
+        const updateData = updateMembershipSchema.parse(req.body);
+        
+        const membership = await updateMembership(membershipId, updateData);
+        
+        return res.status(OK).json({
+            success: true,
+            message: "Membership updated successfully",
+            data: membership
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const deleteMembershipHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const membershipId = membershipIdSchema.parse(req.params.id);
+        const result = await deleteMembership(membershipId);
+        
+        return res.status(OK).json({
+            success: true,
+            message: result.message
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getMembershipCategoriesHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const categories = getMembershipCategories();
+        
+        return res.status(OK).json({
+            success: true,
+            data: categories
+        });
+    } catch (error) {
+        next(error);
+    }
+};
