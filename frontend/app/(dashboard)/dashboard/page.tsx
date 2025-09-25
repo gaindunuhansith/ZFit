@@ -45,7 +45,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">2,847</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+12.5%</span> from last month
+              <span className="text-primary">+12.5%</span> from last month
             </p>
           </CardContent>
         </Card>
@@ -59,7 +59,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">184</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+8.2%</span> from yesterday
+              <span className="text-primary">+8.2%</span> from yesterday
             </p>
           </CardContent>
         </Card>
@@ -71,7 +71,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">$45,231</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+15.3%</span> from last month
+              <span className="text-primary">+15.3%</span> from last month
             </p>
           </CardContent>
         </Card>
@@ -103,28 +103,28 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <div className="w-2 h-2 bg-primary rounded-full"></div>
               <div className="flex-1">
                 <p className="text-sm font-medium">Sarah Johnson checked in</p>
                 <p className="text-xs text-muted-foreground">Morning Yoga Class • 2 minutes ago</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <div className="w-2 h-2 bg-primary rounded-full"></div>
               <div className="flex-1">
                 <p className="text-sm font-medium">Mike Chen booked CrossFit</p>
                 <p className="text-xs text-muted-foreground">Evening Session • 5 minutes ago</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+              <div className="w-2 h-2 bg-primary rounded-full"></div>
               <div className="flex-1">
                 <p className="text-sm font-medium">Emma Davis renewed membership</p>
                 <p className="text-xs text-muted-foreground">Annual Plan • 12 minutes ago</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+              <div className="w-2 h-2 bg-primary rounded-full"></div>
               <div className="flex-1">
                 <p className="text-sm font-medium">Alex Rodriguez joined HIIT</p>
                 <p className="text-xs text-muted-foreground">New Member • 18 minutes ago</p>
@@ -144,28 +144,28 @@ export default function DashboardPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 text-green-600" />
+                <TrendingUp className="h-4 w-4 text-primary" />
                 <span className="text-sm">Membership Growth</span>
               </div>
-              <span className="text-sm font-medium text-green-600">+12.5%</span>
+              <span className="text-sm font-medium text-primary">+12.5%</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <BarChart3 className="h-4 w-4 text-blue-600" />
+                <BarChart3 className="h-4 w-4 text-primary" />
                 <span className="text-sm">Avg. Session Time</span>
               </div>
               <span className="text-sm font-medium">68 min</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Users className="h-4 w-4 text-purple-600" />
+                <Users className="h-4 w-4 text-primary" />
                 <span className="text-sm">Trainer Utilization</span>
               </div>
               <span className="text-sm font-medium">89%</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <CreditCard className="h-4 w-4 text-orange-600" />
+                <CreditCard className="h-4 w-4 text-primary" />
                 <span className="text-sm">Payment Success Rate</span>
               </div>
               <span className="text-sm font-medium">98.2%</span>
@@ -184,35 +184,20 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div className="flex items-center space-x-4 p-4 border rounded-lg">
-              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Activity className="h-6 w-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium">Morning Yoga</h4>
-                <p className="text-sm text-muted-foreground">9:00 AM • 45 min</p>
-                <p className="text-xs text-muted-foreground">12/20 spots filled</p>
-              </div>
+            <div className="p-4 border rounded-lg">
+              <h4 className="font-medium">Morning Yoga</h4>
+              <p className="text-sm text-muted-foreground">9:00 AM • 45 min</p>
+              <p className="text-xs text-muted-foreground">12/20 spots filled</p>
             </div>
-            <div className="flex items-center space-x-4 p-4 border rounded-lg">
-              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Activity className="h-6 w-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium">HIIT Training</h4>
-                <p className="text-sm text-muted-foreground">11:00 AM • 30 min</p>
-                <p className="text-xs text-muted-foreground">8/15 spots filled</p>
-              </div>
+            <div className="p-4 border rounded-lg">
+              <h4 className="font-medium">HIIT Training</h4>
+              <p className="text-sm text-muted-foreground">11:00 AM • 30 min</p>
+              <p className="text-xs text-muted-foreground">8/15 spots filled</p>
             </div>
-            <div className="flex items-center space-x-4 p-4 border rounded-lg">
-              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Activity className="h-6 w-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium">CrossFit</h4>
-                <p className="text-sm text-muted-foreground">6:00 PM • 60 min</p>
-                <p className="text-xs text-muted-foreground">18/25 spots filled</p>
-              </div>
+            <div className="p-4 border rounded-lg">
+              <h4 className="font-medium">CrossFit</h4>
+              <p className="text-sm text-muted-foreground">6:00 PM • 60 min</p>
+              <p className="text-xs text-muted-foreground">18/25 spots filled</p>
             </div>
           </div>
         </CardContent>
