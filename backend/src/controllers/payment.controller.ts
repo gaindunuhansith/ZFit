@@ -19,7 +19,7 @@ const createPaymentSchema = z.object({
     relatedId: z.string().min(1, 'Related ID is required'),
     transactionId: z.string().min(1, 'Transaction ID is required'),
     date: z.string().min(1, 'Date is required'),
-    userId: z.string().optional(),
+    userId: z.string().min(1, 'User ID is required'),
     currency: z.string().optional(),
     description: z.string().optional(),
     metadata: z.record(z.string(), z.any()).optional()
@@ -51,7 +51,7 @@ export const createPayment = async (req: Request, res: Response, next: NextFunct
         
         const paymentData = { 
             ...validated,
-            userId: validated.userId ? new mongoose.Types.ObjectId(validated.userId) : new mongoose.Types.ObjectId(),
+            userId: new mongoose.Types.ObjectId(validated.userId),
             relatedId: new mongoose.Types.ObjectId(validated.relatedId),
             currency: validated.currency || 'LKR',
             date: new Date(validated.date)
@@ -122,6 +122,11 @@ export const updatePayment = async (req: Request, res: Response, next: NextFunct
         const updateData = Object.fromEntries(
             Object.entries(validated).filter(([, value]) => value !== undefined)
         );
+
+        // Convert ObjectId fields
+        if (updateData.relatedId) {
+            updateData.relatedId = new mongoose.Types.ObjectId(updateData.relatedId as string);
+        }
 
         const payment = await updatePaymentService(id, updateData);
         if (!payment) 
