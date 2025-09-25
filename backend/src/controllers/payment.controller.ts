@@ -22,6 +22,7 @@ const createPaymentSchema = z.object({
     userId: z.string().optional(),
     currency: z.string().optional(),
     description: z.string().optional(),
+    metadata: z.record(z.string(), z.any()).optional()
 });
 
 const updatePaymentSchema = z.object({
@@ -33,7 +34,8 @@ const updatePaymentSchema = z.object({
     transactionId: z.string().optional(),
     date: z.string().optional(),
     currency: z.string().optional(),
-    description: z.string().optional()
+    description: z.string().optional(),
+    metadata: z.record(z.string(), z.any()).optional()
 });
 
 const paymentIdSchema = z.object({
@@ -41,7 +43,7 @@ const paymentIdSchema = z.object({
 });
 
 const processPaymentSchema = z.object({
-    response: z.any()
+    response: z.record(z.string(), z.any())
 });
 export const createPayment = async (req: Request, res: Response, next: NextFunction) => {
     try {
