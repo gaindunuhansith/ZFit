@@ -23,6 +23,12 @@ export interface SubscriptionDocument extends mongoose.Document {
   totalDuration(): number;
 }
 
+interface SubscriptionModel extends mongoose.Model<SubscriptionDocument> {
+  findActiveSubscriptions(): Promise<SubscriptionDocument[]>;
+  findExpiringSubscriptions(daysAhead?: number): Promise<SubscriptionDocument[]>;
+  findByUser(userId: mongoose.Types.ObjectId): Promise<SubscriptionDocument[]>;
+}
+
 const subscriptionSchema = new mongoose.Schema<SubscriptionDocument>(
   {
     userId: {
@@ -136,6 +142,7 @@ subscriptionSchema.methods.totalDuration = function(): number {
 // Pre-save middleware to auto-update status based on dates
 subscriptionSchema.pre('save', function(next) {
   const now = new Date();
+
   
   // Auto-expire if end date has passed and status is still active
   if (this.status === 'active' && this.endDate <= now) {
@@ -168,7 +175,7 @@ subscriptionSchema.statics.findByUser = function(userId: mongoose.Types.ObjectId
   return this.find({ userId }).populate('membershipPlanId').sort({ createdAt: -1 });
 };
 
-const SubscriptionModel = mongoose.model<SubscriptionDocument>(
+const SubscriptionModel = mongoose.model<SubscriptionDocument, SubscriptionModel>(
   "Subscription",
   subscriptionSchema
 );
