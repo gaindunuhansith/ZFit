@@ -4,17 +4,13 @@ import mongoose from 'mongoose';
 
 export const createInvoiceService = async (
     userId: string,
-    data: Partial<IInvoice>
+    data: Record<string, any>
 ): Promise<IInvoice> => {
     const invoice = new Invoice({ ...data, userId });
     return await invoice.save();
 };
 
 export const getInvoicesService = async (userId: string): Promise<IInvoice[]> => {
-    // If no userId provided (for testing), return all invoices
-    if (!userId) {
-        return await Invoice.find({});
-    }
     return await Invoice.find({ userId });
 };
 
@@ -25,7 +21,7 @@ export const getInvoiceByIdService = async (id: string): Promise<IInvoice | null
 
 export const updateInvoiceService = async (
     id: string,
-    data: Partial<IInvoice>
+    data: Record<string, any>
 ): Promise<IInvoice | null> => {
     if (!mongoose.Types.ObjectId.isValid(id)) return null;
     return await Invoice.findByIdAndUpdate(id, data, { new: true });
