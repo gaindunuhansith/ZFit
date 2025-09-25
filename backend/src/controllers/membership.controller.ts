@@ -80,3 +80,17 @@ export const getMembershipByIdHandler = async (req: Request, res: Response, next
     }
 };
 
+export const getMembershipsByCategoryHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const category = categorySchema.parse(req.params.category);
+        const memberships = await getMembershipsByCategory(category);
+        
+        return res.status(OK).json({
+            success: true,
+            data: memberships
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
