@@ -60,9 +60,7 @@ export const generateCheckInQR = async (req: Request, res: Response, next: NextF
   }
 };
 
-/**
- * Check in via QR code
- */
+
 export const checkIn = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validatedData = checkInSchema.parse(req.body);
@@ -83,9 +81,7 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction) =
   }
 };
 
-/**
- * Check out user
- */
+
 export const checkOut = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.params.userId;
@@ -110,9 +106,7 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction) 
   }
 };
 
-/**
- * Create manual attendance entry (staff/managers only)
- */
+
 export const createManualEntry = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validatedData = manualEntrySchema.parse(req.body);
@@ -137,9 +131,7 @@ export const createManualEntry = async (req: Request, res: Response, next: NextF
   }
 };
 
-/**
- * Get user attendance history
- */
+
 export const getUserAttendance = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId, startDate, endDate } = getUserAttendanceSchema.parse(req.query);
@@ -160,9 +152,6 @@ export const getUserAttendance = async (req: Request, res: Response, next: NextF
   }
 };
 
-/**
- * Get today's attendance
- */
 export const getTodayAttendance = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userRole } = getTodayAttendanceSchema.parse(req.query);
@@ -179,9 +168,7 @@ export const getTodayAttendance = async (req: Request, res: Response, next: Next
   }
 };
 
-/**
- * Get currently checked in users
- */
+
 export const getCurrentlyCheckedIn = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userRole } = getTodayAttendanceSchema.parse(req.query);
@@ -198,9 +185,7 @@ export const getCurrentlyCheckedIn = async (req: Request, res: Response, next: N
   }
 };
 
-/**
- * Get attendance statistics
- */
+
 export const getAttendanceStats = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { startDate, endDate, userRole } = getStatsSchema.parse(req.query);
@@ -221,9 +206,7 @@ export const getAttendanceStats = async (req: Request, res: Response, next: Next
   }
 };
 
-/**
- * Check if user is currently checked in
- */
+
 export const checkUserStatus = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.params.userId;
