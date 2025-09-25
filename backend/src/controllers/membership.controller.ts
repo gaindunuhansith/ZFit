@@ -66,3 +66,17 @@ export const getAllMembershipsHandler = async (req: Request, res: Response, next
     }
 };
 
+export const getMembershipByIdHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const membershipId = membershipIdSchema.parse(req.params.id);
+        const membership = await getMembershipById(membershipId);
+        
+        return res.status(OK).json({
+            success: true,
+            data: membership
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
