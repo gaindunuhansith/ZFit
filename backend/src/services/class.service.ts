@@ -1,21 +1,30 @@
-import Class, { type IClass } from "../models/class.model.js";
+import ClassModel, { type ClassDocument, type IClass } from "../models/class.model.js";
+import mongoose from "mongoose";
 
-export const createClass = async (data: Partial<IClass>) => {
-  return await Class.create(data);
+// CREATE
+export const createClass = async (data: IClass): Promise<ClassDocument> => {
+  return ClassModel.create(data);
 };
 
-export const getClasses = async () => {
-  return await Class.find();
+// GET ALL
+export const getAllClasses = async (): Promise<ClassDocument[]> => {
+  return ClassModel.find();
 };
 
-export const getClassById = async (id: string) => {
-  return await Class.findById(id);
+// GET BY ID
+export const getClassById = async (id: string): Promise<ClassDocument | null> => {
+  if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Class ID");
+  return ClassModel.findById(id);
 };
 
-export const updateClass = async (id: string, data: Partial<IClass>) => {
-  return await Class.findByIdAndUpdate(id, data, { new: true });
+// UPDATE
+export const updateClass = async (id: string, data: Partial<IClass>): Promise<ClassDocument | null> => {
+  if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Class ID");
+  return ClassModel.findByIdAndUpdate(id, data, { new: true });
 };
 
-export const deleteClass = async (id: string) => {
-  return await Class.findByIdAndDelete(id);
+// DELETE
+export const deleteClass = async (id: string): Promise<ClassDocument | null> => {
+  if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Class ID");
+  return ClassModel.findByIdAndDelete(id);
 };

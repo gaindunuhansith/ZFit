@@ -1,76 +1,88 @@
-import { z } from 'zod';
-import type { Request, Response, NextFunction } from 'express';
-import * as ClassService from '../services/class.service.js';
-import type { IClass } from '../models/class.model.js';
+import type { Request, Response, NextFunction } from "express";
+import * as ClassService from "../services/class.service.js";
+import { z } from "zod";
+import mongoose from "mongoose";
+import type { IClass } from "../models/class.model.js";
 
-interface ClassParams { id: string }
+// Zod schema for validation
+const classSchema = z.object({
+  name: z.string().min(1),
+  type: z.enum(["yoga","pilates","zumba","spinning","crossfit","strength","cardio","other"]),
+  duration: z.number().min(15).max(180),
+  maxCapacity: z.number().min(1).max(50),
+  price: z.number().min(0),
+  status: z.enum(["active","inactive"]).optional()
+});
 
-export class ClassController {
-  static async createClass(req: Request, res: Response, next: NextFunction) {
-    try {
-      const schema = z.object({
-        name: z.string().min(1, "Class name is required"),
-        type: z.string().min(1, "Class type is required"),
-        duration: z.number().min(1, "Duration must be at least 1 minute"),
-        maxCapacity: z.number().min(1, "Capacity must be at least 1"),
-        status: z.enum(['active','inactive']).optional()
-      });
-
-      const validatedData = schema.parse(req.body) as Omit<IClass,'createdAt'|'updatedAt'>;
-      const classInstance = await ClassService.createClass(validatedData);
-      res.status(201).json({ success: true, data: classInstance });
-    } catch (err) {
-      if (err instanceof z.ZodError) return res.status(400).json({ success: false, errors: err.flatten() });
-      next(err);
-    }
+// CREATE CLASS
+export const createClass = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = classSchema.parse(req.body) as IClass;
+    const newClass = await ClassService.createClass(data);
+    res.status(201).json({ success: true, data: newClass });
+  } catch (err: any) {
+    next(err);
   }
+};
 
-  static async getClasses(req: Request, res: Response, next: NextFunction) {
-    try {
-      const classes = await ClassService.getClasses();
-      res.status(200).json({ success: true, data: classes });
-    } catch (err) {
-      next(err);
-    }
+// GET ALL CLASSES
+export const getAllClasses = async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const classes = await ClassService.getAllClasses();
+    res.status(200).json({ success: true, data: classes });
+  } catch (err: any) {
+    next(err);
   }
+};
 
-  static async getClassById(req: Request<ClassParams>, res: Response, next: NextFunction) {
-    try {
-      const classInstance = await ClassService.getClassById(req.params.id);
-      if (!classInstance) return res.status(404).json({ success: false, message: 'Class not found' });
-      res.status(200).json({ success: true, data: classInstance });
-    } catch (err) {
-      next(err);
+// GET CLASS BY ID
+export const getClassById = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Invalid Class ID" });
     }
+
+    const classObj = await ClassService.getClassById(id);
+    if (!classObj) return res.status(404).json({ success: false, message: "Class not found" });
+
+    res.status(200).json({ success: true, data: classObj });
+  } catch (err: any) {
+    next(err);
   }
+};
 
-  static async updateClass(req: Request<ClassParams>, res: Response, next: NextFunction) {
-    try {
-      const schema = z.object({
-        name: z.string().min(1).optional(),
-        type: z.string().min(1).optional(),
-        duration: z.number().min(1).optional(),
-        maxCapacity: z.number().min(1).optional(),
-        status: z.enum(['active','inactive']).optional()
-      });
-
-      const validatedData = schema.parse(req.body) as Partial<IClass>;
-      const updatedClass = await ClassService.updateClass(req.params.id, validatedData);
-      if (!updatedClass) return res.status(404).json({ success: false, message: 'Class not found' });
-      res.status(200).json({ success: true, data: updatedClass });
-    } catch (err) {
-      if (err instanceof z.ZodError) return res.status(400).json({ success: false, errors: err.flatten() });
-      next(err);
+// UPDATE CLASS
+export const updateClass = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Invalid Class ID" });
     }
-  }
 
-  static async deleteClass(req: Request<ClassParams>, res: Response, next: NextFunction) {
-    try {
-      const deletedClass = await ClassService.deleteClass(req.params.id);
-      if (!deletedClass) return res.status(404).json({ success: false, message: 'Class not found' });
-      res.status(200).json({ success: true, message: 'Class deleted successfully', data: deletedClass });
-    } catch (err) {
-      next(err);
-    }
+    const data = classSchema.partial().parse(req.body) as Partial<IClass>;
+    const updatedClass = await ClassService.updateClass(id, data);
+    if (!updatedClass) return res.status(404).json({ success: false, message: "Class not found" });
+
+    res.status(200).json({ success: true, data: updatedClass });
+  } catch (err: any) {
+    next(err);
   }
-}
+};
+
+// DELETE CLASS
+export const deleteClass = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Invalid Class ID" });
+    }
+
+    const deletedClass = await ClassService.deleteClass(id);
+    if (!deletedClass) return res.status(404).json({ success: false, message: "Class not found" });
+
+    res.status(200).json({ success: true, data: deletedClass });
+  } catch (err: any) {
+    next(err);
+  }
+};

@@ -1,19 +1,30 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Document, Schema } from "mongoose";
 
-export interface IFacility extends Document {
+// IFacility: plain input type
+export interface IFacility {
   name: string;
-  capacity: number;
-  status: "active" | "inactive";
-  equipments: string[]; // references to Equipment IDs
+  capacity: number; // max people
+  status?: "active" | "inactive"; // optional for creation
+  equipments?: mongoose.Types.ObjectId[]; // array of equipment references
+}
+
+// FacilityDocument: Mongoose Document
+export interface FacilityDocument extends IFacility, Document {
   createdAt: Date;
   updatedAt: Date;
 }
 
-const FacilitySchema: Schema = new Schema<IFacility>({
-  name: { type: String, required: true },
-  capacity: { type: Number, required: true },
-  status: { type: String, enum: ["active", "inactive"], default: "active" },
-  equipments: [{ type: Schema.Types.ObjectId, ref: "Equipment" }]
-}, { timestamps: true });
+const facilitySchema = new Schema<FacilityDocument>(
+  {
+    name: { type: String, required: true, trim: true },
+    capacity: { type: Number, required: true, min: 1 },
+    status: { type: String, enum: ["active", "inactive"], default: "active" },
+    equipments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Equipment" }],
+  },
+  { timestamps: true }
+);
 
-export default mongoose.model<IFacility>("Facility", FacilitySchema);
+// Optional index
+facilitySchema.index({ name: 1 });
+
+export default mongoose.model<FacilityDocument>("Facility", facilitySchema);

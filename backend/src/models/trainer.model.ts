@@ -1,19 +1,25 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Model, Document } from "mongoose";
 
-export interface ITrainer extends Document {
+// ITrainer: plain input/data type
+export interface ITrainer {
   name: string;
   specialization: string;
-  experience?: number; // in years
-  status: "active" | "inactive";
+  status?: "active" | "inactive"; // optional for creation
+}
+
+// TrainerDocument: Mongoose Document type
+export interface TrainerDocument extends ITrainer, Document {
   createdAt: Date;
   updatedAt: Date;
 }
 
-const TrainerSchema: Schema = new Schema<ITrainer>({
-  name: { type: String, required: true },
-  specialization: { type: String, required: true },
-  experience: { type: Number, min: 0 }, // optional
-  status: { type: String, enum: ["active", "inactive"], default: "active" },
-}, { timestamps: true });
+const trainerSchema = new Schema<TrainerDocument>(
+  {
+    name: { type: String, required: true },
+    specialization: { type: String, required: true },
+    status: { type: String, enum: ["active", "inactive"], default: "active" },
+  },
+  { timestamps: true }
+);
 
-export default mongoose.model<ITrainer>("Trainer", TrainerSchema);
+export default mongoose.model<TrainerDocument>("Trainer", trainerSchema);
