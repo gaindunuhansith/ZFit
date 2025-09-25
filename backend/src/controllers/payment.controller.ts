@@ -49,10 +49,13 @@ export const createPayment = async (req: Request, res: Response, next: NextFunct
     try {
         const validated = createPaymentSchema.parse(req.body);
         
-        const paymentData: any = { ...validated };
-        if (!paymentData.userId) {
-            paymentData.userId = new mongoose.Types.ObjectId().toString();
-        }
+        const paymentData = { 
+            ...validated,
+            userId: validated.userId ? new mongoose.Types.ObjectId(validated.userId) : new mongoose.Types.ObjectId(),
+            relatedId: new mongoose.Types.ObjectId(validated.relatedId),
+            currency: validated.currency || 'LKR',
+            date: new Date(validated.date)
+        };
 
         const payment = await createPaymentService(paymentData);
         res.status(201).json({ 
@@ -117,7 +120,7 @@ export const updatePayment = async (req: Request, res: Response, next: NextFunct
 
         // Filter out undefined values to comply with exactOptionalPropertyTypes
         const updateData = Object.fromEntries(
-            Object.entries(validated).filter(([_, value]) => value !== undefined)
+            Object.entries(validated).filter(([, value]) => value !== undefined)
         );
 
         const payment = await updatePaymentService(id, updateData);
