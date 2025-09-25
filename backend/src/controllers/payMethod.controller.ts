@@ -45,16 +45,6 @@ export const createPaymentMethod = async (req: Request, res: Response,next: Next
         const method = await createPaymentMethodService((req as any).userId, validated);
         res.status(201).json({ success: true, data: method });
     } catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation failed',
-                errors: error.issues.map((e) => ({
-                    field: e.path.join('.'),
-                    message: e.message,
-                })),
-            });
-        }
         next(error);
     }
 };
@@ -98,16 +88,6 @@ export const updatePaymentMethod = async (req: Request, res: Response, next: Nex
         if (!method) return res.status(404).json({ success: false, message: 'Payment method not found' });
         res.json({ success: true, data: method });
     } catch (error) {
-        if (error instanceof z.ZodError) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation failed',
-                errors: error.issues.map((e) => ({
-                    field: e.path.join('.'),
-                    message: e.message,
-                })),
-            });
-        }
         next(error);
     }
 };
