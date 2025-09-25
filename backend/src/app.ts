@@ -40,5 +40,6 @@ app.use('/api/v1/analytics', paymentReportRoutes);  // Added payment analytics r
 
 
 
+app.use(errorMiddleware);
 
 export default app;
