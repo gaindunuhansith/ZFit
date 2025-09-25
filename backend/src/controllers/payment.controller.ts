@@ -1,4 +1,5 @@
-import type { Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
+import { z } from 'zod';
 import mongoose from 'mongoose';
 import {
     createPaymentService,
@@ -9,115 +10,189 @@ import {
     processPaymentService
 } from '../services/payment.services.js';
 
-interface AuthenticatedRequest extends Request {
-    user: {
-        id: string;
-        role?: string;
-    };
-}
+// Zod validation schemas
+const createPaymentSchema = z.object({
+    amount: z.number().min(0, 'Amount must be non-negative'),
+    type: z.enum(['membership', 'inventory', 'booking', 'other']),
+    status: z.enum(['pending', 'completed', 'failed', 'refunded']),
+    method: z.enum(['card', 'bank-transfer', 'cash']),
+    relatedId: z.string().min(1, 'Related ID is required'),
+    transactionId: z.string().min(1, 'Transaction ID is required'),
+    date: z.string().min(1, 'Date is required'),
+    userId: z.string().optional(),
+    currency: z.string().optional(),
+    description: z.string().optional(),
+    metadata: z.record(z.string(), z.any()).optional()
+});
 
-// Manual validation functions
-const validateCreatePayment = (data: any): string | null => {
-    if (!data.amount || !data.type || !data.status || !data.method || !data.relatedId || !data.transactionId || !data.date) {
-        return 'Missing required fields';
-    }
-    if (data.amount < 0) return 'Amount must be non-negative';
-    if (!['membership', 'inventory', 'booking', 'other'].includes(data.type)) return 'Invalid type';
-    if (!['pending', 'completed', 'failed', 'refunded'].includes(data.status)) return 'Invalid status';
-    if (!['card', 'bank-transfer', 'cash'].includes(data.method)) return 'Invalid method';
-    return null;
-};
+const updatePaymentSchema = z.object({
+    amount: z.number().min(0, 'Amount must be non-negative').optional(),
+    type: z.enum(['membership', 'inventory', 'booking', 'other']).optional(),
+    status: z.enum(['pending', 'completed', 'failed', 'refunded']).optional(),
+    method: z.enum(['card', 'bank-transfer', 'cash']).optional(),
+    relatedId: z.string().optional(),
+    transactionId: z.string().optional(),
+    date: z.string().optional(),
+    currency: z.string().optional(),
+    description: z.string().optional(),
+    metadata: z.record(z.string(), z.any()).optional()
+});
 
-const validateUpdatePayment = (data: any): string | null => {
-    if (data.amount !== undefined && data.amount < 0) return 'Amount must be non-negative';
-    if (data.type && !['membership', 'inventory', 'booking', 'other'].includes(data.type)) return 'Invalid type';
-    if (data.status && !['pending', 'completed', 'failed', 'refunded'].includes(data.status)) return 'Invalid status';
-    if (data.method && !['card', 'bank-transfer', 'cash'].includes(data.method)) return 'Invalid method';
-    return null;
-};
+const paymentIdSchema = z.object({
+    id: z.string().min(1, 'Payment ID is required')
+});
 
-export const createPayment = async (req: Request, res: Response) => {
+const processPaymentSchema = z.object({
+    response: z.any()
+});
+export const createPayment = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const error = validateCreatePayment(req.body);
-        if (error) return res.status(400).json({ success: false, message: error });
-
-        // For testing purposes, use a dummy userId if not provided
-        const paymentData = { ...req.body };
+        const validated = createPaymentSchema.parse(req.body);
+        
+        const paymentData: any = { ...validated };
         if (!paymentData.userId) {
-            paymentData.userId = new mongoose.Types.ObjectId().toString(); // Dummy ObjectId as string
+            paymentData.userId = new mongoose.Types.ObjectId().toString();
         }
 
         const payment = await createPaymentService(paymentData);
-        res.status(201).json({ success: true, data: payment });
+        res.status(201).json({ 
+            success: true, 
+            message: 'Payment created successfully',
+            data: payment 
+        });
     } catch (error) {
-        res.status(400).json({ success: false, message: (error as Error).message });
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors: error.issues.map((e) => ({
+                    field: e.path.join('.'),
+                    message: e.message,
+                })),
+            });
+        }
+        next(error); 
     }
 };
 
-export const getPayments = async (req: Request, res: Response) => {
+//get all payments
+export const getPayments = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        // For testing without auth, get all payments (normally would use userId from auth)
-        const payments = await getPaymentsService(''); // Empty string to get all
+        const payments = await getPaymentsService(''); 
         res.json({ success: true, data: payments });
     } catch (error) {
-        res.status(500).json({ success: false, message: (error as Error).message });
+        next(error);
     }
 };
 
-export const getPaymentById = async (req: Request, res: Response) => {
+//get payment by using ID
+export const getPaymentById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        if (!req.params.id) {
-            return res.status(400).json({ success: false, message: 'Payment ID is required' });
-        }
-        const payment = await getPaymentByIdService(req.params.id);
-        if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
+        const { id } = paymentIdSchema.parse({ id: req.params.id });
+
+        const payment = await getPaymentByIdService(id);
+        if (!payment) 
+            return res.status(404).json({ success: false, message: 'Payment not found' });
+
         res.json({ success: true, data: payment });
     } catch (error) {
-        res.status(500).json({ success: false, message: (error as Error).message });
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors: error.issues.map((e) => ({
+                    field: e.path.join('.'),
+                    message: e.message,
+                })),
+            });
+        }
+        next(error); 
     }
 };
 
-export const updatePayment = async (req: Request, res: Response) => {
+export const updatePayment = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const error = validateUpdatePayment(req.body);
-        if (error) return res.status(400).json({ success: false, message: error });
+        const { id } = paymentIdSchema.parse({ id: req.params.id });
+        const validated = updatePaymentSchema.parse(req.body);
 
-        if (!req.params.id) {
-            return res.status(400).json({ success: false, message: 'Payment ID is required' });
-        }
+        // Filter out undefined values to comply with exactOptionalPropertyTypes
+        const updateData = Object.fromEntries(
+            Object.entries(validated).filter(([_, value]) => value !== undefined)
+        );
 
-        const payment = await updatePaymentService(req.params.id, req.body);
-        if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
-        res.json({ success: true, data: payment });
+        const payment = await updatePaymentService(id, updateData);
+        if (!payment) 
+            return res.status(404).json({ success: false, message: 'Payment not found' });
+
+        res.json({ 
+            success: true, 
+            message: 'Payment updated successfully',
+            data: payment 
+        });
     } catch (error) {
-        res.status(400).json({ success: false, message: (error as Error).message });
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors: error.issues.map((e) => ({
+                    field: e.path.join('.'),
+                    message: e.message,
+                })),
+            });
+        }
+        next(error); 
     }
 };
 
-export const deletePayment = async (req: Request, res: Response) => {
+export const deletePayment = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        if (!req.params.id) {
-            return res.status(400).json({ success: false, message: 'Payment ID is required' });
-        }
+        const { id } = paymentIdSchema.parse({ id: req.params.id });
 
-        const payment = await deletePaymentService(req.params.id);
-        if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
-        res.json({ success: true, message: 'Payment deleted' });
+        const payment = await deletePaymentService(id);
+        if (!payment) 
+            return res.status(404).json({ success: false, message: 'Payment not found' });
+
+        res.json({ success: true, message: 'Payment deleted successfully' });
     } catch (error) {
-        res.status(500).json({ success: false, message: (error as Error).message });
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors: error.issues.map((e) => ({
+                    field: e.path.join('.'),
+                    message: e.message,
+                })),
+            });
+        }
+        next(error); 
     }
 };
 
-export const processPayment = async (req: Request, res: Response) => {
+export const processPayment = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        if (!req.params.id) {
-            return res.status(400).json({ success: false, message: 'Payment ID is required' });
-        }
+        const { id } = paymentIdSchema.parse({ id: req.params.id });
+        const { response } = processPaymentSchema.parse(req.body);
 
-        const payment = await processPaymentService(req.params.id, req.body.response);
-        if (!payment) return res.status(404).json({ success: false, message: 'Payment not found' });
-        res.json({ success: true, data: payment });
+        const payment = await processPaymentService(id, response);
+        if (!payment) 
+            return res.status(404).json({ success: false, message: 'Payment not found' });
+
+        res.json({ 
+            success: true, 
+            message: 'Payment processed successfully',
+            data: payment 
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: (error as Error).message });
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation failed',
+                errors: error.issues.map((e) => ({
+                    field: e.path.join('.'),
+                    message: e.message,
+                })),
+            });
+        }
+        next(error); 
     }
 };

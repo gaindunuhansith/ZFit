@@ -7,13 +7,21 @@ import {
     deletePayment,
     processPayment
 } from '../controllers/payment.controller.js';
+import authenticate from '../middleware/auth.middleware.js';
 
 const router = Router();
 
+// Apply authentication to all payment routes
+router.use(authenticate);
+
 // Payment routes
-router.post('/process/:id', processPayment);
+// Process payment (accessible by manager and staff)
+router.post('/process/:id',authenticate(["manager","staff"]), processPayment);
+//get all payements
 router.get('/', getPayments);
 router.get('/:id', getPaymentById);
-router.post('/', createPayment);
-router.put('/:id', updatePayment);
-router.delete('/:id', deletePayment);export default router;
+
+router.post('/', authenticate(["manager"]),createPayment);
+router.put('/:id', authenticate(["manager"]),updatePayment);
+router.delete('/:id', authenticate(["manager"]),deletePayment);
+export default router;
