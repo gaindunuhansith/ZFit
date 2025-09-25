@@ -1,30 +1,26 @@
-import FacilityModel, { type FacilityDocument, type IFacility } from "../models/facility.model.js";
-import mongoose from "mongoose";
+import  { Facility, type IFacility } from "../models/facility.model.js";
 
-// CREATE
-export const createFacility = async (data: IFacility): Promise<FacilityDocument> => {
-  return FacilityModel.create(data);
+// Create
+export const createFacility = async (data: IFacility) => {
+  return await Facility.create(data);
 };
 
-// GET ALL
-export const getAllFacilities = async (): Promise<FacilityDocument[]> => {
-  return FacilityModel.find().populate("equipments");
+// Get all
+export const getAllFacilities = async () => {
+  return await Facility.find();
 };
 
-// GET BY ID
-export const getFacilityById = async (id: string): Promise<FacilityDocument | null> => {
-  if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Facility ID");
-  return FacilityModel.findById(id).populate("equipments");
+// Get by ID
+export const getFacilityById = async (id: string) => {
+  return await Facility.findById(id);
 };
 
-// UPDATE
-export const updateFacility = async (id: string, data: Partial<IFacility>): Promise<FacilityDocument | null> => {
-  if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Facility ID");
-  return FacilityModel.findByIdAndUpdate(id, data, { new: true }).populate("equipments");
+// Update
+export const updateFacility = async (id: string, data: Partial<IFacility>) => {
+  return await Facility.findByIdAndUpdate(id, data, { new: true });
 };
 
-// DELETE
-export const deleteFacility = async (id: string): Promise<FacilityDocument | null> => {
-  if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Facility ID");
-  return FacilityModel.findByIdAndDelete(id);
+// Delete
+export const deleteFacility = async (id: string) => {
+  return await Facility.findByIdAndDelete(id);
 };
