@@ -1,95 +1,206 @@
-import MembershipPlanModel from "../models/membership.model.js";
+import MembershipModel from "../models/membership.model.js";
+import MembershipPlanModel from "../models/membershipPlan.model.js";
+import UserModel from "../models/user.model.js";
 import AppAssert from "../util/AppAssert.js";
 import { CONFLICT, INTERNAL_SERVER_ERROR, NOT_FOUND } from "../constants/http.js";
 
 type CreateMembershipParams = {
-    name: string;
-    description?: string | undefined;
-    price: number;
-    currency: string;
-    durationInDays: number;
-    category: string;
+    userId: string;
+    membershipPlanId: string;
+    startDate?: Date | undefined;
+    transactionId?: string | undefined;
+    autoRenew?: boolean | undefined;
+    notes?: string | undefined;
 };
 
 type UpdateMembershipParams = {
-    name?: string | undefined;
-    description?: string | undefined;
-    price?: number | undefined;
-    currency?: string | undefined;
-    durationInDays?: number | undefined;
-    category?: string | undefined;
+    endDate?: Date | undefined;
+    status?: 'active' | 'expired' | 'cancelled' | 'paused' | undefined;
+    autoRenew?: boolean | undefined;
+    transactionId?: string | undefined;
+    notes?: string | undefined;
 };
 
-
 export const getAllMemberships = async () => {
-    const memberships = await MembershipPlanModel.find();
+    const memberships = await MembershipModel.find()
+        .populate('userId', 'name email')
+        .populate('membershipPlanId', 'name price durationInDays category');
     return memberships;
 };
 
-
 export const getMembershipById = async (membershipId: string) => {
-    const membership = await MembershipPlanModel.findById(membershipId);
+    const membership = await MembershipModel.findById(membershipId)
+        .populate('userId', 'name email')
+        .populate('membershipPlanId', 'name price durationInDays category');
     AppAssert(membership, NOT_FOUND, "Membership not found");
     return membership;
 };
 
-
-export const getMembershipsByCategory = async (category: string) => {
-    const memberships = await MembershipPlanModel.find({ category });
+export const getUserMemberships = async (userId: string) => {
+    const memberships = await MembershipModel.find({ userId })
+        .populate('membershipPlanId', 'name price durationInDays category')
+        .sort({ createdAt: -1 });
     return memberships;
 };
 
+export const getActiveMemberships = async () => {
+    const memberships = await MembershipModel.findActiveMemberships();
+    return memberships;
+};
 
-export const createMembership = async (data: CreateMembershipParams) => {
+export const getExpiringMemberships = async (days: number = 7) => {
+    const memberships = await MembershipModel.findExpiringMemberships(days);
+    return memberships;
+};
 
-    
-    const existingMembership = await MembershipPlanModel.findOne({ name: data.name });
-
-    AppAssert(!existingMembership, CONFLICT, "Membership with this name already exists");
-
-    const membership = await MembershipPlanModel.create(data);
-    AppAssert(membership, INTERNAL_SERVER_ERROR, "Failed to create membership");
+export const getUserActiveMembership = async (userId: string) => {
+    const membership = await MembershipModel.findOne({
+        userId,
+        status: 'active',
+        endDate: { $gt: new Date() }
+    }).populate('membershipPlanId', 'name price durationInDays category');
     
     return membership;
 };
 
+export const createMembership = async (data: CreateMembershipParams) => {
+    // Verify user exists
+    const user = await UserModel.findById(data.userId);
+    AppAssert(user, NOT_FOUND, "User not found");
+
+    // Verify membership plan exists
+    const membershipPlan = await MembershipPlanModel.findById(data.membershipPlanId);
+    AppAssert(membershipPlan, NOT_FOUND, "Membership plan not found");
+
+    // Check if user already has active membership
+    const existingMembership = await MembershipModel.findOne({
+        userId: data.userId,
+        status: 'active',
+        endDate: { $gt: new Date() }
+    });
+    AppAssert(!existingMembership, CONFLICT, "User already has an active membership");
+
+    // Calculate end date
+    const startDate = data.startDate || new Date();
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + membershipPlan.durationInDays);
+
+    const membership = await MembershipModel.create({
+        userId: data.userId,
+        membershipPlanId: data.membershipPlanId,
+        startDate,
+        endDate,
+        transactionId: data.transactionId,
+        autoRenew: data.autoRenew || false,
+        notes: data.notes
+    });
+
+    AppAssert(membership, INTERNAL_SERVER_ERROR, "Failed to create membership");
+
+    // Return with populated data
+    const populatedMembership = await MembershipModel.findById(membership._id)
+        .populate('userId', 'name email')
+        .populate('membershipPlanId', 'name price durationInDays category');
+
+    return populatedMembership;
+};
 
 export const updateMembership = async (membershipId: string, updateData: UpdateMembershipParams) => {
-    
-    const existingMembership = await MembershipPlanModel.findById(membershipId);
-    AppAssert(existingMembership, NOT_FOUND, "Membership not found");
+    const membership = await MembershipModel.findById(membershipId);
+    AppAssert(membership, NOT_FOUND, "Membership not found");
 
-    if (updateData.name) {
-        const duplicateName = await MembershipPlanModel.findOne({ 
-            name: updateData.name, 
-            _id: { $ne: membershipId } 
-        });
-        AppAssert(!duplicateName, CONFLICT, "Membership with this name already exists");
-    }
-
-    const updatedMembership = await MembershipPlanModel.findByIdAndUpdate(
-        membershipId, 
-        updateData, 
+    const updatedMembership = await MembershipModel.findByIdAndUpdate(
+        membershipId,
+        updateData,
         { new: true }
-    );
-    
+    )
+    .populate('userId', 'name email')
+    .populate('membershipPlanId', 'name price durationInDays category');
+
     AppAssert(updatedMembership, INTERNAL_SERVER_ERROR, "Failed to update membership");
     return updatedMembership;
 };
 
-
-export const deleteMembership = async (membershipId: string) => {
-
-    const membership = await MembershipPlanModel.findById(membershipId);
-
+export const cancelMembership = async (membershipId: string, reason?: string) => {
+    const membership = await MembershipModel.findById(membershipId);
     AppAssert(membership, NOT_FOUND, "Membership not found");
+    AppAssert(membership.status === 'active', CONFLICT, "Only active memberships can be cancelled");
 
-    await MembershipPlanModel.findByIdAndDelete(membershipId);
-    
-    return { message: "Membership deleted successfully" };
+    const updatedMembership = await MembershipModel.findByIdAndUpdate(
+        membershipId,
+        {
+            status: 'cancelled',
+            cancellationDate: new Date(),
+            cancellationReason: reason
+        },
+        { new: true }
+    )
+    .populate('userId', 'name email')
+    .populate('membershipPlanId', 'name price durationInDays category');
+
+    return updatedMembership;
 };
 
+export const pauseMembership = async (membershipId: string, reason?: string) => {
+    const membership = await MembershipModel.findById(membershipId);
+    AppAssert(membership, NOT_FOUND, "Membership not found");
+    AppAssert(membership.status === 'active', CONFLICT, "Only active memberships can be paused");
 
-export const getMembershipCategories = () => {
-    return ["weights", "crossfit", "yoga", "mma", "other"];
+    const updatedMembership = await MembershipModel.findByIdAndUpdate(
+        membershipId,
+        {
+            status: 'paused',
+            notes: reason ? `Paused: ${reason}` : 'Paused'
+        },
+        { new: true }
+    )
+    .populate('userId', 'name email')
+    .populate('membershipPlanId', 'name price durationInDays category');
+
+    return updatedMembership;
+};
+
+export const resumeMembership = async (membershipId: string) => {
+    const membership = await MembershipModel.findById(membershipId);
+    AppAssert(membership, NOT_FOUND, "Membership not found");
+    AppAssert(membership.status === 'paused', CONFLICT, "Only paused memberships can be resumed");
+
+    const updatedMembership = await MembershipModel.findByIdAndUpdate(
+        membershipId,
+        {
+            status: 'active',
+            notes: 'Resumed'
+        },
+        { new: true }
+    )
+    .populate('userId', 'name email')
+    .populate('membershipPlanId', 'name price durationInDays category');
+
+    return updatedMembership;
+};
+
+export const extendMembership = async (membershipId: string, additionalDays: number) => {
+    const membership = await MembershipModel.findById(membershipId);
+    AppAssert(membership, NOT_FOUND, "Membership not found");
+
+    const newEndDate = new Date(membership.endDate);
+    newEndDate.setDate(newEndDate.getDate() + additionalDays);
+
+    const updatedMembership = await MembershipModel.findByIdAndUpdate(
+        membershipId,
+        { endDate: newEndDate },
+        { new: true }
+    )
+    .populate('userId', 'name email')
+    .populate('membershipPlanId', 'name price durationInDays category');
+
+    return updatedMembership;
+};
+
+export const deleteMembership = async (membershipId: string) => {
+    const membership = await MembershipModel.findById(membershipId);
+    AppAssert(membership, NOT_FOUND, "Membership not found");
+
+    await MembershipModel.findByIdAndDelete(membershipId);
+    return { message: "Membership deleted successfully" };
 };
