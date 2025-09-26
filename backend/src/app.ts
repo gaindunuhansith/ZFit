@@ -18,6 +18,10 @@ import trainerRoutes from "./routes/Trainer.routes.js";
 import BookingRoutes from "./routes/Booking.routes.js";
 import gatewayRoutes from "./routes/gateway.routes.js";  // Added gateway routes for PayHere
 import paymentReportRoutes from "./routes/paymentReport.routes.js";  // Added payment report routes
+import workoutRoutes from "./routes/workout.routes.js";
+import goalRoutes from "./routes/goal.routes.js";
+import progressRoutes from "./routes/progress.routes.js";
+import nutritionRoutes from "./routes/nutrition.routes.js";
 import errorMiddleware from "./middleware/error.middleware.js";
 
 //creating a express app instance
@@ -49,6 +53,10 @@ app.use('/api/v1/facilities', facilityRoutes);
 app.use('/api/v1/classes', classRoutes);
 app.use('/api/v1/trainers', trainerRoutes);
 app.use('/api/v1/Booking', BookingRoutes);
+app.use('/api/v1/workouts', workoutRoutes);
+app.use('/api/v1/goals', goalRoutes);
+app.use('/api/v1/progress', progressRoutes);
+app.use('/api/v1/nutrition', nutritionRoutes);
 
 
 
