@@ -12,10 +12,13 @@ import invoiceRoutes from "./routes/invoice.routes.js";  // Added invoice routes
 import paymentRoutes from "./routes/payment.routes.js";  // Added payment routes
 import payMethodRoutes from "./routes/payMethod.routes.js";  // Added payMethod routes
 import refundRoutes from "./routes/refund.routes.js";  // Added refund routes
+import facilityRoutes from "./routes/facility.routes.js";
+import classRoutes from "./routes/Class.routes.js";
+import trainerRoutes from "./routes/Trainer.routes.js";
+import BookingRoutes from "./routes/Booking.routes.js";
 import gatewayRoutes from "./routes/gateway.routes.js";  // Added gateway routes for PayHere
 import paymentReportRoutes from "./routes/paymentReport.routes.js";  // Added payment report routes
 import errorMiddleware from "./middleware/error.middleware.js";
-
 
 //creating a express app instance
 const app: express.Application = express();
@@ -42,6 +45,13 @@ app.use('/api/v1/refunds', refundRoutes);  // Added refund routes
 app.use('/api/v1/gateways', gatewayRoutes);  // Added gateway routes for PayHere
 app.use('/api/v1/reports', paymentReportRoutes);  // Added payment report routes
 app.use('/api/v1/analytics', paymentReportRoutes);  // Added payment analytics routes
+app.use('/api/v1/facilities', facilityRoutes);
+app.use('/api/v1/classes', classRoutes);
+app.use('/api/v1/trainers', trainerRoutes);
+app.use('/api/v1/Booking', BookingRoutes);
+
+
+
 
 
 
