@@ -5,20 +5,20 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 
 import authRouter from "./routes/auth.route.js";
-import inventorySupplierRoutes from "./routes/inventorySuppliers.routes.js";
-import categoryRoutes from "./routes/inventoryCategory.routes.js";
-import itemsRoutes from "./routes/inventoryItems.routes.js";
-import stockRoutes from "./routes/inventoryStock.routes.js";
-import inventoryReportRoutes from "./routes/inventoryReport.routes.js";  // Added inventory report routes
+import membershipRouter from "./routes/membership.routes.js";  // Added membership routes
+import subscriptionRouter from "./routes/subscription.routes.js";  // Added subscription routes
+import inventoryRoutes from "./routes/inventory.routes.js";  // Consolidated inventory routes
 import invoiceRoutes from "./routes/invoice.routes.js";  // Added invoice routes
 import paymentRoutes from "./routes/payment.routes.js";  // Added payment routes
 import payMethodRoutes from "./routes/payMethod.routes.js";  // Added payMethod routes
 import refundRoutes from "./routes/refund.routes.js";  // Added refund routes
-import cartRoutes from "./routes/cart.routes.js";
 import facilityRoutes from "./routes/facility.routes.js";
 import classRoutes from "./routes/Class.routes.js";
 import trainerRoutes from "./routes/Trainer.routes.js";
 import BookingRoutes from "./routes/Booking.routes.js";
+import gatewayRoutes from "./routes/gateway.routes.js";  // Added gateway routes for PayHere
+import paymentReportRoutes from "./routes/paymentReport.routes.js";  // Added payment report routes
+import errorMiddleware from "./middleware/error.middleware.js";
 
 //creating a express app instance
 const app: express.Application = express();
@@ -26,32 +26,35 @@ const app: express.Application = express();
 //global middleware
 app.use(cookieParser());
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  credentials: true
+}));
 app.use(express.json());
 app.use(morgan("dev"));
 
 //routes
-app.use('/api/v1/inventory', categoryRoutes);
-app.use("/api/v1/suppliers", inventorySupplierRoutes);
 app.use("/api/v1/auth", authRouter);
-app.use('/api/v1/inventory', itemsRoutes);
-app.use('/api/v1/stock', stockRoutes);
-app.use('/api/v1/inventory/reports', inventoryReportRoutes);  // Added inventory report routes
-app.use('/api/v1/cart', cartRoutes);
+app.use("/api/v1/memberships", membershipRouter);  // Added membership routes
+app.use("/api/v1/subscriptions", subscriptionRouter);  // Added subscription routes
+app.use('/api/v1/inventory', inventoryRoutes);  // Consolidated inventory routes (categories, suppliers, items, stock, reports, cart, orders)
 app.use('/api/v1/invoices', invoiceRoutes);  // Added invoice routes
 app.use('/api/v1/payments', paymentRoutes);  // Added payment routes
 app.use('/api/v1/paymethods', payMethodRoutes);  // Added payMethod routes
 app.use('/api/v1/refunds', refundRoutes);  // Added refund routes
+app.use('/api/v1/gateways', gatewayRoutes);  // Added gateway routes for PayHere
+app.use('/api/v1/reports', paymentReportRoutes);  // Added payment report routes
+app.use('/api/v1/analytics', paymentReportRoutes);  // Added payment analytics routes
 app.use('/api/v1/facilities', facilityRoutes);
 app.use('/api/v1/classes', classRoutes);
 app.use('/api/v1/trainers', trainerRoutes);
 app.use('/api/v1/Booking', BookingRoutes);
 
 
-//API health check
-app.get("/", (req: express.Request, res: express.Response) => {  // Changed from app.use to app.get
-    res.send("The API is running");
-})
 
+
+
+
+app.use(errorMiddleware);
 
 export default app;

@@ -30,6 +30,10 @@ export const registerSchema = z.object({
         .min(1, { message: "Phone number is required" })
         .regex(/^(?:\+94|0)[1-9]\d{8}$/, { message: "Enter a valid Sri Lankan Phone number" }),
     dob: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), { message: "Invalid date" }),
+    profile: z.object({
+        address: z.string().optional(),
+        emergencyContact: z.string().optional()
+    }).optional(),
     consent: z.object({
         gdpr: z.boolean(),
         marketing: z.boolean(),

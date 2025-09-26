@@ -8,6 +8,7 @@ import {
     sendPasswordResetHandler,
     verifyEmailHandler,
 } from "../controllers/auth.controller.js";
+import authenticate from "../middleware/auth.middleware.js";
 
 const authRouter = Router();
 

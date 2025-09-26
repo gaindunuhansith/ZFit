@@ -1,0 +1,154 @@
+import type { Request, Response, NextFunction } from "express";
+import { z } from "zod";
+import { 
+    getAllMemberships, 
+    getMembershipById, 
+    getMembershipsByCategory, 
+    createMembership,
+    updateMembership,
+    deleteMembership,
+    getMembershipCategories
+} from "../services/membership.service.js";
+import { CREATED, OK } from "../constants/http.js";
+
+// Zod validation schemas
+const createMembershipSchema = z.object({
+    name: z.string()
+        .min(2, "Name must be at least 2 characters")
+        .max(100, "Name must be at most 100 characters")
+        .trim(),
+    description: z.string()
+        .max(1000, "Description must be at most 1000 characters")
+        .optional(),
+    price: z.number()
+        .min(0.01, "Price must be greater than 0"),
+    currency: z.enum(["LKR", "USD"]).default("LKR"),
+    durationInDays: z.number()
+        .int()
+        .min(1, "Duration must be at least 1 day"),
+    category: z.enum(["weights", "crossfit", "yoga", "mma", "other"])
+});
+
+const updateMembershipSchema = z.object({
+    name: z.string()
+        .min(2, "Name must be at least 2 characters")
+        .max(100, "Name must be at most 100 characters")
+        .trim()
+        .optional(),
+    description: z.string()
+        .max(1000, "Description must be at most 1000 characters")
+        .optional(),
+    price: z.number()
+        .min(0.01, "Price must be greater than 0")
+        .optional(),
+    currency: z.enum(["LKR", "USD"]).optional(),
+    durationInDays: z.number()
+        .int()
+        .min(1, "Duration must be at least 1 day")
+        .optional(),
+    category: z.enum(["weights", "crossfit", "yoga", "mma", "other"]).optional()
+});
+
+const membershipIdSchema = z.string().min(1, "Membership ID is required");
+const categorySchema = z.enum(["weights", "crossfit", "yoga", "mma", "other"]);
+
+// Controller handlers
+export const getAllMembershipsHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const memberships = await getAllMemberships();
+        
+        return res.status(OK).json({
+            success: true,
+            data: memberships
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getMembershipByIdHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const membershipId = membershipIdSchema.parse(req.params.id);
+        const membership = await getMembershipById(membershipId);
+        
+        return res.status(OK).json({
+            success: true,
+            data: membership
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getMembershipsByCategoryHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const category = categorySchema.parse(req.params.category);
+        const memberships = await getMembershipsByCategory(category);
+        
+        return res.status(OK).json({
+            success: true,
+            data: memberships
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const createMembershipHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const membershipData = createMembershipSchema.parse(req.body);
+        const membership = await createMembership(membershipData);
+        
+        return res.status(CREATED).json({
+            success: true,
+            message: "Membership created successfully",
+            data: membership
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const updateMembershipHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const membershipId = membershipIdSchema.parse(req.params.id);
+        const updateData = updateMembershipSchema.parse(req.body);
+        
+        const membership = await updateMembership(membershipId, updateData);
+        
+        return res.status(OK).json({
+            success: true,
+            message: "Membership updated successfully",
+            data: membership
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const deleteMembershipHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const membershipId = membershipIdSchema.parse(req.params.id);
+        const result = await deleteMembership(membershipId);
+        
+        return res.status(OK).json({
+            success: true,
+            message: result.message
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getMembershipCategoriesHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const categories = getMembershipCategories();
+        
+        return res.status(OK).json({
+            success: true,
+            data: categories
+        });
+    } catch (error) {
+        next(error);
+    }
+};

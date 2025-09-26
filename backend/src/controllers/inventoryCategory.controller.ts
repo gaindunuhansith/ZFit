@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import CategoryService from "../services/inventoryCategory.service.js";
 
@@ -24,7 +24,7 @@ const categoryIdSchema = z.object({
 });
 
 // Controller to create a new category
-export const createCategory = async (req: Request, res: Response) => {
+export const createCategory = async (req: Request, res: Response, next: NextFunction) => {
     try{
         const validated = createCategorySchema.parse(req.body);
         const category = await categoryService.createCategory(validated);
@@ -35,12 +35,12 @@ export const createCategory = async (req: Request, res: Response) => {
             data: category
         });
     }catch(error){
-        handleError(res, error);
+        next(error);
     }
 };
 
 // Controller to get all categories
-export const getAllCategories = async (req: Request, res: Response) => {
+export const getAllCategories = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const categories = await categoryService.getAllCategories();
     res.status(200).json({
@@ -50,14 +50,14 @@ export const getAllCategories = async (req: Request, res: Response) => {
       count: categories.length,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 };
 
 
 
 // Controller to Get by ID
-export const getCategoryById = async (req: Request, res: Response) => {
+export const getCategoryById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = categoryIdSchema.parse({ id: req.params.id });
     const category = await categoryService.getCategoryById(id);
@@ -72,13 +72,13 @@ export const getCategoryById = async (req: Request, res: Response) => {
       data: category,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 };
 
 // Controller to update a category
 
-export const updateCategory = async (req: Request, res: Response) => {
+export const updateCategory = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = categoryIdSchema.parse({ id: req.params.id });
     const validated = updateCategorySchema.parse(req.body);
@@ -94,12 +94,12 @@ export const updateCategory = async (req: Request, res: Response) => {
       data: category,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 };
 
 // Controller to delete a category
-export const deleteCategory = async (req: Request, res: Response) => {
+export const deleteCategory = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = categoryIdSchema.parse({ id: req.params.id });
     const category = await categoryService.deleteCategory(id);
@@ -114,30 +114,8 @@ export const deleteCategory = async (req: Request, res: Response) => {
       data: category,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
-};
-
-
-// Centralized error handling function
-const handleError = (res: Response, error: unknown) => {
-  console.error("Error:", error);
-
-  if (error instanceof z.ZodError) {
-    return res.status(400).json({
-      success: false,
-      message: "Validation failed",
-      errors: error.issues.map((e) => ({
-        field: e.path.join("."),
-        message: e.message,
-      })),
-    });
-  }
-
-  res.status(500).json({
-    success: false,
-    message: "Internal server error",
-  });
 };
 
 

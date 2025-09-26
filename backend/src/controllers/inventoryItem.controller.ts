@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import mongoose from 'mongoose';
 import InventoryItemService from '../services/inventoryItem.service.js';
@@ -34,7 +34,7 @@ export const itemIdSchema = z.object({
 });
 
 //Controller to create a new inventory item
-export const createItem = async (req: Request, res: Response) => {
+export const createItem = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const validated = createItemSchema.parse(req.body);
         const itemData: any = {
@@ -62,12 +62,12 @@ export const createItem = async (req: Request, res: Response) => {
             data: item
         });
     } catch (error) {
-        handleError(res, error);
+        next(error);
     }
 };
 
 //Controller to get all inventory items
-export const getAllItems = async (req: Request, res: Response) => {
+export const getAllItems = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const items = await inventoryItemService.getAllItems();
         res.status(200).json({
@@ -76,12 +76,12 @@ export const getAllItems = async (req: Request, res: Response) => {
             data: items
         });
     } catch (error) {
-        handleError(res, error);
+        next(error);
     }
 };  
 
 //Controller to get an inventory item by ID
-export const getItemById = async (req: Request, res: Response) => {
+export const getItemById = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = itemIdSchema.parse({ id: req.params.id });
         const item = await inventoryItemService.getItemById(id);
@@ -97,12 +97,12 @@ export const getItemById = async (req: Request, res: Response) => {
             data: item
         });
     } catch (error) {
-        handleError(res, error);
+        next(error);
     }
 };  
 
 //Controller to update an inventory item
-export const updateItem = async (req: Request, res: Response) => {
+export const updateItem = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = itemIdSchema.parse({ id: req.params.id });
         const validated = updateItemSchema.parse(req.body);
@@ -133,12 +133,12 @@ export const updateItem = async (req: Request, res: Response) => {
             data: item
         });
     } catch (error) {
-        handleError(res, error);
+        next(error);
     }
 };
 
 //Controller to delete an inventory item
-export const deleteItem = async (req: Request, res: Response) => {
+export const deleteItem = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = itemIdSchema.parse({ id: req.params.id });
         const success = await inventoryItemService.deleteItem(id);
@@ -153,27 +153,6 @@ export const deleteItem = async (req: Request, res: Response) => {
             message: "Inventory item deleted successfully"
         });
     } catch (error) {
-        handleError(res, error);
+        next(error);
     }
-};  
-
-//centralized error handling function
-const handleError = (res: Response, error: unknown) => {
-  console.error("Error:", error)
-
-  if(error instanceof z.ZodError){
-    return res.status(400).json({
-      success: false,
-      message: "Validation failed",
-      errors: error.issues.map((e) => ({
-        field: e.path.join("."),
-        message: e.message,
-      }))
-    })
-  }
-
-  res.status(500).json({
-    success: false,
-    message: "Internal server error",
-  })
-}
+};

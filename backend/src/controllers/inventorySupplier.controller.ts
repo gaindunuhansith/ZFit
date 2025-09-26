@@ -1,4 +1,4 @@
-import { type Request, type Response } from "express";
+import { type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
 import SupplierService from "../services/inventorySupplier.service.js";
 
@@ -23,7 +23,7 @@ const supplierIdSchema = z.object({
 });
 
 //Controller to create a new supplier
-export const createSupplier = async (req: Request, res: Response) => {
+export const createSupplier = async (req: Request, res: Response, next: NextFunction) => {
   try{
     const validated = createSupplierSchema.parse(req.body);
     const supplier = await supplierService.createSupplier(validated);
@@ -34,12 +34,12 @@ export const createSupplier = async (req: Request, res: Response) => {
       data: supplier
     })
   }catch(error){
-    handleError(res, error);
+    next(error);
   }
 }
 
   //controller to get all suppliers
-  export const getAllSuppliers = async (req: Request, res: Response) => {
+  export const getAllSuppliers = async (req: Request, res: Response, next: NextFunction) => {
     try{
       const suppliers = await supplierService.getAllSuppliers()
 
@@ -50,12 +50,12 @@ export const createSupplier = async (req: Request, res: Response) => {
         count: suppliers.length
       })
     }catch(error){
-      handleError(res, error);
+      next(error);
     }
 }
 
 //controller to get by id
-export const getSupplierById = async (req: Request, res: Response) => {
+export const getSupplierById = async (req: Request, res: Response, next: NextFunction) => {
   try{
     const { id } = supplierIdSchema.parse({ id: req.params.id })
     const supplier = await supplierService.getSupplierById(id)
@@ -73,12 +73,12 @@ export const getSupplierById = async (req: Request, res: Response) => {
       data: supplier,
     })
   }catch(error){
-    handleError(res, error);
+    next(error);
   }
 }
 
 //controller to update supplier
-export const updateSupplier = async (req: Request, res: Response) => {
+export const updateSupplier = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = supplierIdSchema.parse({ id: req.params.id });
     const validated = updateSupplierSchema.parse(req.body);
@@ -94,12 +94,12 @@ export const updateSupplier = async (req: Request, res: Response) => {
       data: category,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 };
 
 // Controller to delete a supplier
-export const deleteSupplier = async (req: Request, res: Response) => {
+export const deleteSupplier = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = supplierIdSchema.parse({ id: req.params.id });
     const category = await supplierService.deleteSupplier(id);
@@ -114,29 +114,8 @@ export const deleteSupplier = async (req: Request, res: Response) => {
       data: category,
     });
   } catch (error) {
-    handleError(res, error);
+    next(error);
   }
 };
-
-//centralized error handling function
-const handleError = (res: Response, error: unknown) => {
-  console.error("Error:", error)
-
-  if(error instanceof z.ZodError){
-    return res.status(400).json({
-      success: false,
-      message: "Validation failed",
-      errors: error.issues.map((e) => ({
-        field: e.path.join("."),
-        message: e.message,
-      }))
-    })
-  }
-
-  res.status(500).json({
-    success: false,
-    message: "Internal server error",
-  })
-}
 
 
