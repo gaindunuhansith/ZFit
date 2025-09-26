@@ -15,7 +15,7 @@ export interface IBooking {
 
 const BookingSchema = new Schema<IBooking>(
   {
-    memberId: { type: Schema.Types.ObjectId, ref: "Member", required: true, index: true },
+    memberId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     classId: { type: Schema.Types.ObjectId, ref: "Class", required: true },
     trainerId: { type: Schema.Types.ObjectId, ref: "Trainer", required: true },
     facilityId: { type: Schema.Types.ObjectId, ref: "Facility", required: true },

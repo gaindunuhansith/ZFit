@@ -1,10 +1,10 @@
-import mongoose, { Schema, Model, Document } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
-// ITrainer: plain input/data type
+
 export interface ITrainer {
   name: string;
   specialization: string;
-  status?: "active" | "inactive"; // optional for creation
+  status?: "active" | "inactive"; 
 }
 
 // TrainerDocument: Mongoose Document type
@@ -19,7 +19,7 @@ const trainerSchema = new Schema<TrainerDocument>(
     specialization: { type: String, required: true },
     status: { type: String, enum: ["active", "inactive"], default: "active" },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "fitness_trainers" }
 );
 
 export default mongoose.model<TrainerDocument>("Trainer", trainerSchema);
