@@ -15,9 +15,8 @@ import refundRoutes from "./routes/refund.routes.js";  // Added refund routes
 import facilityRoutes from "./routes/facility.routes.js";
 import classRoutes from "./routes/class.routes.js";
 import trainerRoutes from "./routes/trainer.routes.js";
-import BookingRoutes from "./routes/booking.routes.js";
+import BookingRoutes from "./routes/Booking.routes.js";
 import gatewayRoutes from "./routes/gateway.routes.js";  // Added gateway routes for PayHere
-import paymentReportRoutes from "./routes/paymentReport.routes.js";  // Added payment report routes
 import errorMiddleware from "./middleware/error.middleware.js";
 
 //creating a express app instance
@@ -43,8 +42,6 @@ app.use('/api/v1/payments', paymentRoutes);  // Added payment routes
 app.use('/api/v1/paymethods', payMethodRoutes);  // Added payMethod routes
 app.use('/api/v1/refunds', refundRoutes);  // Added refund routes
 app.use('/api/v1/gateways', gatewayRoutes);  // Added gateway routes for PayHere
-app.use('/api/v1/reports', paymentReportRoutes);  // Added payment report routes
-app.use('/api/v1/analytics', paymentReportRoutes);  // Added payment analytics routes
 app.use('/api/v1/facilities', facilityRoutes);
 app.use('/api/v1/classes', classRoutes);
 app.use('/api/v1/trainers', trainerRoutes);
