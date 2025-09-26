@@ -1,8 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
-import * as TrainerService from "../services/Trainer.service.js";
+import * as TrainerService from "../services/trainer.service.js";
 import { z } from "zod";
 import mongoose from "mongoose";
-import type { ITrainer } from "../models/Trainer.model.js";
+import type { ITrainer } from "../models/trainer.model.js";
 
 // Zod schema for validation
 const trainerSchema = z.object({
@@ -14,7 +14,7 @@ const trainerSchema = z.object({
 // CREATE TRAINER
 export const createTrainer = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const data = trainerSchema.parse(req.body) as ITrainer; // Type cast to ITrainer
+    const data = trainerSchema.parse(req.body) as ITrainer; 
     const trainer = await TrainerService.createTrainer(data);
     res.status(201).json({ success: true, data: trainer });
   } catch (err: any) {

@@ -13,9 +13,9 @@ import paymentRoutes from "./routes/payment.routes.js";  // Added payment routes
 import payMethodRoutes from "./routes/payMethod.routes.js";  // Added payMethod routes
 import refundRoutes from "./routes/refund.routes.js";  // Added refund routes
 import facilityRoutes from "./routes/facility.routes.js";
-import classRoutes from "./routes/Class.routes.js";
-import trainerRoutes from "./routes/Trainer.routes.js";
-import BookingRoutes from "./routes/Booking.routes.js";
+import classRoutes from "./routes/class.routes.js";
+import trainerRoutes from "./routes/trainer.routes.js";
+import BookingRoutes from "./routes/booking.routes.js";
 import gatewayRoutes from "./routes/gateway.routes.js";  // Added gateway routes for PayHere
 import paymentReportRoutes from "./routes/paymentReport.routes.js";  // Added payment report routes
 import errorMiddleware from "./middleware/error.middleware.js";
@@ -48,7 +48,7 @@ app.use('/api/v1/analytics', paymentReportRoutes);  // Added payment analytics r
 app.use('/api/v1/facilities', facilityRoutes);
 app.use('/api/v1/classes', classRoutes);
 app.use('/api/v1/trainers', trainerRoutes);
-app.use('/api/v1/Booking', BookingRoutes);
+app.use('/api/v1/bookings', BookingRoutes);
 
 
 

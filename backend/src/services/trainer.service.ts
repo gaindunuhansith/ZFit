@@ -1,4 +1,4 @@
-import TrainerModel, { type TrainerDocument, type ITrainer } from "../models/Trainer.model.js";
+import TrainerModel, { type TrainerDocument, type ITrainer } from "../models/trainer.model.js";
 import mongoose from "mongoose";
 
 // CREATE
