@@ -1,11 +1,19 @@
 import AttendanceModel from "../models/attendance.model.js";
 import UserModel from "../models/user.model.js";
 import { verifyQR } from "../util/qrCode.util.js";
+import { getUserActiveSubscription } from "./subscription.service.js";
 import AppAssert from "../util/AppAssert.js";
-import { BAD_REQUEST, NOT_FOUND, CONFLICT } from "../constants/http.js";
+import { BAD_REQUEST, NOT_FOUND, FORBIDDEN } from "../constants/http.js";
 
 export interface CheckInParams {
   qrToken: string;
+  location?: string | undefined;
+  notes?: string | undefined;
+}
+
+export interface ForceCheckInParams {
+  memberQrToken: string;
+  staffQrToken: string;
   location?: string | undefined;
   notes?: string | undefined;
 }
@@ -42,7 +50,8 @@ export const isUserCheckedIn = async (userId: string): Promise<boolean> => {
 };
 
 /**
- * QR Code Check-In
+ * QR Code Check-In/Check-Out with membership validation
+ * Automatically handles checkout if user is already checked in
  */
 export const checkIn = async (params: CheckInParams) => {
   // Verify QR token
@@ -53,20 +62,118 @@ export const checkIn = async (params: CheckInParams) => {
   AppAssert(user, NOT_FOUND, "User not found");
   
   // Check if already checked in today
-  const alreadyCheckedIn = await isUserCheckedIn(payload.userId);
-  AppAssert(!alreadyCheckedIn, CONFLICT, "User is already checked in today");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   
-  // Create attendance record
+  const existingAttendance = await AttendanceModel.findOne({
+    userId: payload.userId,
+    date: { $gte: today },
+    status: 'checked-in'
+  });
+  
+  // If already checked in, perform checkout
+  if (existingAttendance) {
+    existingAttendance.checkOutTime = new Date();
+    existingAttendance.status = 'checked-out';
+    if (params.notes) {
+      existingAttendance.notes = existingAttendance.notes 
+        ? `${existingAttendance.notes}. Checkout: ${params.notes}`
+        : `Checkout: ${params.notes}`;
+    }
+    await existingAttendance.save();
+    
+    const result = await AttendanceModel.findById(existingAttendance._id).populate('userId', 'name email');
+    return { ...result?.toObject(), action: 'checked-out' };
+  }
+  
+  // For members, check if they have an active subscription
+  if (payload.userRole === 'member') {
+    const activeSubscription = await getUserActiveSubscription(payload.userId);
+    AppAssert(activeSubscription, FORBIDDEN, "No active membership found. Access denied.");
+  }
+  
+  // Create new check-in record
   const attendance = await AttendanceModel.create({
     userId: payload.userId,
     userRole: payload.userRole,
     checkInTime: new Date(),
+    date: new Date(),
     status: 'checked-in',
     notes: params.notes,
     isManualEntry: false
   });
   
-  return await AttendanceModel.findById(attendance._id).populate('userId', 'name email');
+  const result = await AttendanceModel.findById(attendance._id).populate('userId', 'name email');
+  return { ...result?.toObject(), action: 'checked-in' };
+};
+
+/**
+ * Force Check-In (Staff/Manager override for members without valid membership)
+ * Also handles checkout if member is already checked in
+ */
+export const forceCheckIn = async (params: ForceCheckInParams) => {
+  // Verify member QR token
+  const memberPayload = verifyQR(params.memberQrToken);
+  AppAssert(memberPayload.userRole === 'member', BAD_REQUEST, "Invalid member QR code");
+  
+  // Verify staff QR token
+  const staffPayload = verifyQR(params.staffQrToken);
+  AppAssert(
+    staffPayload.userRole === 'staff' || staffPayload.userRole === 'manager',
+    FORBIDDEN, 
+    "Only staff or managers can force check-in"
+  );
+  
+  // Check if member exists
+  const member = await UserModel.findById(memberPayload.userId);
+  AppAssert(member, NOT_FOUND, "Member not found");
+  
+  // Check if staff exists
+  const staff = await UserModel.findById(staffPayload.userId);
+  AppAssert(staff, NOT_FOUND, "Staff member not found");
+  
+  // Check if member is already checked in today
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const existingAttendance = await AttendanceModel.findOne({
+    userId: memberPayload.userId,
+    date: { $gte: today },
+    status: 'checked-in'
+  });
+  
+  // If already checked in, perform checkout
+  if (existingAttendance) {
+    existingAttendance.checkOutTime = new Date();
+    existingAttendance.status = 'checked-out';
+    const checkoutNote = `Force checkout by ${staff.name} (${staffPayload.userRole}). ${params.notes || ''}`.trim();
+    existingAttendance.notes = existingAttendance.notes 
+      ? `${existingAttendance.notes}. ${checkoutNote}`
+      : checkoutNote;
+    await existingAttendance.save();
+    
+    const result = await AttendanceModel.findById(existingAttendance._id)
+      .populate('userId', 'name email')
+      .populate('enteredBy', 'name email');
+    return { ...result?.toObject(), action: 'checked-out' };
+  }
+  
+  // Create attendance record with force entry flag
+  const attendance = await AttendanceModel.create({
+    userId: memberPayload.userId,
+    userRole: memberPayload.userRole,
+    checkInTime: new Date(),
+    date: new Date(),
+    status: 'checked-in',
+    notes: `Force check-in by ${staff.name} (${staffPayload.userRole}). ${params.notes || ''}`.trim(),
+    isManualEntry: true,
+    enteredBy: staffPayload.userId
+  });
+  
+  const result = await AttendanceModel.findById(attendance._id)
+    .populate('userId', 'name email')
+    .populate('enteredBy', 'name email');
+  return { ...result?.toObject(), action: 'checked-in' };
 };
 
 /**
@@ -112,6 +219,7 @@ export const createManualEntry = async (params: ManualEntryParams) => {
     userId: params.userId,
     userRole: params.userRole,
     checkInTime: params.checkInTime,
+    date: params.checkInTime,
     checkOutTime: params.checkOutTime,
     status: params.checkOutTime ? 'checked-out' : 'checked-in',
     notes: params.notes,

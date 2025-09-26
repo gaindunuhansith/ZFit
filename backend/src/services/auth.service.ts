@@ -10,6 +10,7 @@ import { sendMail } from "../util/sendMail.util.js";
 import { getPasswordResetTemplate, getVerifyEmailTemplate } from "../util/emailTemplates.js";
 import { refreshTokenSignOptions, signToken, verifyToken} from "../util/jwt.js";
 import { hashValue } from "../util/bcrypt.util.js";
+import { generateQR } from "../util/qrCode.util.js";
 import { CONFLICT, INTERNAL_SERVER_ERROR, NOT_FOUND, TOO_MANY_REQUESTS, UNAUTHORIZED } from "../constants/http.js";
 
 
@@ -55,6 +56,11 @@ export const createAccount = async (data: CreateAccountParams) => {
     });
 
     const userId = user._id;
+
+    // Generate and store QR code for the user
+    const qrToken = generateQR(String(user._id), data.role as 'member' | 'staff' | 'manager');
+    user.qrCode = qrToken;
+    await user.save();
 
     const verificationCode = await VerificationCodeModel.create({
         userId,

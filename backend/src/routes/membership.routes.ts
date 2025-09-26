@@ -2,26 +2,40 @@ import { Router } from "express";
 import {
     getAllMembershipsHandler,
     getMembershipByIdHandler,
-    getMembershipsByCategoryHandler,
+    getUserMembershipsHandler,
+    getActiveMembershipsHandler,
+    getExpiringMembershipsHandler,
+    getUserActiveMembershipHandler,
     createMembershipHandler,
     updateMembershipHandler,
-    deleteMembershipHandler,
-    getMembershipCategoriesHandler
+    cancelMembershipHandler,
+    pauseMembershipHandler,
+    resumeMembershipHandler,
+    extendMembershipHandler,
+    deleteMembershipHandler
 } from "../controllers/membership.controller.js";
 
-const membershipRouter = Router();
+const router = Router();
 
+// GET routes
+router.get("/", getAllMembershipsHandler);
+router.get("/active", getActiveMembershipsHandler);
+router.get("/expiring", getExpiringMembershipsHandler);
+router.get("/:id", getMembershipByIdHandler);
+router.get("/user/:userId", getUserMembershipsHandler);
+router.get("/user/:userId/active", getUserActiveMembershipHandler);
 
-membershipRouter.get("/", getAllMembershipsHandler);
-membershipRouter.get("/categories", getMembershipCategoriesHandler);
-membershipRouter.get("/category/:category", getMembershipsByCategoryHandler);
-membershipRouter.get("/:id", getMembershipByIdHandler);
+// POST routes
+router.post("/", createMembershipHandler);
 
-membershipRouter.post("/", createMembershipHandler);
+// PUT routes
+router.put("/:id", updateMembershipHandler);
+router.put("/:id/cancel", cancelMembershipHandler);
+router.put("/:id/pause", pauseMembershipHandler);
+router.put("/:id/resume", resumeMembershipHandler);
+router.put("/:id/extend", extendMembershipHandler);
 
+// DELETE routes
+router.delete("/:id", deleteMembershipHandler);
 
-membershipRouter.put("/:id", updateMembershipHandler);
-
-membershipRouter.delete("/:id", deleteMembershipHandler);
-
-export default membershipRouter;
+export default router;
