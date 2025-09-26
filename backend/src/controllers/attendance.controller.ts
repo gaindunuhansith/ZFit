@@ -1,12 +1,19 @@
 import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import * as attendanceService from "../services/attendance.service.js";
-import { generateQR } from "../utils/qrCode.util.js";
+import { generateQR } from "../util/qrCode.util.js";
 import { CREATED, OK } from "../constants/http.js";
 
 // Zod Validation Schemas
 const checkInSchema = z.object({
   qrToken: z.string().min(1, "QR token is required"),
+  location: z.string().optional(),
+  notes: z.string().optional()
+});
+
+const forceCheckInSchema = z.object({
+  memberQrToken: z.string().min(1, "Member QR token is required"),
+  staffQrToken: z.string().min(1, "Staff QR token is required"),
   location: z.string().optional(),
   notes: z.string().optional()
 });
@@ -65,16 +72,49 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction) =
   try {
     const validatedData = checkInSchema.parse(req.body);
     
-    const attendance = await attendanceService.checkIn({
+    const result = await attendanceService.checkIn({
       qrToken: validatedData.qrToken,
       ...(validatedData.location && { location: validatedData.location }),
       ...(validatedData.notes && { notes: validatedData.notes })
     });
     
-    res.status(CREATED).json({
+    const action = result.action || 'checked-in';
+    const message = action === 'checked-out' 
+      ? "Checked out successfully" 
+      : "Checked in successfully";
+    
+    res.status(action === 'checked-out' ? OK : CREATED).json({
       success: true,
-      data: attendance,
-      message: "Checked in successfully"
+      data: result,
+      message,
+      action
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const forceCheckIn = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const validatedData = forceCheckInSchema.parse(req.body);
+    
+    const result = await attendanceService.forceCheckIn({
+      memberQrToken: validatedData.memberQrToken,
+      staffQrToken: validatedData.staffQrToken,
+      ...(validatedData.location && { location: validatedData.location }),
+      ...(validatedData.notes && { notes: validatedData.notes })
+    });
+    
+    const action = result.action || 'checked-in';
+    const message = action === 'checked-out' 
+      ? "Member force checked out successfully" 
+      : "Member force checked in successfully";
+    
+    res.status(action === 'checked-out' ? OK : CREATED).json({
+      success: true,
+      data: result,
+      message,
+      action
     });
   } catch (error) {
     next(error);
