@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, User } from 'lucide-react'
 import { apiService } from '@/lib/api'
 import { UserFormModal } from '@/components/UserFormModal'
+import { UserFormData } from '@/lib/validations/user'
 
 interface Member {
   _id: string
@@ -91,14 +92,7 @@ export default function MembersPage() {
     }
   }
 
-  const handleModalSubmit = async (formData: {
-    name: string
-    email: string
-    contactNo: string
-    password?: string
-    role: 'member' | 'staff' | 'manager'
-    status: 'active' | 'inactive' | 'expired'
-  }) => {
+  const handleModalSubmit = async (formData: UserFormData) => {
     try {
       if (editingMember) {
         // Update existing member

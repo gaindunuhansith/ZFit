@@ -19,20 +19,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { z } from 'zod'
+import { ZodError } from 'zod'
 
-interface UserFormData {
-  name: string
-  email: string
-  contactNo: string
-  password?: string
-  role: 'member' | 'staff' | 'manager'
-  status: 'active' | 'inactive' | 'expired'
-}
+// Password validation schema (same as backend)
+const passwordSchema = z.string()
+  .min(8, { message: "Password must be at least 8 characters long" })
+  .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
+  .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter" })
+  .regex(/[0-9]/, { message: "Password must contain at least one number" })
+  .regex(/[^A-Za-z0-9]/, { message: "Password must contain at least one special character" })
+
+// User form validation schemas (matching backend)
+const createUserFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email format"),
+  contactNo: z.string()
+    .min(1, "Phone number is required")
+    .regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan Phone number"),
+  password: passwordSchema,
+  role: z.enum(['member', 'staff', 'manager']),
+  status: z.enum(['active', 'inactive', 'expired']),
+})
+
+const updateUserFormSchema = z.object({
+  name: z.string().min(1, "Name is required").optional(),
+  email: z.string().email("Invalid email format").optional(),
+  contactNo: z.string()
+    .regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan Phone number")
+    .optional(),
+  role: z.enum(['member', 'staff', 'manager']).optional(),
+  status: z.enum(['active', 'inactive', 'expired']).optional(),
+})
+
+type UserFormData = z.infer<typeof createUserFormSchema>
+type UpdateUserFormData = z.infer<typeof updateUserFormSchema>
 
 interface UserFormModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: UserFormData) => Promise<void>
+  onSubmit: (data: UserFormData | UpdateUserFormData) => Promise<void>
   initialData?: Partial<UserFormData>
   mode: 'add' | 'edit'
   title: string
@@ -46,11 +72,13 @@ export function UserFormModal({
   mode,
   title,
 }: UserFormModalProps) {
-  const [formData, setFormData] = useState<UserFormData>({
+type FormDataType = UserFormData | UpdateUserFormData
+
+  const [formData, setFormData] = useState<FormDataType>({
     name: '',
     email: '',
     contactNo: '',
-    password: '',
+    ...(mode === 'add' ? { password: '' } : {}),
     role: 'member',
     status: 'active',
   })
@@ -81,30 +109,22 @@ export function UserFormModal({
   }, [initialData, mode, isOpen])
 
   const validateForm = () => {
-    const newErrors: Record<string, string> = {}
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required'
+    try {
+      const schema = mode === 'add' ? createUserFormSchema : updateUserFormSchema
+      schema.parse(formData)
+      setErrors({})
+      return true
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const zodErrors: Record<string, string> = {}
+        error.issues.forEach((issue) => {
+          const path = issue.path.join('.')
+          zodErrors[path] = issue.message
+        })
+        setErrors(zodErrors)
+      }
+      return false
     }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email format'
-    }
-
-    if (!formData.contactNo.trim()) {
-      newErrors.contactNo = 'Phone number is required'
-    } else if (!/^(?:\+94|0)[1-9]\d{8}$/.test(formData.contactNo)) {
-      newErrors.contactNo = 'Invalid phone number format'
-    }
-
-    if (mode === 'add' && !formData.password) {
-      newErrors.password = 'Password is required'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -116,15 +136,21 @@ export function UserFormModal({
 
     setLoading(true)
     try {
-      const submitData = { ...formData }
+      // For updates, only send fields that have values
+      let dataToSend = formData
+
       if (mode === 'edit') {
-        // Don't send password if it's empty (not changed)
-        if (!submitData.password) {
-          delete submitData.password
-        }
+        // Filter out empty/undefined values for updates
+        const filteredData: Record<string, string> = {}
+        Object.entries(formData).forEach(([key, value]) => {
+          if (value !== undefined && value !== '' && value !== null) {
+            filteredData[key] = value
+          }
+        })
+        dataToSend = filteredData as UserFormData
       }
 
-      await onSubmit(submitData)
+      await onSubmit(dataToSend)
       onClose()
     } catch (error) {
       console.error('Error submitting form:', error)
@@ -133,9 +159,9 @@ export function UserFormModal({
     }
   }
 
-  const handleInputChange = (field: keyof UserFormData, value: string) => {
+  const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    if (errors[field]) {
+    if (errors[field as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
     }
   }
@@ -253,24 +279,25 @@ export function UserFormModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="password" className="text-right">
-                Password
-              </Label>
-              <div className="col-span-3">
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  placeholder={mode === 'edit' ? 'Leave blank to keep current' : ''}
-                  className={errors.password ? 'border-red-500' : ''}
-                />
-                {errors.password && (
-                  <p className="text-sm text-red-500 mt-1">{errors.password}</p>
-                )}
+            {mode === 'add' && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="password" className="text-right">
+                  Password
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="password"
+                    type="password"
+                    value={'password' in formData ? formData.password : ''}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    className={errors.password ? 'border-red-500' : ''}
+                  />
+                  {errors.password && (
+                    <p className="text-sm text-red-500 mt-1">{errors.password}</p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>

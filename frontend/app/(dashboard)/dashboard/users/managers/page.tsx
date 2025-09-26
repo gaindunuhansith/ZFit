@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, Shield } from 'lucide-react'
 import { apiService } from '@/lib/api'
 import { UserFormModal } from '@/components/UserFormModal'
+import { UserFormData } from '@/lib/validations/user'
 
 interface Manager {
   _id: string
@@ -93,14 +94,7 @@ export default function ManagersPage() {
     }
   }
 
-  const handleModalSubmit = async (formData: {
-    name: string
-    email: string
-    contactNo: string
-    password?: string
-    role: 'member' | 'staff' | 'manager'
-    status: 'active' | 'inactive' | 'expired'
-  }) => {
+  const handleModalSubmit = async (formData: UserFormData) => {
     try {
       if (editingManager) {
         // Update existing manager
