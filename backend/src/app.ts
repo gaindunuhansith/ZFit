@@ -5,6 +5,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 
 import authRouter from "./routes/auth.route.js";
+import userRouter from "./routes/user.routes.js";  // Added user routes
 import membershipRouter from "./routes/membership.routes.js";  // Added membership routes
 import subscriptionRouter from "./routes/subscription.routes.js";  // Added subscription routes
 import inventoryRoutes from "./routes/inventory.routes.js";  // Consolidated inventory routes
@@ -28,6 +29,7 @@ app.use(morgan("dev"));
 
 //routes
 app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/users", userRouter);  // Added user routes
 app.use("/api/v1/memberships", membershipRouter);  // Added membership routes
 app.use("/api/v1/subscriptions", subscriptionRouter);  // Added subscription routes
 app.use('/api/v1/inventory', inventoryRoutes);  // Consolidated inventory routes (categories, suppliers, items, stock, reports, cart, orders)
