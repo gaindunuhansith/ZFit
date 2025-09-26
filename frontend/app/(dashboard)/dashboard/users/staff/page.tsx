@@ -14,22 +14,33 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, UserCheck } from 'lucide-react'
 import { apiService } from '@/lib/api'
+import { UserFormModal } from '@/components/UserFormModal'
+import { UserFormData } from '@/lib/validations/user'
 
 interface Staff {
   _id: string
   name: string
   email: string
-  phone: string
-  role: string
-  status: 'active' | 'inactive'
-  joinDate: string
+  contactNo: string
+  status: 'active' | 'inactive' | 'expired'
+  createdAt: string
   qrCode?: string
+  profile?: {
+    emergencyContact?: string
+    medicalConditions?: string
+  }
+  consent?: {
+    termsAccepted: boolean
+    marketingEmails: boolean
+  }
 }
 
 export default function StaffPage() {
   const [staff, setStaff] = useState<Staff[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingStaff, setEditingStaff] = useState<Staff | null>(null)
 
   useEffect(() => {
     fetchStaff()
@@ -38,41 +49,8 @@ export default function StaffPage() {
   const fetchStaff = async () => {
     try {
       setLoading(true)
-      // TODO: Implement API call to fetch staff
-      // const response = await apiService.getStaff()
-      // setStaff(response.data)
-
-      // For now, using mock data
-      const mockStaff: Staff[] = [
-        {
-          _id: '1',
-          name: 'Alice Johnson',
-          email: 'alice@zfit.com',
-          phone: '+1234567893',
-          role: 'Trainer',
-          status: 'active',
-          joinDate: '2024-01-10',
-        },
-        {
-          _id: '2',
-          name: 'Mike Wilson',
-          email: 'mike@zfit.com',
-          phone: '+1234567894',
-          role: 'Receptionist',
-          status: 'active',
-          joinDate: '2024-02-15',
-        },
-        {
-          _id: '3',
-          name: 'Sarah Davis',
-          email: 'sarah@zfit.com',
-          phone: '+1234567895',
-          role: 'Cleaner',
-          status: 'inactive',
-          joinDate: '2023-11-20',
-        },
-      ]
-      setStaff(mockStaff)
+      const response = await apiService.getStaff()
+      setStaff(response.data as Staff[])
     } catch (error) {
       console.error('Error fetching staff:', error)
       setError('Failed to load staff')
@@ -81,27 +59,26 @@ export default function StaffPage() {
     }
   }
 
+  const handleAddStaff = () => {
+    setEditingStaff(null)
+    setModalOpen(true)
+  }
+
+  const handleEditStaff = (staffMember: Staff) => {
+    setEditingStaff(staffMember)
+    setModalOpen(true)
+  }
+
   const handleDeleteStaff = async (staffId: string) => {
     if (!confirm('Are you sure you want to delete this staff member?')) return
 
     try {
-      // TODO: Implement API call to delete staff
-      // await apiService.deleteStaff(staffId)
+      await apiService.deleteUser(staffId)
       setStaff(staff.filter(member => member._id !== staffId))
     } catch (error) {
       console.error('Error deleting staff:', error)
       setError('Failed to delete staff member')
     }
-  }
-
-  const handleEditStaff = (staffMember: Staff) => {
-    // TODO: Implement edit functionality
-    console.log('Edit staff:', staffMember)
-  }
-
-  const handleAddStaff = () => {
-    // TODO: Implement add staff functionality
-    console.log('Add new staff member')
   }
 
   const getStatusBadgeVariant = (status: string) => {
@@ -110,8 +87,27 @@ export default function StaffPage() {
         return 'default'
       case 'inactive':
         return 'secondary'
+      case 'expired':
+        return 'destructive'
       default:
         return 'secondary'
+    }
+  }
+
+  const handleModalSubmit = async (formData: UserFormData) => {
+    try {
+      if (editingStaff) {
+        // Update existing staff
+        await apiService.updateUser(editingStaff._id, formData)
+      } else {
+        // Create new staff
+        await apiService.createUser({ ...formData, role: 'staff' })
+      }
+      fetchStaff() // Refresh the list
+    } catch (error) {
+      console.error('Error saving staff:', error)
+      setError('Failed to save staff member')
+      throw error
     }
   }
 
@@ -174,9 +170,8 @@ export default function StaffPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
-                <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Join Date</TableHead>
+                <TableHead>Created Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -185,14 +180,13 @@ export default function StaffPage() {
                 <TableRow key={staffMember._id}>
                   <TableCell className="font-medium">{staffMember.name}</TableCell>
                   <TableCell>{staffMember.email}</TableCell>
-                  <TableCell>{staffMember.phone}</TableCell>
-                  <TableCell>{staffMember.role}</TableCell>
+                  <TableCell>{staffMember.contactNo}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(staffMember.status)}>
                       {staffMember.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{new Date(staffMember.joinDate).toLocaleDateString()}</TableCell>
+                  <TableCell>{new Date(staffMember.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button
@@ -226,6 +220,21 @@ export default function StaffPage() {
           )}
         </CardContent>
       </Card>
+
+      <UserFormModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleModalSubmit}
+        initialData={editingStaff ? {
+          name: editingStaff.name,
+          email: editingStaff.email,
+          contactNo: editingStaff.contactNo,
+          role: 'staff' as 'member' | 'staff' | 'manager',
+          status: editingStaff.status as 'active' | 'inactive' | 'expired'
+        } : undefined}
+        mode={editingStaff ? 'edit' : 'add'}
+        title={editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
+      />
     </div>
   )
 }

@@ -14,22 +14,33 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, Shield } from 'lucide-react'
 import { apiService } from '@/lib/api'
+import { UserFormModal } from '@/components/UserFormModal'
+import { UserFormData } from '@/lib/validations/user'
 
 interface Manager {
   _id: string
   name: string
   email: string
-  phone: string
-  department: string
-  status: 'active' | 'inactive'
-  joinDate: string
+  contactNo: string
+  status: 'active' | 'inactive' | 'expired'
+  createdAt: string
   qrCode?: string
+  profile?: {
+    emergencyContact?: string
+    medicalConditions?: string
+  }
+  consent?: {
+    termsAccepted: boolean
+    marketingEmails: boolean
+  }
 }
 
 export default function ManagersPage() {
   const [managers, setManagers] = useState<Manager[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingManager, setEditingManager] = useState<Manager | null>(null)
 
   useEffect(() => {
     fetchManagers()
@@ -38,32 +49,8 @@ export default function ManagersPage() {
   const fetchManagers = async () => {
     try {
       setLoading(true)
-      // TODO: Implement API call to fetch managers
-      // const response = await apiService.getManagers()
-      // setManagers(response.data)
-
-      // For now, using mock data
-      const mockManagers: Manager[] = [
-        {
-          _id: '1',
-          name: 'David Brown',
-          email: 'david@zfit.com',
-          phone: '+1234567896',
-          department: 'Operations',
-          status: 'active',
-          joinDate: '2023-06-15',
-        },
-        {
-          _id: '2',
-          name: 'Emma Taylor',
-          email: 'emma@zfit.com',
-          phone: '+1234567897',
-          department: 'Finance',
-          status: 'active',
-          joinDate: '2023-08-20',
-        },
-      ]
-      setManagers(mockManagers)
+      const response = await apiService.getManagers()
+      setManagers(response.data as Manager[])
     } catch (error) {
       console.error('Error fetching managers:', error)
       setError('Failed to load managers')
@@ -72,27 +59,26 @@ export default function ManagersPage() {
     }
   }
 
+  const handleAddManager = () => {
+    setEditingManager(null)
+    setModalOpen(true)
+  }
+
+  const handleEditManager = (manager: Manager) => {
+    setEditingManager(manager)
+    setModalOpen(true)
+  }
+
   const handleDeleteManager = async (managerId: string) => {
     if (!confirm('Are you sure you want to delete this manager?')) return
 
     try {
-      // TODO: Implement API call to delete manager
-      // await apiService.deleteManager(managerId)
+      await apiService.deleteUser(managerId)
       setManagers(managers.filter(manager => manager._id !== managerId))
     } catch (error) {
       console.error('Error deleting manager:', error)
       setError('Failed to delete manager')
     }
-  }
-
-  const handleEditManager = (manager: Manager) => {
-    // TODO: Implement edit functionality
-    console.log('Edit manager:', manager)
-  }
-
-  const handleAddManager = () => {
-    // TODO: Implement add manager functionality
-    console.log('Add new manager')
   }
 
   const getStatusBadgeVariant = (status: string) => {
@@ -101,8 +87,27 @@ export default function ManagersPage() {
         return 'default'
       case 'inactive':
         return 'secondary'
+      case 'expired':
+        return 'destructive'
       default:
         return 'secondary'
+    }
+  }
+
+  const handleModalSubmit = async (formData: UserFormData) => {
+    try {
+      if (editingManager) {
+        // Update existing manager
+        await apiService.updateUser(editingManager._id, formData)
+      } else {
+        // Create new manager
+        await apiService.createUser({ ...formData, role: 'manager' })
+      }
+      fetchManagers() // Refresh the list
+    } catch (error) {
+      console.error('Error saving manager:', error)
+      setError('Failed to save manager')
+      throw error
     }
   }
 
@@ -165,9 +170,8 @@ export default function ManagersPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
-                <TableHead>Department</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Join Date</TableHead>
+                <TableHead>Created Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -176,14 +180,13 @@ export default function ManagersPage() {
                 <TableRow key={manager._id}>
                   <TableCell className="font-medium">{manager.name}</TableCell>
                   <TableCell>{manager.email}</TableCell>
-                  <TableCell>{manager.phone}</TableCell>
-                  <TableCell>{manager.department}</TableCell>
+                  <TableCell>{manager.contactNo}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(manager.status)}>
                       {manager.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{new Date(manager.joinDate).toLocaleDateString()}</TableCell>
+                  <TableCell>{new Date(manager.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button
@@ -217,6 +220,21 @@ export default function ManagersPage() {
           )}
         </CardContent>
       </Card>
+
+      <UserFormModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleModalSubmit}
+        initialData={editingManager ? {
+          name: editingManager.name,
+          email: editingManager.email,
+          contactNo: editingManager.contactNo,
+          role: 'manager' as 'member' | 'staff' | 'manager',
+          status: editingManager.status as 'active' | 'inactive' | 'expired'
+        } : undefined}
+        mode={editingManager ? 'edit' : 'add'}
+        title={editingManager ? 'Edit Manager' : 'Add New Manager'}
+      />
     </div>
   )
 }

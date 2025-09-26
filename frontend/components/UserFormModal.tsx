@@ -1,0 +1,314 @@
+"use client"
+
+import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { z } from 'zod'
+import { ZodError } from 'zod'
+
+// Password validation schema (same as backend)
+const passwordSchema = z.string()
+  .min(8, { message: "Password must be at least 8 characters long" })
+  .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
+  .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter" })
+  .regex(/[0-9]/, { message: "Password must contain at least one number" })
+  .regex(/[^A-Za-z0-9]/, { message: "Password must contain at least one special character" })
+
+// User form validation schemas (matching backend)
+const createUserFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email format"),
+  contactNo: z.string()
+    .min(1, "Phone number is required")
+    .regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan Phone number"),
+  password: passwordSchema,
+  role: z.enum(['member', 'staff', 'manager']),
+  status: z.enum(['active', 'inactive', 'expired']),
+})
+
+const updateUserFormSchema = z.object({
+  name: z.string().min(1, "Name is required").optional(),
+  email: z.string().email("Invalid email format").optional(),
+  contactNo: z.string()
+    .regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan Phone number")
+    .optional(),
+  role: z.enum(['member', 'staff', 'manager']).optional(),
+  status: z.enum(['active', 'inactive', 'expired']).optional(),
+})
+
+type UserFormData = z.infer<typeof createUserFormSchema>
+type UpdateUserFormData = z.infer<typeof updateUserFormSchema>
+
+interface UserFormModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onSubmit: (data: UserFormData | UpdateUserFormData) => Promise<void>
+  initialData?: Partial<UserFormData>
+  mode: 'add' | 'edit'
+  title: string
+}
+
+export function UserFormModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  initialData,
+  mode,
+  title,
+}: UserFormModalProps) {
+type FormDataType = UserFormData | UpdateUserFormData
+
+  const [formData, setFormData] = useState<FormDataType>({
+    name: '',
+    email: '',
+    contactNo: '',
+    ...(mode === 'add' ? { password: '' } : {}),
+    role: 'member',
+    status: 'active',
+  })
+  const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (initialData && mode === 'edit') {
+      setFormData({
+        name: initialData.name || '',
+        email: initialData.email || '',
+        contactNo: initialData.contactNo || '',
+        password: '', // Don't populate password for editing
+        role: initialData.role || 'member',
+        status: initialData.status || 'active',
+      })
+    } else {
+      setFormData({
+        name: '',
+        email: '',
+        contactNo: '',
+        password: '',
+        role: 'member',
+        status: 'active',
+      })
+    }
+    setErrors({})
+  }, [initialData, mode, isOpen])
+
+  const validateForm = () => {
+    try {
+      const schema = mode === 'add' ? createUserFormSchema : updateUserFormSchema
+      schema.parse(formData)
+      setErrors({})
+      return true
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const zodErrors: Record<string, string> = {}
+        error.issues.forEach((issue) => {
+          const path = issue.path.join('.')
+          zodErrors[path] = issue.message
+        })
+        setErrors(zodErrors)
+      }
+      return false
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateForm()) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      // For updates, only send fields that have values
+      let dataToSend = formData
+
+      if (mode === 'edit') {
+        // Filter out empty/undefined values for updates
+        const filteredData: Record<string, string> = {}
+        Object.entries(formData).forEach(([key, value]) => {
+          if (value !== undefined && value !== '' && value !== null) {
+            filteredData[key] = value
+          }
+        })
+        dataToSend = filteredData as UserFormData
+      }
+
+      await onSubmit(dataToSend)
+      onClose()
+    } catch (error) {
+      console.error('Error submitting form:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    if (errors[field as keyof typeof errors]) {
+      setErrors(prev => ({ ...prev, [field]: '' }))
+    }
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            {mode === 'add'
+              ? 'Fill in the details to create a new user.'
+              : 'Update the user information below.'
+            }
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Name
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  className={errors.name ? 'border-red-500' : ''}
+                />
+                {errors.name && (
+                  <p className="text-sm text-red-500 mt-1">{errors.name}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="email" className="text-right">
+                Email
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  className={errors.email ? 'border-red-500' : ''}
+                />
+                {errors.email && (
+                  <p className="text-sm text-red-500 mt-1">{errors.email}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="contactNo" className="text-right">
+                Phone
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="contactNo"
+                  value={formData.contactNo}
+                  onChange={(e) => handleInputChange('contactNo', e.target.value)}
+                  placeholder="+94712345678"
+                  className={errors.contactNo ? 'border-red-500' : ''}
+                />
+                {errors.contactNo && (
+                  <p className="text-sm text-red-500 mt-1">{errors.contactNo}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="role" className="text-right">
+                Role
+              </Label>
+              <div className="col-span-3">
+                <Select
+                  value={formData.role}
+                  onValueChange={(value: 'member' | 'staff' | 'manager') =>
+                    handleInputChange('role', value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="member">Member</SelectItem>
+                    <SelectItem value="staff">Staff</SelectItem>
+                    <SelectItem value="manager">Manager</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="status" className="text-right">
+                Status
+              </Label>
+              <div className="col-span-3">
+                <Select
+                  value={formData.status}
+                  onValueChange={(value: 'active' | 'inactive' | 'expired') =>
+                    handleInputChange('status', value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {mode === 'add' && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="password" className="text-right">
+                  Password
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="password"
+                    type="password"
+                    value={'password' in formData ? formData.password : ''}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    className={errors.password ? 'border-red-500' : ''}
+                  />
+                  {errors.password && (
+                    <p className="text-sm text-red-500 mt-1">{errors.password}</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Saving...' : mode === 'add' ? 'Create' : 'Update'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
