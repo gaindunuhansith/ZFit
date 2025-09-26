@@ -52,8 +52,7 @@ const membershipPlanSchema = new mongoose.Schema<MembershipPlanDocument>(
   }
 );
 
-
-membershipPlanSchema.index({ name: 1 });
+// Only keep compound indexes, name index is already created by unique: true
 membershipPlanSchema.index({ category: 1, price: 1 });
 
 const MembershipPlanModel = mongoose.model<MembershipPlanDocument>(
