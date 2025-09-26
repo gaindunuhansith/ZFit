@@ -14,21 +14,30 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, User } from 'lucide-react'
 import { apiService } from '@/lib/api'
+import { UserFormModal } from '@/components/UserFormModal'
 
 interface Member {
   _id: string
   name: string
   email: string
-  phone: string
-  membershipStatus: 'active' | 'inactive' | 'expired'
-  joinDate: string
+  contactNo: string
+  role: string
+  status: string
   qrCode?: string
+  createdAt: string
+  updatedAt: string
+  profile?: {
+    address?: string
+    emergencyContact?: string
+  }
 }
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingMember, setEditingMember] = useState<Member | null>(null)
 
   useEffect(() => {
     fetchMembers()
@@ -37,38 +46,8 @@ export default function MembersPage() {
   const fetchMembers = async () => {
     try {
       setLoading(true)
-      // TODO: Implement API call to fetch members
-      // const response = await apiService.getMembers()
-      // setMembers(response.data)
-
-      // For now, using mock data
-      const mockMembers: Member[] = [
-        {
-          _id: '1',
-          name: 'John Doe',
-          email: 'john@example.com',
-          phone: '+1234567890',
-          membershipStatus: 'active',
-          joinDate: '2024-01-15',
-        },
-        {
-          _id: '2',
-          name: 'Jane Smith',
-          email: 'jane@example.com',
-          phone: '+1234567891',
-          membershipStatus: 'inactive',
-          joinDate: '2024-02-20',
-        },
-        {
-          _id: '3',
-          name: 'Bob Johnson',
-          email: 'bob@example.com',
-          phone: '+1234567892',
-          membershipStatus: 'expired',
-          joinDate: '2023-12-10',
-        },
-      ]
-      setMembers(mockMembers)
+      const response = await apiService.getMembers()
+      setMembers(response.data as Member[])
     } catch (error) {
       console.error('Error fetching members:', error)
       setError('Failed to load members')
@@ -81,8 +60,7 @@ export default function MembersPage() {
     if (!confirm('Are you sure you want to delete this member?')) return
 
     try {
-      // TODO: Implement API call to delete member
-      // await apiService.deleteMember(memberId)
+      await apiService.deleteUser(memberId)
       setMembers(members.filter(member => member._id !== memberId))
     } catch (error) {
       console.error('Error deleting member:', error)
@@ -91,13 +69,13 @@ export default function MembersPage() {
   }
 
   const handleEditMember = (member: Member) => {
-    // TODO: Implement edit functionality
-    console.log('Edit member:', member)
+    setEditingMember(member)
+    setModalOpen(true)
   }
 
   const handleAddMember = () => {
-    // TODO: Implement add member functionality
-    console.log('Add new member')
+    setEditingMember(null)
+    setModalOpen(true)
   }
 
   const getStatusBadgeVariant = (status: string) => {
@@ -110,6 +88,30 @@ export default function MembersPage() {
         return 'destructive'
       default:
         return 'secondary'
+    }
+  }
+
+  const handleModalSubmit = async (formData: {
+    name: string
+    email: string
+    contactNo: string
+    password?: string
+    role: 'member' | 'staff' | 'manager'
+    status: 'active' | 'inactive' | 'expired'
+  }) => {
+    try {
+      if (editingMember) {
+        // Update existing member
+        await apiService.updateUser(editingMember._id, formData)
+      } else {
+        // Create new member
+        await apiService.createUser({ ...formData, role: 'member' })
+      }
+      fetchMembers() // Refresh the list
+    } catch (error) {
+      console.error('Error saving member:', error)
+      setError('Failed to save member')
+      throw error
     }
   }
 
@@ -172,8 +174,8 @@ export default function MembersPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
-                <TableHead>Membership Status</TableHead>
-                <TableHead>Join Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -182,13 +184,13 @@ export default function MembersPage() {
                 <TableRow key={member._id}>
                   <TableCell className="font-medium">{member.name}</TableCell>
                   <TableCell>{member.email}</TableCell>
-                  <TableCell>{member.phone}</TableCell>
+                  <TableCell>{member.contactNo}</TableCell>
                   <TableCell>
-                    <Badge variant={getStatusBadgeVariant(member.membershipStatus)}>
-                      {member.membershipStatus}
+                    <Badge variant={getStatusBadgeVariant(member.status)}>
+                      {member.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{new Date(member.joinDate).toLocaleDateString()}</TableCell>
+                  <TableCell>{new Date(member.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button
@@ -222,6 +224,21 @@ export default function MembersPage() {
           )}
         </CardContent>
       </Card>
+
+      <UserFormModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleModalSubmit}
+        initialData={editingMember ? {
+          name: editingMember.name,
+          email: editingMember.email,
+          contactNo: editingMember.contactNo,
+          role: editingMember.role as 'member' | 'staff' | 'manager',
+          status: editingMember.status as 'active' | 'inactive' | 'expired'
+        } : undefined}
+        mode={editingMember ? 'edit' : 'add'}
+        title={editingMember ? 'Edit Member' : 'Add New Member'}
+      />
     </div>
   )
 }

@@ -10,9 +10,10 @@ interface ApiResponse<T = unknown> {
 interface MemberData {
   name: string
   email: string
-  phone: string
+  contactNo: string
   password?: string
-  role?: string
+  role?: 'member' | 'staff' | 'manager'
+  status?: 'active' | 'inactive' | 'expired'
 }
 
 class ApiService {
@@ -59,38 +60,32 @@ class ApiService {
     return this.request('/users/members')
   }
 
-  async getMemberById(id: string) {
-    return this.request(`/users/members/${id}`)
-  }
-
-  async createMember(memberData: MemberData) {
-    return this.request('/users/members', {
-      method: 'POST',
-      body: JSON.stringify(memberData),
-    })
-  }
-
-  async updateMember(id: string, memberData: Partial<MemberData>) {
-    return this.request(`/users/members/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(memberData),
-    })
-  }
-
-  async deleteMember(id: string) {
-    return this.request(`/users/members/${id}`, {
-      method: 'DELETE',
-    })
-  }
-
-  // Staff API methods
   async getStaff() {
     return this.request('/users/staff')
   }
 
-  // Manager API methods
   async getManagers() {
     return this.request('/users/managers')
+  }
+
+  async createUser(userData: MemberData) {
+    return this.request('/users', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    })
+  }
+
+  async updateUser(id: string, userData: Partial<MemberData>) {
+    return this.request(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(userData),
+    })
+  }
+
+  async deleteUser(id: string) {
+    return this.request(`/users/${id}`, {
+      method: 'DELETE',
+    })
   }
 
   // Attendance API methods
