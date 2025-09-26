@@ -1,11 +1,26 @@
 "use client"
 
 import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth-context"
 
 export default function Home() {
-  useEffect(() => {
-    window.location.href = "/auth/login"
-  }, [])
+  const { isAuthenticated, isLoading } = useAuth()
+  const router = useRouter()
 
-  return null
+  useEffect(() => {
+    if (!isLoading) {
+      if (isAuthenticated) {
+        router.push("/dashboard")
+      } else {
+        router.push("/auth/login")
+      }
+    }
+  }, [isAuthenticated, isLoading, router])
+
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
+    </div>
+  )
 }

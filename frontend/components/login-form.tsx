@@ -1,11 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Eye, EyeOff, Mail, Lock } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/lib/auth-context"
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
@@ -13,6 +15,9 @@ export function LoginForm() {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+
+  const { login } = useAuth()
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,13 +55,11 @@ export function LoginForm() {
       // Success - handle login
       console.log("Login successful:", data)
       
-      // Store token if provided
-      if (data.token) {
-        localStorage.setItem("token", data.token)
-      }
+      // Store user data and token in auth context
+      login(data.token || 'dummy-token', data.user)
 
-      // Redirect to dashboard or handle success
-      window.location.href = "/"
+      // Redirect to dashboard
+      router.push("/dashboard")
 
     } catch (error) {
       console.error("Login error:", error)
