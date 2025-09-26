@@ -2,6 +2,7 @@ import UserModel from "../models/user.model.js";
 import AppAssert from "../util/AppAssert.js";
 import { NOT_FOUND, CONFLICT } from "../constants/http.js";
 import { hashValue } from "../util/bcrypt.util.js";
+import { generateQR } from "../util/qrCode.util.js";
 
 
 
@@ -127,6 +128,11 @@ export const createUser = async (data: CreateUserParams) => {
         status: data.status || 'active',
         verified: true, 
     });
+
+    // Generate and store QR code for the user
+    const qrToken = generateQR(String(user._id), data.role as 'member' | 'staff' | 'manager');
+    user.qrCode = qrToken;
+    await user.save();
 
     return await UserModel.findById(user._id).select('-password');
 };

@@ -8,6 +8,7 @@ import authRouter from "./routes/auth.route.js";
 import userRouter from "./routes/user.routes.js";  // Added user routes
 import membershipRouter from "./routes/membership.routes.js";  // Added membership routes
 import subscriptionRouter from "./routes/subscription.routes.js";  // Added subscription routes
+import attendanceRouter from "./routes/attendance.routes.js";  // Added attendance routes
 import inventoryRoutes from "./routes/inventory.routes.js";  // Consolidated inventory routes
 import paymentRoutes from "./routes/payment.routes.js";  // Consolidated payment routes (payments, invoices, refunds, methods, gateways)
 import BookingRoutes from "./routes/Booking.routes.js";
@@ -32,6 +33,7 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", userRouter);  // Added user routes
 app.use("/api/v1/memberships", membershipRouter);  // Added membership routes
 app.use("/api/v1/subscriptions", subscriptionRouter);  // Added subscription routes
+app.use("/api/v1/attendance", attendanceRouter);  // Added attendance routes
 app.use('/api/v1/inventory', inventoryRoutes);  // Consolidated inventory routes (categories, suppliers, items, stock, reports, cart, orders)
 app.use('/api/v1/payments', paymentRoutes);  // Consolidated payment routes (payments, invoices, refunds, methods, gateways)
 app.use('/api/v1/bookings', BookingRoutes);
