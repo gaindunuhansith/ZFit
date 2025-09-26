@@ -41,9 +41,9 @@ const data = {
   },
   teams: [
     {
-      name: "ZFit Admin",
+      name: "ZFit",
       logo: "/logo.png",
-      plan: "Fitness Management",
+      plan: "Gym Management Portal",
     },
   ],
   navMain: [
