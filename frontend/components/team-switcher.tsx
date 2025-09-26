@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { ChevronsUpDown, Plus } from "lucide-react"
+import Image from "next/image"
 
 import {
   DropdownMenu,
@@ -24,7 +25,7 @@ export function TeamSwitcher({
 }: {
   teams: {
     name: string
-    logo: React.ElementType
+    logo: React.ElementType | string
     plan: string
   }[]
 }) {
@@ -40,8 +41,12 @@ export function TeamSwitcher({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <activeTeam.logo className="size-4" />
+              <div className="flex aspect-square size-10 items-center justify-center rounded-lg text-sidebar-primary-foreground">
+                {typeof activeTeam.logo === 'string' ? (
+                  <Image src={activeTeam.logo} width={36} height={36} alt="Logo" />
+                ) : (
+                  <activeTeam.logo className="size-4" />
+                )}
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">
@@ -67,8 +72,12 @@ export function TeamSwitcher({
                 onClick={() => setActiveTeam(team)}
                 className="gap-2 p-2"
               >
-                <div className="flex size-6 items-center justify-center rounded-sm border">
-                  <team.logo className="size-4 shrink-0" />
+                <div className="flex size-8 items-center justify-center rounded-sm border">
+                  {typeof team.logo === 'string' ? (
+                    <Image src={team.logo} width={28} height={28} alt="Logo" />
+                  ) : (
+                    <team.logo className="size-4 shrink-0" />
+                  )}
                 </div>
                 {team.name}
                 <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>

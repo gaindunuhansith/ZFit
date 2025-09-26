@@ -7,7 +7,6 @@ import {
   Bot,
   Command,
   Frame,
-  GalleryVerticalEnd,
   Map,
   PieChart,
   Settings2,
@@ -43,7 +42,7 @@ const data = {
   teams: [
     {
       name: "ZFit Admin",
-      logo: GalleryVerticalEnd,
+      logo: "/logo.png",
       plan: "Fitness Management",
     },
   ],
