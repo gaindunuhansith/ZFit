@@ -1,5 +1,5 @@
 import SubscriptionModel from "../models/subscription.model.js";
-import MembershipPlanModel from "../models/membership.model.js";
+import MembershipPlanModel from "../models/membershipPlan.model.js";
 import UserModel from "../models/user.model.js";
 import AppAssert from "../util/AppAssert.js";
 import { CONFLICT, INTERNAL_SERVER_ERROR, NOT_FOUND } from "../constants/http.js";

@@ -1,18 +1,18 @@
 import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { 
-    getAllMemberships, 
-    getMembershipById, 
-    getMembershipsByCategory, 
-    createMembership,
-    updateMembership,
-    deleteMembership,
-    getMembershipCategories
-} from "../services/membership.service.js";
+    getAllMembershipPlans, 
+    getMembershipPlanById, 
+    getMembershipPlansByCategory, 
+    createMembershipPlan,
+    updateMembershipPlan,
+    deleteMembershipPlan,
+    getMembershipPlanCategories
+} from "../services/membershipPlan.service.js";
 import { CREATED, OK } from "../constants/http.js";
 
 // Zod validation schemas
-const createMembershipSchema = z.object({
+const createMembershipPlanSchema = z.object({
     name: z.string()
         .min(2, "Name must be at least 2 characters")
         .max(100, "Name must be at most 100 characters")
@@ -29,7 +29,7 @@ const createMembershipSchema = z.object({
     category: z.enum(["weights", "crossfit", "yoga", "mma", "other"])
 });
 
-const updateMembershipSchema = z.object({
+const updateMembershipPlanSchema = z.object({
     name: z.string()
         .min(2, "Name must be at least 2 characters")
         .max(100, "Name must be at most 100 characters")
@@ -49,87 +49,87 @@ const updateMembershipSchema = z.object({
     category: z.enum(["weights", "crossfit", "yoga", "mma", "other"]).optional()
 });
 
-const membershipIdSchema = z.string().min(1, "Membership ID is required");
+const membershipPlanIdSchema = z.string().min(1, "Membership plan ID is required");
 const categorySchema = z.enum(["weights", "crossfit", "yoga", "mma", "other"]);
 
 // Controller handlers
-export const getAllMembershipsHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const getAllMembershipPlansHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const memberships = await getAllMemberships();
+        const membershipPlans = await getAllMembershipPlans();
         
         return res.status(OK).json({
             success: true,
-            data: memberships
+            data: membershipPlans
         });
     } catch (error) {
         next(error);
     }
 };
 
-export const getMembershipByIdHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const getMembershipPlanByIdHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const membershipId = membershipIdSchema.parse(req.params.id);
-        const membership = await getMembershipById(membershipId);
+        const membershipPlanId = membershipPlanIdSchema.parse(req.params.id);
+        const membershipPlan = await getMembershipPlanById(membershipPlanId);
         
         return res.status(OK).json({
             success: true,
-            data: membership
+            data: membershipPlan
         });
     } catch (error) {
         next(error);
     }
 };
 
-export const getMembershipsByCategoryHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const getMembershipPlansByCategoryHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const category = categorySchema.parse(req.params.category);
-        const memberships = await getMembershipsByCategory(category);
+        const membershipPlans = await getMembershipPlansByCategory(category);
         
         return res.status(OK).json({
             success: true,
-            data: memberships
+            data: membershipPlans
         });
     } catch (error) {
         next(error);
     }
 };
 
-export const createMembershipHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const createMembershipPlanHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const membershipData = createMembershipSchema.parse(req.body);
-        const membership = await createMembership(membershipData);
+        const membershipPlanData = createMembershipPlanSchema.parse(req.body);
+        const membershipPlan = await createMembershipPlan(membershipPlanData);
         
         return res.status(CREATED).json({
             success: true,
-            message: "Membership created successfully",
-            data: membership
+            message: "Membership plan created successfully",
+            data: membershipPlan
         });
     } catch (error) {
         next(error);
     }
 };
 
-export const updateMembershipHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const updateMembershipPlanHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const membershipId = membershipIdSchema.parse(req.params.id);
-        const updateData = updateMembershipSchema.parse(req.body);
+        const membershipPlanId = membershipPlanIdSchema.parse(req.params.id);
+        const updateData = updateMembershipPlanSchema.parse(req.body);
         
-        const membership = await updateMembership(membershipId, updateData);
+        const membershipPlan = await updateMembershipPlan(membershipPlanId, updateData);
         
         return res.status(OK).json({
             success: true,
-            message: "Membership updated successfully",
-            data: membership
+            message: "Membership plan updated successfully",
+            data: membershipPlan
         });
     } catch (error) {
         next(error);
     }
 };
 
-export const deleteMembershipHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteMembershipPlanHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const membershipId = membershipIdSchema.parse(req.params.id);
-        const result = await deleteMembership(membershipId);
+        const membershipPlanId = membershipPlanIdSchema.parse(req.params.id);
+        const result = await deleteMembershipPlan(membershipPlanId);
         
         return res.status(OK).json({
             success: true,
@@ -140,9 +140,9 @@ export const deleteMembershipHandler = async (req: Request, res: Response, next:
     }
 };
 
-export const getMembershipCategoriesHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const getMembershipPlanCategoriesHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const categories = getMembershipCategories();
+        const categories = getMembershipPlanCategories();
         
         return res.status(OK).json({
             success: true,
