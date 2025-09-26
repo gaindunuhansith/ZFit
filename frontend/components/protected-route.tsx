@@ -2,15 +2,22 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/auth-context'
+import { useAuth, UserRole } from '@/lib/auth-context'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  requiredRole?: string
+  requiredRole?: UserRole
+  requireAnyRole?: UserRole[]
+  requireAllRoles?: UserRole[]
 }
 
-export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { isAuthenticated, user, isLoading } = useAuth()
+export function ProtectedRoute({
+  children,
+  requiredRole,
+  requireAnyRole,
+  requireAllRoles
+}: ProtectedRouteProps) {
+  const { isAuthenticated, user, isLoading, canAccess, hasAnyRole } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
@@ -20,12 +27,25 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
         return
       }
 
-      if (requiredRole && user?.role !== requiredRole) {
-        router.push('/dashboard') // Redirect to dashboard if wrong role
+      // Check single required role
+      if (requiredRole && !canAccess(requiredRole)) {
+        router.push('/dashboard') // Redirect to dashboard if insufficient permissions
+        return
+      }
+
+      // Check if user has any of the required roles
+      if (requireAnyRole && !hasAnyRole(requireAnyRole)) {
+        router.push('/dashboard')
+        return
+      }
+
+      // Check if user has all required roles (for complex permissions)
+      if (requireAllRoles && !requireAllRoles.every(role => canAccess(role))) {
+        router.push('/dashboard')
         return
       }
     }
-  }, [isAuthenticated, user, isLoading, router, requiredRole])
+  }, [isAuthenticated, user, isLoading, router, requiredRole, requireAnyRole, requireAllRoles, canAccess, hasAnyRole])
 
   if (isLoading) {
     return (
