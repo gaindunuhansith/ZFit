@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import * as attendanceService from "../services/attendance.service.js";
-import { generateQR } from "../utils/qrCode.util.js";
+import { generateQR } from "../util/qrCode.util.js";
 import { CREATED, OK } from "../constants/http.js";
 
 // Zod Validation Schemas

@@ -1,6 +1,6 @@
 import AttendanceModel from "../models/attendance.model.js";
 import UserModel from "../models/user.model.js";
-import { verifyQR } from "../utils/qrCode.util.js";
+import { verifyQR } from "../util/qrCode.util.js";
 import AppAssert from "../util/AppAssert.js";
 import { BAD_REQUEST, NOT_FOUND, CONFLICT } from "../constants/http.js";
 
