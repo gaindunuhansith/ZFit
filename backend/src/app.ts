@@ -12,7 +12,9 @@ import paymentRoutes from "./routes/payment.routes.js";  // Consolidated payment
 import facilityRoutes from "./routes/facility.routes.js";
 import classRoutes from "./routes/class.routes.js";
 import trainerRoutes from "./routes/trainer.routes.js";
-import BookingRoutes from "./routes/Booking.routes.js";
+import BookingRoutes from "./routes/booking.routes.js";
+import progressRoutes from "./routes/progress.routes.js";
+
 import errorMiddleware from "./middleware/error.middleware.js";
 
 //creating a express app instance
@@ -38,11 +40,7 @@ app.use('/api/v1/facilities', facilityRoutes);
 app.use('/api/v1/classes', classRoutes);
 app.use('/api/v1/trainers', trainerRoutes);
 app.use('/api/v1/bookings', BookingRoutes);
-
-
-
-
-
+app.use('/api/v1/progress', progressRoutes);
 
 app.use(errorMiddleware);
 
