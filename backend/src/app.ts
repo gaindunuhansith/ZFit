@@ -33,7 +33,7 @@ app.use("/api/v1/memberships", membershipRouter);  // Added membership routes
 app.use("/api/v1/subscriptions", subscriptionRouter);  // Added subscription routes
 app.use('/api/v1/inventory', inventoryRoutes);  // Consolidated inventory routes (categories, suppliers, items, stock, reports, cart, orders)
 app.use('/api/v1/payments', paymentRoutes);  // Consolidated payment routes (payments, invoices, refunds, methods, gateways)
-app.use('/api/v1/bookings', BookingRoutes);
+
 app.use('/api/v1/progress', progressRoutes);
 
 app.use(errorMiddleware);
