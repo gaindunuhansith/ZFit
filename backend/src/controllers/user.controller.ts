@@ -70,9 +70,7 @@ const statusSchema = z.object({
     status: z.enum(['active', 'inactive', 'expired'])
 });
 
-/**
- * Get all users
- */
+
 export const getAllUsersHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const users = await getAllUsers();
@@ -87,9 +85,7 @@ export const getAllUsersHandler = async (req: Request, res: Response, next: Next
     }
 };
 
-/**
- * Get all members
- */
+
 export const getAllMembersHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const members = await getAllMembers();
@@ -104,9 +100,7 @@ export const getAllMembersHandler = async (req: Request, res: Response, next: Ne
     }
 };
 
-/**
- * Get active members
- */
+
 export const getActiveMembersHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const members = await getActiveMembers();
@@ -121,9 +115,7 @@ export const getActiveMembersHandler = async (req: Request, res: Response, next:
     }
 };
 
-/**
- * Get inactive members
- */
+
 export const getInactiveMembersHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const members = await getInactiveMembers();
@@ -138,9 +130,6 @@ export const getInactiveMembersHandler = async (req: Request, res: Response, nex
     }
 };
 
-/**
- * Get all staff
- */
 export const getAllStaffHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const staff = await getAllStaff();
@@ -155,9 +144,7 @@ export const getAllStaffHandler = async (req: Request, res: Response, next: Next
     }
 };
 
-/**
- * Get all managers
- */
+
 export const getAllManagersHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const managers = await getAllManagers();
@@ -172,9 +159,7 @@ export const getAllManagersHandler = async (req: Request, res: Response, next: N
     }
 };
 
-/**
- * Get user by ID
- */
+
 export const getUserByIdHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = userIdSchema.parse(req.params.id);
@@ -190,9 +175,6 @@ export const getUserByIdHandler = async (req: Request, res: Response, next: Next
     }
 };
 
-/**
- * Get user by email
- */
 export const getUserByEmailHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const email = emailSchema.parse(req.params.email);
@@ -208,9 +190,7 @@ export const getUserByEmailHandler = async (req: Request, res: Response, next: N
     }
 };
 
-/**
- * Create new user
- */
+
 export const createUserHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userData = createUserSchema.parse(req.body);
@@ -226,9 +206,7 @@ export const createUserHandler = async (req: Request, res: Response, next: NextF
     }
 };
 
-/**
- * Update user
- */
+
 export const updateUserHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = userIdSchema.parse(req.params.id);
@@ -246,9 +224,7 @@ export const updateUserHandler = async (req: Request, res: Response, next: NextF
     }
 };
 
-/**
- * Delete user
- */
+
 export const deleteUserHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = userIdSchema.parse(req.params.id);
@@ -263,9 +239,7 @@ export const deleteUserHandler = async (req: Request, res: Response, next: NextF
     }
 };
 
-/**
- * Update user status
- */
+
 export const updateUserStatusHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = userIdSchema.parse(req.params.id);

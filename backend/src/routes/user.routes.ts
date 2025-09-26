@@ -20,7 +20,7 @@ const userRouter = Router();
 // Apply authentication to all routes (commented out for testing)
 // userRouter.use(authenticate());
 
-// Get routes
+
 userRouter.get("/", getAllUsersHandler);
 userRouter.get("/members", getAllMembersHandler);
 userRouter.get("/members/active", getActiveMembersHandler);
@@ -30,7 +30,7 @@ userRouter.get("/managers", getAllManagersHandler);
 userRouter.get("/email/:email", getUserByEmailHandler);
 userRouter.get("/:id", getUserByIdHandler);
 
-// Create, update, delete routes
+
 userRouter.post("/", createUserHandler);
 userRouter.put("/:id", updateUserHandler);
 userRouter.patch("/:id/status", updateUserStatusHandler);
