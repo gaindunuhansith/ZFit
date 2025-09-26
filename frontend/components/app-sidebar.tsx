@@ -54,21 +54,21 @@ const data = {
       isActive: true,
     },
     {
-      title: "Members",
-      url: "/dashboard/members",
+      title: "Users",
+      url: "/dashboard/users",
       icon: Users,
       items: [
         {
-          title: "All Members",
-          url: "/dashboard/members",
+          title: "Members",
+          url: "/dashboard/users/members",
         },
         {
-          title: "Active Members",
-          url: "/dashboard/members/active",
+          title: "Staff",
+          url: "/dashboard/users/staff",
         },
         {
-          title: "Inactive Members",
-          url: "/dashboard/members/inactive",
+          title: "Managers",
+          url: "/dashboard/users/managers",
         },
       ],
     },
