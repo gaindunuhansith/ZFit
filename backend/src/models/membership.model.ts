@@ -1,50 +1,108 @@
 import mongoose from "mongoose";
 
-export interface MembershipPlanDocument extends mongoose.Document {
-  name: string;            
-  description?: string;    
-  price: number;           
-  currency: string;        
-  durationInDays: number;  
-  category: string;        
+export interface MembershipDocument extends mongoose.Document {
+  userId: mongoose.Types.ObjectId;
+  membershipPlanId: mongoose.Types.ObjectId;
+  startDate: Date;
+  endDate: Date;
+  status: 'active' | 'expired' | 'cancelled' | 'paused';
+  transactionId?: string;
+  autoRenew: boolean;
+  renewalAttempts: number;
+  lastRenewalDate?: Date;
+  cancellationDate?: Date;
+  cancellationReason?: string;
+  notes?: string;
   createdAt: Date;
   updatedAt: Date;
+
+  // Instance methods
+  isActive(): boolean;
+  daysRemaining(): number;
+  isExpired(): boolean;
+  totalDuration(): number;
 }
 
-const membershipPlanSchema = new mongoose.Schema<MembershipPlanDocument>(
+interface MembershipModel extends mongoose.Model<MembershipDocument> {
+  findActiveMemberships(): Promise<MembershipDocument[]>;
+  findExpiringMemberships(daysAhead?: number): Promise<MembershipDocument[]>;
+  findByUser(userId: mongoose.Types.ObjectId): Promise<MembershipDocument[]>;
+}
+
+const membershipSchema = new mongoose.Schema<MembershipDocument>(
   {
-    name: {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, "User ID is required"],
+      index: true,
+    },
+    membershipPlanId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'MembershipPlan',
+      required: [true, "Membership plan ID is required"],
+      index: true,
+    },
+    startDate: {
+      type: Date,
+      required: [true, "Start date is required"],
+      default: Date.now,
+      validate: {
+        validator: function(v: Date) {
+          return v <= new Date();
+        },
+        message: 'Start date cannot be in the future'
+      }
+    },
+    endDate: {
+      type: Date,
+      required: [true, "End date is required"],
+      validate: {
+        validator: function(this: MembershipDocument, v: Date) {
+          return v > this.startDate;
+        },
+        message: 'End date must be after start date'
+      }
+    },
+    status: {
       type: String,
-      required: [true, "Membership plan name is required"],
+      enum: {
+        values: ['active', 'expired', 'cancelled', 'paused'],
+        message: 'Status must be one of: active, expired, cancelled, paused'
+      },
+      required: [true, "Status is required"],
+      default: 'active',
+      index: true,
+    },
+    transactionId: {
+      type: String,
       trim: true,
-      minlength: 2,
-      maxlength: 100,
-      unique: true,
     },
-    description: {
-      type: String,
-      maxlength: 1000,
+    autoRenew: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
-    price: {
+    renewalAttempts: {
       type: Number,
-      required: [true, "Price is required"],
-      min: [0, "Price must be greater than 0"],
+      default: 0,
+      min: [0, "Renewal attempts cannot be negative"],
     },
-    currency: {
+    lastRenewalDate: {
+      type: Date,
+    },
+    cancellationDate: {
+      type: Date,
+    },
+    cancellationReason: {
       type: String,
-      enum: ["LKR", "USD"],
-      default: "LKR",
+      maxlength: [500, "Cancellation reason cannot exceed 500 characters"],
+      trim: true,
     },
-    durationInDays: {
-      type: Number,
-      required: [true, "Duration in days is required"],
-      min: [1, "Duration must be at least 1 day"],
-    },
-    category: {
+    notes: {
       type: String,
-      enum: ["weights", "crossfit", "yoga", "mma", "other"],
-      required: [true, "Category is required"],
-      default: "weights",
+      maxlength: [1000, "Notes cannot exceed 1000 characters"],
+      trim: true,
     },
   },
   {
@@ -52,12 +110,74 @@ const membershipPlanSchema = new mongoose.Schema<MembershipPlanDocument>(
   }
 );
 
-// Only keep compound indexes, name index is already created by unique: true
-membershipPlanSchema.index({ category: 1, price: 1 });
+// Compound indexes for common queries
+membershipSchema.index({ userId: 1, status: 1 });
+membershipSchema.index({ endDate: 1, status: 1 });
+membershipSchema.index({ status: 1, autoRenew: 1 });
+membershipSchema.index({ createdAt: -1 });
 
-const MembershipPlanModel = mongoose.model<MembershipPlanDocument>(
-  "MembershipPlan",
-  membershipPlanSchema
+// Instance methods
+membershipSchema.methods.isActive = function(): boolean {
+  const now = new Date();
+  return this.status === 'active' && this.endDate > now;
+};
+
+membershipSchema.methods.daysRemaining = function(): number {
+  const now = new Date();
+  const timeDiff = this.endDate.getTime() - now.getTime();
+  const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+  return daysDiff > 0 ? daysDiff : 0;
+};
+
+membershipSchema.methods.isExpired = function(): boolean {
+  const now = new Date();
+  return this.endDate <= now;
+};
+
+membershipSchema.methods.totalDuration = function(): number {
+  const timeDiff = this.endDate.getTime() - this.startDate.getTime();
+  return Math.ceil(timeDiff / (1000 * 3600 * 24));
+};
+
+// Pre-save middleware to auto-update status based on dates
+membershipSchema.pre('save', function(next) {
+  const now = new Date();
+
+  
+  // Auto-expire if end date has passed and status is still active
+  if (this.status === 'active' && this.endDate <= now) {
+    this.status = 'expired';
+  }
+  
+  next();
+});
+
+// Static methods
+membershipSchema.statics.findActiveMemberships = function() {
+  return this.find({ 
+    status: 'active', 
+    endDate: { $gt: new Date() } 
+  }).populate('userId membershipPlanId');
+};
+
+membershipSchema.statics.findExpiringMemberships = function(daysAhead: number = 7) {
+  const now = new Date();
+  const futureDate = new Date();
+  futureDate.setDate(now.getDate() + daysAhead);
+  
+  return this.find({
+    status: 'active',
+    endDate: { $gte: now, $lte: futureDate }
+  }).populate('userId membershipPlanId');
+};
+
+membershipSchema.statics.findByUser = function(userId: mongoose.Types.ObjectId) {
+  return this.find({ userId }).populate('membershipPlanId').sort({ createdAt: -1 });
+};
+
+const MembershipModel = mongoose.model<MembershipDocument, MembershipModel>(
+  "Membership",
+  membershipSchema
 );
 
-export default MembershipPlanModel;
+export default MembershipModel;
