@@ -4,7 +4,8 @@ import connectToMongoDB from "./config/mongodb.js";
 
 const startServer = async () => {
     app.listen(env.PORT, async () => {
-        console.log(`Server is running http://localhost:${env.PORT}`);
+        console.log("Server is running http://localhost:5000");
+
         
         await connectToMongoDB();
     })

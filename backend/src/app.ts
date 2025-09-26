@@ -11,7 +11,6 @@ import inventoryRoutes from "./routes/inventory.routes.js";  // Consolidated inv
 import paymentRoutes from "./routes/payment.routes.js";  // Consolidated payment routes (payments, invoices, refunds, methods, gateways)
 import BookingRoutes from "./routes/Booking.routes.js";
 import progressRoutes from "./routes/progress.routes.js";
-
 import errorMiddleware from "./middleware/error.middleware.js";
 
 //creating a express app instance
