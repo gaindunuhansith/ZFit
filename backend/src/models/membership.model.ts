@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-export interface SubscriptionDocument extends mongoose.Document {
+export interface MembershipDocument extends mongoose.Document {
   userId: mongoose.Types.ObjectId;
   membershipPlanId: mongoose.Types.ObjectId;
   startDate: Date;
@@ -23,13 +23,13 @@ export interface SubscriptionDocument extends mongoose.Document {
   totalDuration(): number;
 }
 
-interface SubscriptionModel extends mongoose.Model<SubscriptionDocument> {
-  findActiveSubscriptions(): Promise<SubscriptionDocument[]>;
-  findExpiringSubscriptions(daysAhead?: number): Promise<SubscriptionDocument[]>;
-  findByUser(userId: mongoose.Types.ObjectId): Promise<SubscriptionDocument[]>;
+interface MembershipModel extends mongoose.Model<MembershipDocument> {
+  findActiveMemberships(): Promise<MembershipDocument[]>;
+  findExpiringMemberships(daysAhead?: number): Promise<MembershipDocument[]>;
+  findByUser(userId: mongoose.Types.ObjectId): Promise<MembershipDocument[]>;
 }
 
-const subscriptionSchema = new mongoose.Schema<SubscriptionDocument>(
+const membershipSchema = new mongoose.Schema<MembershipDocument>(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -58,7 +58,7 @@ const subscriptionSchema = new mongoose.Schema<SubscriptionDocument>(
       type: Date,
       required: [true, "End date is required"],
       validate: {
-        validator: function(this: SubscriptionDocument, v: Date) {
+        validator: function(this: MembershipDocument, v: Date) {
           return v > this.startDate;
         },
         message: 'End date must be after start date'
@@ -111,36 +111,36 @@ const subscriptionSchema = new mongoose.Schema<SubscriptionDocument>(
 );
 
 // Compound indexes for common queries
-subscriptionSchema.index({ userId: 1, status: 1 });
-subscriptionSchema.index({ endDate: 1, status: 1 });
-subscriptionSchema.index({ status: 1, autoRenew: 1 });
-subscriptionSchema.index({ createdAt: -1 });
+membershipSchema.index({ userId: 1, status: 1 });
+membershipSchema.index({ endDate: 1, status: 1 });
+membershipSchema.index({ status: 1, autoRenew: 1 });
+membershipSchema.index({ createdAt: -1 });
 
 // Instance methods
-subscriptionSchema.methods.isActive = function(): boolean {
+membershipSchema.methods.isActive = function(): boolean {
   const now = new Date();
   return this.status === 'active' && this.endDate > now;
 };
 
-subscriptionSchema.methods.daysRemaining = function(): number {
+membershipSchema.methods.daysRemaining = function(): number {
   const now = new Date();
   const timeDiff = this.endDate.getTime() - now.getTime();
   const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
   return daysDiff > 0 ? daysDiff : 0;
 };
 
-subscriptionSchema.methods.isExpired = function(): boolean {
+membershipSchema.methods.isExpired = function(): boolean {
   const now = new Date();
   return this.endDate <= now;
 };
 
-subscriptionSchema.methods.totalDuration = function(): number {
+membershipSchema.methods.totalDuration = function(): number {
   const timeDiff = this.endDate.getTime() - this.startDate.getTime();
   return Math.ceil(timeDiff / (1000 * 3600 * 24));
 };
 
 // Pre-save middleware to auto-update status based on dates
-subscriptionSchema.pre('save', function(next) {
+membershipSchema.pre('save', function(next) {
   const now = new Date();
 
   
@@ -153,14 +153,14 @@ subscriptionSchema.pre('save', function(next) {
 });
 
 // Static methods
-subscriptionSchema.statics.findActiveSubscriptions = function() {
+membershipSchema.statics.findActiveMemberships = function() {
   return this.find({ 
     status: 'active', 
     endDate: { $gt: new Date() } 
   }).populate('userId membershipPlanId');
 };
 
-subscriptionSchema.statics.findExpiringSubscriptions = function(daysAhead: number = 7) {
+membershipSchema.statics.findExpiringMemberships = function(daysAhead: number = 7) {
   const now = new Date();
   const futureDate = new Date();
   futureDate.setDate(now.getDate() + daysAhead);
@@ -171,13 +171,13 @@ subscriptionSchema.statics.findExpiringSubscriptions = function(daysAhead: numbe
   }).populate('userId membershipPlanId');
 };
 
-subscriptionSchema.statics.findByUser = function(userId: mongoose.Types.ObjectId) {
+membershipSchema.statics.findByUser = function(userId: mongoose.Types.ObjectId) {
   return this.find({ userId }).populate('membershipPlanId').sort({ createdAt: -1 });
 };
 
-const SubscriptionModel = mongoose.model<SubscriptionDocument, SubscriptionModel>(
-  "Subscription",
-  subscriptionSchema
+const MembershipModel = mongoose.model<MembershipDocument, MembershipModel>(
+  "Membership",
+  membershipSchema
 );
 
-export default SubscriptionModel;
+export default MembershipModel;
