@@ -12,7 +12,7 @@ interface ItemData {
   itemDescription: string
   categoryID: string
   quantity: number
-  price: number
+  price?: number
   supplierID: string
   lowStockThreshold: number
   maintenanceStatus: "good" | "maintenance_required" | "under_repair"

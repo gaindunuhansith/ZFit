@@ -5,7 +5,7 @@ export interface IInventoryItem extends Document {
     itemDescription: string;
     categoryID: "supplements" | "equipment";
     quantity: number;
-    price: number;
+    price?: number;
     supplierID: mongoose.Types.ObjectId;
     lowStockThreshold: number;
     maintenanceStatus: "good" | "maintenance_required" | "under_repair";
@@ -23,7 +23,7 @@ const InventoryItemSchema = new mongoose.Schema<IInventoryItem>({
         required: true 
     },
     quantity: { type: Number, required: true, min: 0 },
-    price: { type: Number, required: true, min: 0 },
+    price: { type: Number, required: false, min: 0, default: 0 },
     supplierID: { type: mongoose.Schema.Types.ObjectId, ref: "Supplier", required: true },
     lowStockThreshold: { type: Number, default: 5 },
     maintenanceStatus: { 

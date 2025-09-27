@@ -10,7 +10,7 @@ export const createItemSchema = z.object({
     itemDescription: z.string().min(2).max(500),
     categoryID: z.enum(["supplements", "equipment"]),
     quantity: z.number().min(0),
-    price: z.number().min(0),
+    price: z.number().min(0).optional(),
     supplierID: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid supplier ID format"),
     lowStockThreshold: z.number().min(0).optional(),
     maintenanceStatus: z.enum(["good", "maintenance_required", "under_repair"]).optional(),

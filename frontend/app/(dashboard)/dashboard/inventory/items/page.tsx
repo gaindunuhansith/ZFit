@@ -24,7 +24,7 @@ interface Item {
   itemDescription: string
   categoryID: "supplements" | "equipment"
   quantity: number
-  price: number
+  price?: number
   supplierID: {
     _id: string
     supplierName: string
@@ -251,7 +251,7 @@ export default function ItemsPage() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>${item.price.toFixed(2)}</TableCell>
+                  <TableCell>${item.price ? item.price.toFixed(2) : '0.00'}</TableCell>
                   <TableCell>
                     <Badge variant={getMaintenanceStatusBadgeVariant(item.maintenanceStatus)}>
                       {getMaintenanceStatusLabel(item.maintenanceStatus)}

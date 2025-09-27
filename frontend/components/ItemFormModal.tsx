@@ -37,7 +37,8 @@ const createItemFormSchema = z.object({
   quantity: z.number()
     .min(0, "Quantity must be 0 or greater"),
   price: z.number()
-    .min(0, "Price must be 0 or greater"),
+    .min(0, "Price must be 0 or greater")
+    .optional(),
   supplierID: z.string()
     .min(1, "Please select a supplier"),
   lowStockThreshold: z.number()
@@ -332,7 +333,7 @@ export function ItemFormModal({
               {/* Price */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="price" className="text-right">
-                  Price *
+                  Price (Optional)
                 </Label>
                 <div className="col-span-3">
                   <Input
