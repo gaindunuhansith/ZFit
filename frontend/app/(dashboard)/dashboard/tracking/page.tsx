@@ -8,7 +8,6 @@ import { trackingApi, type Workout, type Nutrition, type Goal, type Progress } f
 import { useAuth } from "@/lib/auth-context"
 import { Activity, Target, Apple, Dumbbell, TrendingUp, Calendar, Award, Plus, ArrowRight } from "lucide-react"
 import Link from "next/link"
-import { toast } from "sonner"
 
 export default function TrackingOverviewPage() {
   const { user } = useAuth()
@@ -48,7 +47,6 @@ export default function TrackingOverviewPage() {
       }
     } catch (error) {
       console.error("Failed to fetch recent data:", error)
-      toast.error("Failed to fetch recent activity")
     } finally {
       setLoading(false)
     }

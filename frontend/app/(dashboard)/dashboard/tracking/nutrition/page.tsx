@@ -12,7 +12,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { trackingApi, type Nutrition, type NutritionData } from "@/lib/api/trackingApi"
 import { useAuth } from "@/lib/auth-context"
-import { toast } from "sonner"
 
 const MEAL_TYPES = [
   { value: "breakfast", label: "Breakfast" },
@@ -56,7 +55,6 @@ export default function NutritionTrackingPage() {
       }
     } catch (error) {
       console.error("Failed to fetch nutrition:", error)
-      toast.error("Failed to fetch nutrition data")
     } finally {
       setLoading(false)
     }
@@ -67,10 +65,10 @@ export default function NutritionTrackingPage() {
     try {
       if (editingNutrition) {
         await trackingApi.updateNutrition(editingNutrition._id, formData)
-        toast.success("Nutrition entry updated successfully")
+        console.log("Nutrition entry updated successfully")
       } else {
         await trackingApi.createNutrition(formData)
-        toast.success("Nutrition entry added successfully")
+        console.log("Nutrition entry added successfully")
       }
       setIsDialogOpen(false)
       setEditingNutrition(null)
@@ -78,7 +76,6 @@ export default function NutritionTrackingPage() {
       fetchNutrition()
     } catch (error) {
       console.error("Failed to save nutrition:", error)
-      toast.error("Failed to save nutrition entry")
     }
   }
 
@@ -99,11 +96,10 @@ export default function NutritionTrackingPage() {
     if (confirm("Are you sure you want to delete this nutrition entry?")) {
       try {
         await trackingApi.deleteNutrition(id)
-        toast.success("Nutrition entry deleted successfully")
+        console.log("Nutrition entry deleted successfully")
         fetchNutrition()
       } catch (error) {
         console.error("Failed to delete nutrition:", error)
-        toast.error("Failed to delete nutrition entry")
       }
     }
   }

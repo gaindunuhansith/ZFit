@@ -12,7 +12,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { trackingApi, type Workout, type WorkoutData } from "@/lib/api/trackingApi"
 import { useAuth } from "@/lib/auth-context"
-import { toast } from "sonner"
 
 export default function WorkoutTrackingPage() {
   const { user } = useAuth()
@@ -46,7 +45,6 @@ export default function WorkoutTrackingPage() {
       }
     } catch (error) {
       console.error("Failed to fetch workouts:", error)
-      toast.error("Failed to fetch workouts")
     } finally {
       setLoading(false)
     }
@@ -57,10 +55,10 @@ export default function WorkoutTrackingPage() {
     try {
       if (editingWorkout) {
         await trackingApi.updateWorkout(editingWorkout._id, formData)
-        toast.success("Workout updated successfully")
+        console.log("Workout updated successfully")
       } else {
         await trackingApi.createWorkout(formData)
-        toast.success("Workout added successfully")
+        console.log("Workout added successfully")
       }
       setIsDialogOpen(false)
       setEditingWorkout(null)
@@ -68,7 +66,6 @@ export default function WorkoutTrackingPage() {
       fetchWorkouts()
     } catch (error) {
       console.error("Failed to save workout:", error)
-      toast.error("Failed to save workout")
     }
   }
 
@@ -90,11 +87,10 @@ export default function WorkoutTrackingPage() {
     if (confirm("Are you sure you want to delete this workout?")) {
       try {
         await trackingApi.deleteWorkout(id)
-        toast.success("Workout deleted successfully")
+        console.log("Workout deleted successfully")
         fetchWorkouts()
       } catch (error) {
         console.error("Failed to delete workout:", error)
-        toast.error("Failed to delete workout")
       }
     }
   }

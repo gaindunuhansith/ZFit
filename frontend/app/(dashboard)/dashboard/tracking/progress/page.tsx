@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { trackingApi, type Progress, type Workout, type Nutrition, type Goal } from "@/lib/api/trackingApi"
 import { useAuth } from "@/lib/auth-context"
 import { Activity, Target, Apple, Dumbbell, TrendingUp, Calendar, Award } from "lucide-react"
-import { toast } from "sonner"
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 
@@ -52,7 +51,6 @@ export default function ProgressOverviewPage() {
       }
     } catch (error) {
       console.error("Failed to fetch data:", error)
-      toast.error("Failed to fetch progress data")
     } finally {
       setLoading(false)
     }

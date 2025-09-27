@@ -12,7 +12,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { trackingApi, type Goal, type GoalData } from "@/lib/api/trackingApi"
 import { useAuth } from "@/lib/auth-context"
-import { toast } from "sonner"
 
 const GOAL_TYPES = [
   { value: "weight_loss", label: "Weight Loss" },
@@ -56,7 +55,6 @@ export default function GoalManagementPage() {
       }
     } catch (error) {
       console.error("Failed to fetch goals:", error)
-      toast.error("Failed to fetch goals")
     } finally {
       setLoading(false)
     }
@@ -67,10 +65,10 @@ export default function GoalManagementPage() {
     try {
       if (editingGoal) {
         await trackingApi.updateGoal(editingGoal._id, formData)
-        toast.success("Goal updated successfully")
+        console.log("Goal updated successfully")
       } else {
         await trackingApi.createGoal(formData)
-        toast.success("Goal created successfully")
+        console.log("Goal created successfully")
       }
       setIsDialogOpen(false)
       setEditingGoal(null)
@@ -78,7 +76,6 @@ export default function GoalManagementPage() {
       fetchGoals()
     } catch (error) {
       console.error("Failed to save goal:", error)
-      toast.error("Failed to save goal")
     }
   }
 
@@ -98,11 +95,10 @@ export default function GoalManagementPage() {
     if (confirm("Are you sure you want to delete this goal?")) {
       try {
         await trackingApi.deleteGoal(id)
-        toast.success("Goal deleted successfully")
+        console.log("Goal deleted successfully")
         fetchGoals()
       } catch (error) {
         console.error("Failed to delete goal:", error)
-        toast.error("Failed to delete goal")
       }
     }
   }
