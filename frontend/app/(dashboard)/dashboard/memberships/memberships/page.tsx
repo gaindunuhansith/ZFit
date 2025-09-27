@@ -365,6 +365,7 @@ export default function MembershipsPage() {
             ? editingMembership.membershipPlanId._id
             : '',
           startDate: editingMembership.startDate,
+          endDate: editingMembership.endDate,
           transactionId: editingMembership.transactionId,
           autoRenew: editingMembership.autoRenew,
           notes: editingMembership.notes,

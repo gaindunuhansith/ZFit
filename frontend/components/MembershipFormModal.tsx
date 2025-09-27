@@ -51,7 +51,7 @@ interface MembershipFormModalProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (data: MembershipFormData | UpdateMembershipFormData) => Promise<void>
-  initialData?: Partial<MembershipFormData>
+  initialData?: Partial<MembershipFormData & { endDate?: string }>
   mode: 'add' | 'edit'
   title: string
   users?: Array<{ _id: string; name: string; email: string }>
@@ -101,6 +101,7 @@ export function MembershipFormModal({
         userId: initialData.userId || '',
         membershipPlanId: initialData.membershipPlanId || '',
         startDate: initialData.startDate ? new Date(initialData.startDate).toISOString().slice(0, 16) : '',
+        endDate: initialData.endDate ? new Date(initialData.endDate).toISOString().slice(0, 16) : '',
         transactionId: initialData.transactionId || '',
         autoRenew: initialData.autoRenew || false,
         notes: initialData.notes || '',
@@ -164,11 +165,17 @@ export function MembershipFormModal({
         }
         dataToSend = processedData as MembershipFormData
       } else {
-        // Filter out empty/undefined values for updates
+        // Filter out empty/undefined values for updates and convert dates
         const filteredData: Record<string, string | boolean> = {}
         Object.entries(formData).forEach(([key, value]) => {
           if (value !== undefined && value !== '' && value !== null) {
-            filteredData[key] = value
+            // Convert date fields to full ISO strings
+            if ((key === 'startDate' || key === 'endDate') && typeof value === 'string') {
+              const date = new Date(value)
+              filteredData[key] = date.toISOString()
+            } else {
+              filteredData[key] = value
+            }
           }
         })
         dataToSend = filteredData as UpdateMembershipFormData
