@@ -172,21 +172,37 @@ export default function BrowseMembershipsPage() {
       console.log('Payment request data:', paymentRequest) // Debug log
 
       const response = await initiatePayHerePayment(paymentRequest)
+      
+      console.log('Payment response received:', response)
+      console.log('Payment form exists:', !!response.paymentForm)
 
       if (response.paymentForm) {
-        // Create a new window/tab and submit the PayHere form
-        const paymentWindow = window.open('', '_blank', 'width=800,height=600')
-        if (paymentWindow) {
-          paymentWindow.document.write(response.paymentForm)
-          paymentWindow.document.close()
+        console.log('Creating payment form...')
+        // Show a brief loading message before redirect
+        setError('Redirecting to payment gateway...')
+        
+        // Create form in current window and submit immediately
+        const formContainer = document.createElement('div')
+        formContainer.innerHTML = response.paymentForm
+        document.body.appendChild(formContainer)
+        
+        // Find the form and submit it manually instead of relying on inline script
+        const paymentForm = document.getElementById('payhere-form') as HTMLFormElement
+        if (paymentForm) {
+          console.log('Found payment form, submitting manually...')
+          // Small delay to ensure the form is properly added to DOM
+          setTimeout(() => {
+            paymentForm.submit()
+          }, 100)
         } else {
-          // Fallback: Create form in current window
-          const formContainer = document.createElement('div')
-          formContainer.innerHTML = response.paymentForm
-          document.body.appendChild(formContainer)
-          // The form will auto-submit due to the script in the HTML
+          console.error('Could not find payment form with id payhere-form')
+          throw new Error('Payment form element not found')
         }
+        
+        console.log('Payment form added to DOM and should auto-submit')
+        // The form will auto-submit due to the script in the HTML
       } else {
+        console.error('No payment form received in response')
         throw new Error('Payment form not received')
       }
     } catch (err) {
@@ -268,6 +284,16 @@ export default function BrowseMembershipsPage() {
           Choose the perfect membership plan for your fitness journey
         </p>
       </div>
+
+      {/* Payment Status Alert */}
+      {error && error.includes('Redirecting') && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="flex items-center gap-3 py-4">
+            <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent"></div>
+            <span className="text-blue-700 font-medium">{error}</span>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">

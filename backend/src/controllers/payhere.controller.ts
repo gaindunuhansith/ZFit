@@ -27,6 +27,8 @@ const generatePayHereForm = (paymentData: PayHerePaymentData, checkoutUrl: strin
  */
 export const processPayHerePayment = async (req: Request, res: Response) => {
     try {
+        console.log('PayHere payment request received:', req.body);
+        
         // Validate required fields
         const {
             userId,
@@ -47,6 +49,19 @@ export const processPayHerePayment = async (req: Request, res: Response) => {
         if (!userId || !amount || !type || !relatedId || !description || 
             !customerFirstName || !customerLastName || !customerEmail || 
             !customerPhone || !customerAddress || !customerCity) {
+            console.log('Missing required fields:', {
+                userId: !!userId,
+                amount: !!amount,
+                type: !!type,
+                relatedId: !!relatedId,
+                description: !!description,
+                customerFirstName: !!customerFirstName,
+                customerLastName: !!customerLastName,
+                customerEmail: !!customerEmail,
+                customerPhone: !!customerPhone,
+                customerAddress: !!customerAddress,
+                customerCity: !!customerCity
+            });
             return res.status(400).json({
                 success: false,
                 message: 'Missing required fields for PayHere payment'
@@ -94,6 +109,8 @@ export const processPayHerePayment = async (req: Request, res: Response) => {
 
         const result = await payHereService.initiatePayment(paymentRequest);
 
+        console.log('PayHere service result:', result);
+
         res.status(200).json({
             success: true,
             message: 'PayHere payment initiated successfully',
@@ -108,6 +125,7 @@ export const processPayHerePayment = async (req: Request, res: Response) => {
         });
     } catch (error) {
         console.error('PayHere payment processing error:', error);
+        console.error('Error stack:', (error as Error).stack);
         res.status(500).json({
             success: false,
             message: `PayHere payment processing failed: ${(error as Error).message}`
@@ -121,7 +139,10 @@ export const processPayHerePayment = async (req: Request, res: Response) => {
  */
 export const handlePayHereWebhook = async (req: Request, res: Response) => {
     try {
-        console.log('PayHere webhook received:', req.body);
+        console.log('=== PayHere webhook received ===');
+        console.log('Webhook headers:', req.headers);
+        console.log('Webhook body:', req.body);
+        console.log('=====================================');
 
         const webhookData: PayHereWebhookData = req.body;
 

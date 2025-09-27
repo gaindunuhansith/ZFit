@@ -22,15 +22,6 @@ const apiRequest = async <T>(
     ...options,
   }
 
-  // Add auth token if available
-  const token = localStorage.getItem('authToken')
-  if (token) {
-    config.headers = {
-      ...config.headers,
-      Authorization: `Bearer ${token}`,
-    }
-  }
-
   try {
     const response = await fetch(url, config)
     const data = await response.json()

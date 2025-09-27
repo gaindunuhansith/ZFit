@@ -22,15 +22,6 @@ const apiRequest = async <T>(
     ...options,
   }
 
-  // Get token from localStorage
-  const token = localStorage.getItem('authToken')
-  if (token) {
-    config.headers = {
-      ...config.headers,
-      Authorization: `Bearer ${token}`,
-    }
-  }
-
   try {
     const response = await fetch(url, config)
     const data = await response.json()
@@ -184,6 +175,10 @@ export const initiatePayHerePayment = async (paymentData: PayHerePaymentRequest)
       method: 'POST',
       body: JSON.stringify(paymentData),
     })
+    
+    console.log('PayHere API response:', response)
+    console.log('PayHere response data:', response.data)
+    
     if (!response.success || !response.data) {
       throw new Error(response.message || 'Failed to initiate PayHere payment')
     }

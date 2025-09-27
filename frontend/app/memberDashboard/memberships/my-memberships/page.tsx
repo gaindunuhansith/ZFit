@@ -24,13 +24,19 @@ export default function MyMembershipsPage() {
   const [error, setError] = useState<string | null>(null)
 
   const fetchMemberships = useCallback(async () => {
-    if (!user?._id) return
+    if (!user?._id) {
+      console.log('No user ID available for fetching memberships')
+      return
+    }
 
     try {
       setLoading(true)
       setError(null)
+      console.log('Fetching memberships for user:', user._id)
       const response = await membershipApi.getUserMemberships(user._id)
+      console.log('Memberships API response:', response)
       setMemberships(response.data || [])
+      console.log('Memberships set:', response.data || [])
     } catch (err) {
       console.error('Failed to fetch memberships:', err)
       setError('Failed to load your memberships. Please try again.')
@@ -42,6 +48,10 @@ export default function MyMembershipsPage() {
   useEffect(() => {
     fetchMemberships()
   }, [fetchMemberships])
+
+  console.log('Component render - memberships:', memberships)
+  console.log('Component render - memberships.length:', memberships.length)
+  console.log('Component render - loading:', loading)
 
   const getStatusBadge = (status: Membership['status']) => {
     switch (status) {
@@ -168,6 +178,7 @@ export default function MyMembershipsPage() {
         </Button>
       </div>
 
+      
       {memberships.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">

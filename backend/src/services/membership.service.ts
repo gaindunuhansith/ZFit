@@ -72,13 +72,16 @@ export const createMembership = async (data: CreateMembershipParams) => {
     const membershipPlan = await MembershipPlanModel.findById(data.membershipPlanId);
     AppAssert(membershipPlan, NOT_FOUND, "Membership plan not found");
 
-    // Check if user already has active membership
+    // Allow multiple memberships - remove the conflict check
     const existingMembership = await MembershipModel.findOne({
         userId: data.userId,
         status: 'active',
         endDate: { $gt: new Date() }
     });
-    AppAssert(!existingMembership, CONFLICT, "User already has an active membership");
+    
+    if (existingMembership) {
+        console.log('User already has active membership, but creating new one as requested');
+    }
 
     // Calculate end date
     const startDate = data.startDate || new Date();
