@@ -3,43 +3,32 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
 import {
   User,
   Mail,
   Phone,
-  MapPin,
   Calendar,
   CreditCard,
-  Activity,
   Settings,
   Edit,
-  Camera,
   Shield,
-  Bell,
   Lock,
   Eye,
   CheckCircle,
   XCircle,
   Clock,
-  Award,
-  Target,
-  Flame,
-  TrendingUp,
   Building,
   Briefcase
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { getUserById, updateUser } from "@/lib/api/userApi"
 import { UserFormModal, UpdateUserFormData } from "@/components/UserFormModal"
+import { ChangePasswordDialog } from "@/components/ChangePasswordDialog"
+import { QRCodeModal } from "@/components/QRCodeModal"
 
 interface UserProfileData {
   _id?: string
@@ -161,6 +150,8 @@ export function UserProfile({
   const [loading, setLoading] = useState(!initialProfileData)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const [showQRModal, setShowQRModal] = useState(false)
 
   // Fetch user profile data if not provided via props
   useEffect(() => {
@@ -505,81 +496,46 @@ export function UserProfile({
                 </div>
               </>
             )}
-
-            {/* QR Code */}
-            {profileData?.qrCode && (
-              <>
-                <Separator />
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm text-muted-foreground">QR Code</h4>
-                  <p className="text-sm font-mono bg-muted p-2 rounded">{profileData.qrCode}</p>
-                </div>
-              </>
-            )}
           </CardContent>
         </Card>
 
-        {/* Role-specific Stats */}
+        {/* Account Settings */}
+        {showAccountSettings && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              {isMember ? 'Fitness Stats' : 'Work Stats'}
+              <Settings className="h-5 w-5" />
+              Account Settings
             </CardTitle>
             <CardDescription>
-              {isMember ? 'Current fitness metrics' : 'Work performance metrics'}
+              Manage account preferences and security settings.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {isMember ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Total Workouts</span>
-                  <span className="text-lg font-bold">24</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Current Streak</span>
-                  <div className="flex items-center gap-1">
-                    <Flame className="h-4 w-4 text-orange-500" />
-                    <span className="text-lg font-bold">5</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Attendance Rate</span>
-                  <span className="text-lg font-bold">85%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Achievements</span>
-                  <div className="flex items-center gap-1">
-                    <Award className="h-4 w-4 text-yellow-500" />
-                    <span className="text-lg font-bold">7</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Employee ID</span>
-                  <span className="text-lg font-bold">{profileData?.employeeId || 'N/A'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Hire Date</span>
-                  <span className="text-sm font-bold">
-                    {profileData?.hireDate ? new Date(profileData.hireDate).toLocaleDateString() : 'N/A'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Manager</span>
-                  <span className="text-sm font-bold">{profileData?.manager || 'N/A'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Department</span>
-                  <span className="text-sm font-bold">{profileData?.department || 'N/A'}</span>
-                </div>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setShowPasswordDialog(true)}
+              >
+                <Lock className="mr-2 h-4 w-4" />
+                Change Password
+              </Button>
+
+              {profileData?.qrCode && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => setShowQRModal(true)}
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  View QR Code
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
+        )}
       </div>
 
       {/* Payment History - Only for Members */}
@@ -641,84 +597,20 @@ export function UserProfile({
         </Card>
       )}
 
-      {/* Account Settings */}
-      {showAccountSettings && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Account Settings
-            </CardTitle>
-            <CardDescription>
-              Manage account preferences and security settings.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <Bell className="h-4 w-4" />
-                  <span className="text-sm font-medium">Email Notifications</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Receive updates about your account and {isMember ? 'classes' : 'work'}
-                </p>
-              </div>
-              <Switch defaultChecked />
-            </div>
+      {/* Change Password Dialog */}
+      <ChangePasswordDialog
+        open={showPasswordDialog}
+        onOpenChange={setShowPasswordDialog}
+      />
 
-            <Separator />
-
-            {isMember && (
-              <>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <Activity className="h-4 w-4" />
-                      <span className="text-sm font-medium">Workout Reminders</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Get reminded about your scheduled workouts
-                    </p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <Award className="h-4 w-4" />
-                      <span className="text-sm font-medium">Achievement Notifications</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Celebrate your fitness milestones
-                    </p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-
-                <Separator />
-              </>
-            )}
-
-            <div className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
-                <Lock className="mr-2 h-4 w-4" />
-                Change Password
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Camera className="mr-2 h-4 w-4" />
-                Update Profile Picture
-              </Button>
-              <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700">
-                <Shield className="mr-2 h-4 w-4" />
-                Delete Account
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      {/* QR Code Modal */}
+      {profileData?.qrCode && (
+        <QRCodeModal
+          isOpen={showQRModal}
+          onClose={() => setShowQRModal(false)}
+          qrCodeData={profileData.qrCode}
+          userName={profileData.name}
+        />
       )}
     </div>
   )
