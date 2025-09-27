@@ -12,7 +12,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, UserCheck, MoreHorizontal } from 'lucide-react'
+import { Plus, Edit, Trash2, UserCheck, MoreHorizontal, Search } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +41,7 @@ export default function MembershipsPage() {
   const [error, setError] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingMembership, setEditingMembership] = useState<Membership | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     fetchData()
@@ -158,6 +160,22 @@ export default function MembershipsPage() {
     return diffDays
   }
 
+  // Filter memberships based on search term
+  const filteredMemberships = memberships.filter(membership => {
+    const searchLower = searchTerm.toLowerCase()
+    const userName = membership.userId && typeof membership.userId === 'object' ? membership.userId.name : ''
+    const userEmail = membership.userId && typeof membership.userId === 'object' ? membership.userId.email : ''
+    const planName = membership.membershipPlanId && typeof membership.membershipPlanId === 'object' ? membership.membershipPlanId.name : ''
+
+    return (
+      userName.toLowerCase().includes(searchLower) ||
+      userEmail.toLowerCase().includes(searchLower) ||
+      planName.toLowerCase().includes(searchLower) ||
+      membership.status.toLowerCase().includes(searchLower) ||
+      (membership.transactionId && membership.transactionId.toLowerCase().includes(searchLower))
+    )
+  })
+
   const handleModalSubmit = async (formData: MembershipFormData | UpdateMembershipFormData) => {
     try {
       if (editingMembership) {
@@ -230,6 +248,19 @@ export default function MembershipsPage() {
             </div>
           )}
 
+          {/* Search Bar */}
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search memberships..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -244,7 +275,7 @@ export default function MembershipsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {memberships.map((membership) => (
+              {filteredMemberships.map((membership) => (
                 <TableRow key={membership._id}>
                   <TableCell className="font-medium">
                     <div>
@@ -343,11 +374,11 @@ export default function MembershipsPage() {
             </TableBody>
           </Table>
 
-          {memberships.length === 0 && (
+          {filteredMemberships.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <UserCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No memberships found</p>
-              <p className="text-sm">Add your first membership to get started</p>
+              <p>{searchTerm ? 'No memberships found matching your search' : 'No memberships found'}</p>
+              <p className="text-sm">{searchTerm ? 'Try adjusting your search terms' : 'Add your first membership to get started'}</p>
             </div>
           )}
         </CardContent>
