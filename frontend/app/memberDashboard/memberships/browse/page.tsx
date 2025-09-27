@@ -16,7 +16,9 @@ import {
   Heart,
   Target
 } from "lucide-react"
+import { useAuth } from "@/lib/auth-context"
 import { membershipPlanApi, type MembershipPlan } from "@/lib/api/membershipPlanApi"
+import { initiatePayHerePayment, type PayHerePaymentRequest } from "@/lib/api/paymentApi"
 
 const categoryIcons = {
   weights: Dumbbell,
@@ -35,12 +37,14 @@ const categoryColors = {
 }
 
 export default function BrowseMembershipsPage() {
+  const { user } = useAuth()
   const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([])
   const [filteredPlans, setFilteredPlans] = useState<MembershipPlan[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("price-asc")
+  const [purchasingPlan, setPurchasingPlan] = useState<string | null>(null)
 
   useEffect(() => {
     fetchMembershipPlans()
@@ -124,10 +128,89 @@ export default function BrowseMembershipsPage() {
     return `${days} Days`
   }
 
-  const handlePurchase = (plan: MembershipPlan) => {
-    // TODO: Implement purchase flow
-    console.log('Purchasing plan:', plan)
-    // This would typically navigate to a payment page or open a purchase modal
+  const handlePurchase = async (plan: MembershipPlan) => {
+    if (!user) {
+      setError('Please log in to purchase a membership.')
+      return
+    }
+
+    // Validate required user information
+    if (!user.email) {
+      setError('Please update your profile with a valid email address.')
+      return
+    }
+
+    if (!user.contactNo) {
+      setError('Please update your profile with a contact number.')
+      return
+    }
+
+    try {
+      setPurchasingPlan(plan._id)
+      setError(null)
+
+      // Extract customer details with proper fallbacks
+      const nameParts = user.name.trim().split(/\s+/)
+      const firstName = nameParts[0] || 'Unknown'
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'User'
+
+      const paymentRequest: PayHerePaymentRequest = {
+        userId: user._id,
+        amount: plan.price,
+        currency: plan.currency || 'LKR',
+        type: 'membership',
+        relatedId: plan._id,
+        description: `Purchase of ${plan.name} membership`,
+        customerFirstName: firstName,
+        customerLastName: lastName,
+        customerEmail: user.email,
+        customerPhone: user.contactNo || '+94700000000', // Fallback phone number
+        customerAddress: user.profile?.address || 'No address provided',
+        customerCity: user.profile?.address?.split(',')[1]?.trim() || 'Colombo',
+      }
+
+      console.log('Payment request data:', paymentRequest) // Debug log
+
+      const response = await initiatePayHerePayment(paymentRequest)
+      
+      console.log('Payment response received:', response)
+      console.log('Payment form exists:', !!response.paymentForm)
+
+      if (response.paymentForm) {
+        console.log('Creating payment form...')
+        // Show a brief loading message before redirect
+        setError('Redirecting to payment gateway...')
+        
+        // Create form in current window and submit immediately
+        const formContainer = document.createElement('div')
+        formContainer.innerHTML = response.paymentForm
+        document.body.appendChild(formContainer)
+        
+        // Find the form and submit it manually instead of relying on inline script
+        const paymentForm = document.getElementById('payhere-form') as HTMLFormElement
+        if (paymentForm) {
+          console.log('Found payment form, submitting manually...')
+          // Small delay to ensure the form is properly added to DOM
+          setTimeout(() => {
+            paymentForm.submit()
+          }, 100)
+        } else {
+          console.error('Could not find payment form with id payhere-form')
+          throw new Error('Payment form element not found')
+        }
+        
+        console.log('Payment form added to DOM and should auto-submit')
+        // The form will auto-submit due to the script in the HTML
+      } else {
+        console.error('No payment form received in response')
+        throw new Error('Payment form not received')
+      }
+    } catch (err) {
+      console.error('Payment initiation failed:', err)
+      setError('Failed to initiate payment. Please try again.')
+    } finally {
+      setPurchasingPlan(null)
+    }
   }
 
   if (loading) {
@@ -201,6 +284,16 @@ export default function BrowseMembershipsPage() {
           Choose the perfect membership plan for your fitness journey
         </p>
       </div>
+
+      {/* Payment Status Alert */}
+      {error && error.includes('Redirecting') && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="flex items-center gap-3 py-4">
+            <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent"></div>
+            <span className="text-blue-700 font-medium">{error}</span>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -302,9 +395,10 @@ export default function BrowseMembershipsPage() {
                   <Button
                     className="w-full"
                     onClick={() => handlePurchase(plan)}
+                    disabled={purchasingPlan === plan._id}
                   >
                     <CreditCard className="w-4 h-4 mr-2" />
-                    Purchase Now
+                    {purchasingPlan === plan._id ? 'Processing...' : 'Purchase Now'}
                   </Button>
                 </div>
               </CardContent>

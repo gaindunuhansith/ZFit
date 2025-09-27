@@ -1,8 +1,25 @@
 import type { Request, Response } from 'express';
 import { PayHereService } from '../services/payhere.service.js';
-import type { PayHerePaymentRequest, PayHereWebhookData } from '../services/payhere.service.js';
+import type { PayHerePaymentRequest, PayHereWebhookData, PayHerePaymentData } from '../services/payhere.service.js';
 
 const payHereService = new PayHereService();
+
+/**
+ * Generate PayHere payment form HTML
+ */
+const generatePayHereForm = (paymentData: PayHerePaymentData, checkoutUrl: string): string => {
+    const formFields = Object.entries(paymentData)
+        .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}">`)
+        .join('\n    ');
+
+    return `
+<form method="post" action="${checkoutUrl}" id="payhere-form">
+    ${formFields}
+</form>
+<script>
+    document.getElementById('payhere-form').submit();
+</script>`;
+};
 
 /**
  * Process PayHere payment
@@ -10,6 +27,8 @@ const payHereService = new PayHereService();
  */
 export const processPayHerePayment = async (req: Request, res: Response) => {
     try {
+        console.log('PayHere payment request received:', req.body);
+        
         // Validate required fields
         const {
             userId,
@@ -30,6 +49,19 @@ export const processPayHerePayment = async (req: Request, res: Response) => {
         if (!userId || !amount || !type || !relatedId || !description || 
             !customerFirstName || !customerLastName || !customerEmail || 
             !customerPhone || !customerAddress || !customerCity) {
+            console.log('Missing required fields:', {
+                userId: !!userId,
+                amount: !!amount,
+                type: !!type,
+                relatedId: !!relatedId,
+                description: !!description,
+                customerFirstName: !!customerFirstName,
+                customerLastName: !!customerLastName,
+                customerEmail: !!customerEmail,
+                customerPhone: !!customerPhone,
+                customerAddress: !!customerAddress,
+                customerCity: !!customerCity
+            });
             return res.status(400).json({
                 success: false,
                 message: 'Missing required fields for PayHere payment'
@@ -77,6 +109,8 @@ export const processPayHerePayment = async (req: Request, res: Response) => {
 
         const result = await payHereService.initiatePayment(paymentRequest);
 
+        console.log('PayHere service result:', result);
+
         res.status(200).json({
             success: true,
             message: 'PayHere payment initiated successfully',
@@ -84,11 +118,14 @@ export const processPayHerePayment = async (req: Request, res: Response) => {
                 paymentId: result.payment._id,
                 orderId: result.paymentData.order_id,
                 checkoutUrl: result.checkoutUrl,
-                paymentData: result.paymentData
+                paymentData: result.paymentData,
+                // Return HTML form for PayHere submission
+                paymentForm: generatePayHereForm(result.paymentData, result.checkoutUrl)
             }
         });
     } catch (error) {
         console.error('PayHere payment processing error:', error);
+        console.error('Error stack:', (error as Error).stack);
         res.status(500).json({
             success: false,
             message: `PayHere payment processing failed: ${(error as Error).message}`
@@ -102,7 +139,10 @@ export const processPayHerePayment = async (req: Request, res: Response) => {
  */
 export const handlePayHereWebhook = async (req: Request, res: Response) => {
     try {
-        console.log('PayHere webhook received:', req.body);
+        console.log('=== PayHere webhook received ===');
+        console.log('Webhook headers:', req.headers);
+        console.log('Webhook body:', req.body);
+        console.log('=====================================');
 
         const webhookData: PayHereWebhookData = req.body;
 

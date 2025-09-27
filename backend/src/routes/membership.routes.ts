@@ -17,7 +17,7 @@ import {
 
 const router = Router();
 
-// GET routes
+// GET routes (no auth for now)
 router.get("/", getAllMembershipsHandler);
 router.get("/active", getActiveMembershipsHandler);
 router.get("/expiring", getExpiringMembershipsHandler);
@@ -25,7 +25,7 @@ router.get("/:id", getMembershipByIdHandler);
 router.get("/user/:userId", getUserMembershipsHandler);
 router.get("/user/:userId/active", getUserActiveMembershipHandler);
 
-// POST routes
+// POST routes (no auth for now)
 router.post("/", createMembershipHandler);
 
 // PUT routes

@@ -2,6 +2,7 @@ import env from '../config/env.js';
 import mongoose from 'mongoose';
 import { PayHereUtils } from '../util/payhere.util.js';
 import { createPaymentService, updatePaymentService } from './payment.services.js';
+import { createMembership } from './membership.service.js';
 import Payment from '../models/payment.model.js';
 
 export interface PayHerePaymentRequest {
@@ -77,6 +78,16 @@ export class PayHereService {
         checkoutUrl: string;
     }> {
         try {
+            console.log('PayHere service: Initiating payment for:', paymentRequest);
+            console.log('PayHere environment variables check:', {
+                merchantId: !!env.PAYHERE_MERCHANT_ID,
+                merchantSecret: !!env.PAYHERE_MERCHANT_SECRET,
+                environment: env.PAYHERE_ENV,
+                returnUrl: env.PAYHERE_RETURN_URL,
+                cancelUrl: env.PAYHERE_CANCEL_URL,
+                notifyUrl: env.PAYHERE_NOTIFY_URL
+            });
+            
             // Generate unique order ID
             const orderId = PayHereUtils.generateOrderId('ZFIT');
             
@@ -124,6 +135,33 @@ export class PayHereService {
                 merchant_secret: env.PAYHERE_MERCHANT_SECRET
             });
 
+            // For sandbox environment, simulate automatic payment completion after a delay
+            if (env.PAYHERE_ENV === 'sandbox') {
+                console.log('Sandbox mode: Will auto-complete payment after 60 seconds');
+                setTimeout(async () => {
+                    try {
+                        console.log(`Auto-completing sandbox payment: ${orderId}`);
+                        
+                        const mockWebhookData = {
+                            merchant_id: env.PAYHERE_MERCHANT_ID,
+                            order_id: orderId,
+                            payhere_amount: paymentRequest.amount.toString(),
+                            payhere_currency: paymentRequest.currency,
+                            status_code: '2', // Success status
+                            md5sig: 'SANDBOX_AUTO_COMPLETE',
+                            method: 'SANDBOX',
+                            status_message: 'Auto-completed in sandbox',
+                            payment_id: `SANDBOX_${Date.now()}`
+                        };
+
+                        await this.handleWebhook(mockWebhookData);
+                        console.log(`Successfully auto-completed sandbox payment: ${orderId}`);
+                    } catch (error) {
+                        console.error(`Failed to auto-complete sandbox payment ${orderId}:`, error);
+                    }
+                }, 60000); // 60 seconds delay
+            }
+
             return {
                 payment,
                 paymentData: payhereData,
@@ -141,10 +179,20 @@ export class PayHereService {
         success: boolean;
         message: string;
         payment?: any;
+        membership?: any;
     }> {
         try {
-            // Verify webhook signature
-            if (!PayHereUtils.verifyWebhook(webhookData)) {
+            console.log('Processing PayHere webhook...');
+            
+            // Verify webhook signature (skip in sandbox for testing)
+            const isSignatureValid = PayHereUtils.verifyWebhook(webhookData);
+            console.log('Webhook signature verification:', {
+                isValid: isSignatureValid,
+                environment: env.PAYHERE_ENV,
+                skipVerification: env.PAYHERE_ENV === 'sandbox'
+            });
+            
+            if (!isSignatureValid && env.PAYHERE_ENV !== 'sandbox') {
                 return {
                     success: false,
                     message: 'Invalid webhook signature'
@@ -177,10 +225,46 @@ export class PayHereService {
                 })
             });
 
+            // Auto-create membership for successful membership payments only
+            let membership = null;
+            console.log('Checking for membership creation:', {
+                paymentStatus,
+                paymentType: payment.type,
+                shouldCreateMembership: paymentStatus === 'completed' && payment.type === 'membership'
+            });
+            
+            if (paymentStatus === 'completed' && payment.type === 'membership') {
+                try {
+                    console.log('Creating membership with data:', {
+                        userId: payment.userId.toString(),
+                        membershipPlanId: payment.relatedId.toString(),
+                        transactionId: payment.transactionId,
+                        autoRenew: false,
+                        notes: `Auto-created from payment ${payment.transactionId}`
+                    });
+                    
+                    membership = await createMembership({
+                        userId: payment.userId.toString(),
+                        membershipPlanId: payment.relatedId.toString(),
+                        transactionId: payment.transactionId,
+                        autoRenew: false,
+                        notes: `Auto-created from payment ${payment.transactionId}`
+                    });
+                    
+                    console.log('Membership created successfully:', membership);
+                } catch (membershipError) {
+                    console.error('Failed to auto-create membership:', membershipError);
+                    console.error('Membership error stack:', (membershipError as Error).stack);
+                    // Don't fail the webhook if membership creation fails
+                    // The membership can be created manually later
+                }
+            }
+
             return {
                 success: true,
                 message: 'Webhook processed successfully',
-                payment: updatedPayment
+                payment: updatedPayment,
+                membership: membership
             };
         } catch (error) {
             return {
