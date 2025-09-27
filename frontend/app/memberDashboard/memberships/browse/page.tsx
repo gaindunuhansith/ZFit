@@ -7,6 +7,10 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog"
+import {
   CreditCard,
   Dumbbell,
   Filter,
@@ -42,9 +46,11 @@ export default function BrowseMembershipsPage() {
   const [filteredPlans, setFilteredPlans] = useState<MembershipPlan[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("price-asc")
   const [purchasingPlan, setPurchasingPlan] = useState<string | null>(null)
+  const [isRedirecting, setIsRedirecting] = useState(false)
 
   useEffect(() => {
     fetchMembershipPlans()
@@ -130,24 +136,24 @@ export default function BrowseMembershipsPage() {
 
   const handlePurchase = async (plan: MembershipPlan) => {
     if (!user) {
-      setError('Please log in to purchase a membership.')
+      setPaymentError('Please log in to purchase a membership.')
       return
     }
 
     // Validate required user information
     if (!user.email) {
-      setError('Please update your profile with a valid email address.')
+      setPaymentError('Please update your profile with a valid email address.')
       return
     }
 
     if (!user.contactNo) {
-      setError('Please update your profile with a contact number.')
+      setPaymentError('Please update your profile with a contact number.')
       return
     }
 
     try {
       setPurchasingPlan(plan._id)
-      setError(null)
+      setPaymentError(null)
 
       // Extract customer details with proper fallbacks
       const nameParts = user.name.trim().split(/\s+/)
@@ -178,8 +184,8 @@ export default function BrowseMembershipsPage() {
 
       if (response.paymentForm) {
         console.log('Creating payment form...')
-        // Show a brief loading message before redirect
-        setError('Redirecting to payment gateway...')
+        // Show the redirecting modal
+        setIsRedirecting(true)
         
         // Create form in current window and submit immediately
         const formContainer = document.createElement('div')
@@ -196,6 +202,7 @@ export default function BrowseMembershipsPage() {
           }, 100)
         } else {
           console.error('Could not find payment form with id payhere-form')
+          setIsRedirecting(false)
           throw new Error('Payment form element not found')
         }
         
@@ -207,7 +214,8 @@ export default function BrowseMembershipsPage() {
       }
     } catch (err) {
       console.error('Payment initiation failed:', err)
-      setError('Failed to initiate payment. Please try again.')
+      setPaymentError('Failed to initiate payment. Please try again.')
+      setIsRedirecting(false)
     } finally {
       setPurchasingPlan(null)
     }
@@ -285,12 +293,12 @@ export default function BrowseMembershipsPage() {
         </p>
       </div>
 
-      {/* Payment Status Alert */}
-      {error && error.includes('Redirecting') && (
-        <Card className="border-blue-200 bg-blue-50">
+      {/* Payment Error Alert */}
+      {paymentError && (
+        <Card className="border-red-200 bg-red-50">
           <CardContent className="flex items-center gap-3 py-4">
-            <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent"></div>
-            <span className="text-blue-700 font-medium">{error}</span>
+            <CreditCard className="h-5 w-5 text-red-500" />
+            <span className="text-red-700 font-medium">{paymentError}</span>
           </CardContent>
         </Card>
       )}
@@ -370,7 +378,7 @@ export default function BrowseMembershipsPage() {
                 <div className="space-y-4">
                   {/* Price */}
                   <div>
-                    <div className="text-3xl font-bold text-primary">
+                    <div className="text-3xl font-bold text-foreground">
                       {formatPrice(plan.price, plan.currency)}
                     </div>
                     <div className="text-sm text-muted-foreground">
@@ -406,6 +414,22 @@ export default function BrowseMembershipsPage() {
           ))}
         </div>
       )}
+
+      {/* Payment Redirecting Modal */}
+      <Dialog open={isRedirecting} onOpenChange={() => {}}>
+        <DialogContent className="max-w-sm bg-black border-primary">
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-primary"></div>
+              <div className="absolute inset-0 rounded-full h-12 w-12 border-4 border-transparent border-t-primary animate-ping"></div>
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-semibold text-white">Redirecting to Payment Gateway</h3>
+              <p className="text-sm text-gray-300">Please wait while we redirect you to complete your payment...</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
