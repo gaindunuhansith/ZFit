@@ -7,11 +7,10 @@ import {
   CreditCard,
   Activity,
   Dumbbell,
-  BookOpen,
   Target,
   BarChart3,
-  Settings,
   Home,
+  Users,
   ShoppingBag,
 } from "lucide-react"
 
@@ -50,10 +49,23 @@ const data = {
     },
     {
       title: "My Profile",
-      url: "/profile",
+      url: "/memberDashboard/profile",
       icon: User,
     },
     {
+      title: "Memberships",
+      url: "/memberDashboard/memberships",
+      icon: Users,
+      items: [
+        {
+          title: "My Memberships",
+          url: "/memberDashboard/memberships/my-memberships",
+        },
+        {
+          title: "Browse Memberships",
+          url: "/memberDashboard/memberships/browse",
+        },
+      ],
       title: "Store",
       url: "/memberDashboard/store",
       icon: ShoppingBag,

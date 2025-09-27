@@ -1,6 +1,6 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import {
   BadgeCheck,
   Bell,
@@ -44,10 +44,18 @@ export function NavUser({
   const { isMobile } = useSidebar()
   const { logout } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
 
   const handleLogout = () => {
     logout()
     router.push('/auth/login')
+  }
+
+  const handleAccountClick = () => {
+    // Check if we're in member dashboard or staff/manager dashboard
+    const isMemberDashboard = pathname.startsWith('/memberDashboard')
+    const profileUrl = isMemberDashboard ? '/memberDashboard/profile' : '/dashboard/profile'
+    router.push(profileUrl)
   }
 
   return (
@@ -101,7 +109,7 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleAccountClick}>
                 <BadgeCheck />
                 Account
               </DropdownMenuItem>
