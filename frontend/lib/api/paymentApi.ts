@@ -154,13 +154,41 @@ export const updatePayment = async (id: string, paymentData: UpdatePaymentData):
   }
 }
 
-export const deletePayment = async (id: string): Promise<void> => {
+export interface PayHerePaymentRequest {
+  userId: string
+  amount: number
+  currency?: string
+  type: 'membership' | 'inventory' | 'booking' | 'other'
+  relatedId: string
+  description: string
+  customerFirstName: string
+  customerLastName: string
+  customerEmail: string
+  customerPhone: string
+  customerAddress: string
+  customerCity: string
+}
+
+export interface PayHerePaymentResponse {
+  paymentId: string
+  orderId: string
+  checkoutUrl: string
+  paymentData: Record<string, unknown>
+}
+
+// PayHere payment functions
+export const initiatePayHerePayment = async (paymentData: PayHerePaymentRequest): Promise<PayHerePaymentResponse> => {
   try {
-    await apiRequest(`/payments/${id}`, {
-      method: 'DELETE',
+    const response = await apiRequest<PayHerePaymentResponse>('/gateways/payhere/process', {
+      method: 'POST',
+      body: JSON.stringify(paymentData),
     })
+    if (!response.data) {
+      throw new Error('Failed to initiate PayHere payment')
+    }
+    return response.data
   } catch (error) {
-    console.error('Error deleting payment:', error)
+    console.error('Error initiating PayHere payment:', error)
     throw error
   }
 }

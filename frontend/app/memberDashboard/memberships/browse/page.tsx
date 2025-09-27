@@ -16,7 +16,9 @@ import {
   Heart,
   Target
 } from "lucide-react"
+import { useAuth } from "@/lib/auth-context"
 import { membershipPlanApi, type MembershipPlan } from "@/lib/api/membershipPlanApi"
+import { initiatePayHerePayment, type PayHerePaymentRequest } from "@/lib/api/paymentApi"
 
 const categoryIcons = {
   weights: Dumbbell,
@@ -35,12 +37,14 @@ const categoryColors = {
 }
 
 export default function BrowseMembershipsPage() {
+  const { user } = useAuth()
   const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([])
   const [filteredPlans, setFilteredPlans] = useState<MembershipPlan[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("price-asc")
+  const [purchasingPlan, setPurchasingPlan] = useState<string | null>(null)
 
   useEffect(() => {
     fetchMembershipPlans()
@@ -124,10 +128,56 @@ export default function BrowseMembershipsPage() {
     return `${days} Days`
   }
 
-  const handlePurchase = (plan: MembershipPlan) => {
-    // TODO: Implement purchase flow
-    console.log('Purchasing plan:', plan)
-    // This would typically navigate to a payment page or open a purchase modal
+  const handlePurchase = async (plan: MembershipPlan) => {
+    if (!user) {
+      setError('Please log in to purchase a membership.')
+      return
+    }
+
+    // Validate required user information
+    if (!user.email) {
+      setError('Please update your profile with a valid email address.')
+      return
+    }
+
+    if (!user.contactNo) {
+      setError('Please update your profile with a contact number.')
+      return
+    }
+
+    try {
+      setPurchasingPlan(plan._id)
+      setError(null)
+
+      const paymentRequest: PayHerePaymentRequest = {
+        userId: user._id,
+        amount: plan.price,
+        currency: plan.currency || 'LKR',
+        type: 'membership',
+        relatedId: plan._id,
+        description: `Purchase of ${plan.name} membership`,
+        customerFirstName: user.name.split(' ')[0] || user.name,
+        customerLastName: user.name.split(' ').slice(1).join(' ') || '',
+        customerEmail: user.email,
+        customerPhone: user.contactNo || '',
+        customerAddress: user.profile?.address || 'No address provided',
+        customerCity: user.profile?.address?.split(',')[1]?.trim() || 'Colombo',
+      }
+
+      const response = await initiatePayHerePayment(paymentRequest)
+
+      if (response.checkoutUrl) {
+        // Redirect to PayHere payment page
+        window.location.href = response.checkoutUrl
+      } else {
+        throw new Error('Failed to initiate payment')
+      }
+    } catch (err) {
+      console.error('Payment initiation failed:', err)
+      setError('Failed to initiate payment. Please try again.')
+    } finally {
+      setPurchasingPlan(null)
+    }
   }
 
   if (loading) {
@@ -302,9 +352,10 @@ export default function BrowseMembershipsPage() {
                   <Button
                     className="w-full"
                     onClick={() => handlePurchase(plan)}
+                    disabled={purchasingPlan === plan._id}
                   >
                     <CreditCard className="w-4 h-4 mr-2" />
-                    Purchase Now
+                    {purchasingPlan === plan._id ? 'Processing...' : 'Purchase Now'}
                   </Button>
                 </div>
               </CardContent>

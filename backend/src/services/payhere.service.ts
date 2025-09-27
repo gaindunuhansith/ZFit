@@ -141,6 +141,7 @@ export class PayHereService {
         success: boolean;
         message: string;
         payment?: any;
+        membership?: any;
     }> {
         try {
             // Verify webhook signature
@@ -177,10 +178,29 @@ export class PayHereService {
                 })
             });
 
+            // Auto-create membership for successful membership payments only
+            let membership = null;
+            if (paymentStatus === 'completed' && payment.type === 'membership') {
+                try {
+                    membership = await createMembership({
+                        userId: payment.userId.toString(),
+                        membershipPlanId: payment.relatedId.toString(),
+                        transactionId: payment.transactionId,
+                        autoRenew: false,
+                        notes: `Auto-created from payment ${payment.transactionId}`
+                    });
+                } catch (membershipError) {
+                    console.error('Failed to auto-create membership:', membershipError);
+                    // Don't fail the webhook if membership creation fails
+                    // The membership can be created manually later
+                }
+            }
+
             return {
                 success: true,
                 message: 'Webhook processed successfully',
-                payment: updatedPayment
+                payment: updatedPayment,
+                membership: membership
             };
         } catch (error) {
             return {
