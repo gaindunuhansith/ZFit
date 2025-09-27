@@ -30,7 +30,7 @@ interface CartItem extends SupplementItem {
   cartQuantity: number
 }
 
-export default function UserStorePage() {
+export default function MemberStorePage() {
   const [supplements, setSupplements] = useState<SupplementItem[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(true)

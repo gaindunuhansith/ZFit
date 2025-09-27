@@ -12,6 +12,7 @@ import {
   BarChart3,
   Settings,
   Home,
+  ShoppingBag,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -51,6 +52,11 @@ const data = {
       title: "My Profile",
       url: "/profile",
       icon: User,
+    },
+    {
+      title: "Store",
+      url: "/memberDashboard/store",
+      icon: ShoppingBag,
     },
     {
       title: "My Classes",
