@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -95,7 +95,20 @@ export default function ResetPasswordPage() {
       }
     } catch (error: unknown) {
       console.error("Reset password error:", error)
-      setError(error instanceof Error ? error.message : "Failed to reset password. Please try again.")
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred"
+
+      // Provide user-friendly error messages
+      if (errorMessage.includes("Network error") || errorMessage.includes("fetch")) {
+        setError("Unable to connect to the server. Please check your internet connection and try again.")
+      } else if (errorMessage.includes("Invalid or expired verification code")) {
+        setError("This reset link has expired or is invalid. Please request a new password reset.")
+      } else if (errorMessage.includes("404") || errorMessage.includes("Not Found")) {
+        setError("Invalid reset link. Please request a new password reset.")
+      } else if (errorMessage.includes("500") || errorMessage.includes("Server error")) {
+        setError("Server error occurred. Please try again later or contact support if the problem persists.")
+      } else {
+        setError(errorMessage || "Failed to reset password. Please try again.")
+      }
     } finally {
       setIsLoading(false)
     }
