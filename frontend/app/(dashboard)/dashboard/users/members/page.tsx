@@ -1,0 +1,238 @@
+"use client"
+
+import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Plus, Edit, Trash2, User } from 'lucide-react'
+import { apiService } from '@/lib/api'
+import { UserFormModal } from '@/components/UserFormModal'
+import { UserFormData } from '@/lib/validations/user'
+
+interface Member {
+  _id: string
+  name: string
+  email: string
+  contactNo: string
+  role: string
+  status: string
+  qrCode?: string
+  createdAt: string
+  updatedAt: string
+  profile?: {
+    address?: string
+    emergencyContact?: string
+  }
+}
+
+export default function MembersPage() {
+  const [members, setMembers] = useState<Member[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string>('')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingMember, setEditingMember] = useState<Member | null>(null)
+
+  useEffect(() => {
+    fetchMembers()
+  }, [])
+
+  const fetchMembers = async () => {
+    try {
+      setLoading(true)
+      const response = await apiService.getMembers()
+      setMembers(response.data as Member[])
+    } catch (error) {
+      console.error('Error fetching members:', error)
+      setError('Failed to load members')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteMember = async (memberId: string) => {
+    if (!confirm('Are you sure you want to delete this member?')) return
+
+    try {
+      await apiService.deleteUser(memberId)
+      setMembers(members.filter(member => member._id !== memberId))
+    } catch (error) {
+      console.error('Error deleting member:', error)
+      setError('Failed to delete member')
+    }
+  }
+
+  const handleEditMember = (member: Member) => {
+    setEditingMember(member)
+    setModalOpen(true)
+  }
+
+  const handleAddMember = () => {
+    setEditingMember(null)
+    setModalOpen(true)
+  }
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'default'
+      case 'inactive':
+        return 'secondary'
+      case 'expired':
+        return 'destructive'
+      default:
+        return 'secondary'
+    }
+  }
+
+  const handleModalSubmit = async (formData: UserFormData) => {
+    try {
+      if (editingMember) {
+        // Update existing member
+        await apiService.updateUser(editingMember._id, formData)
+      } else {
+        // Create new member
+        await apiService.createUser({ ...formData, role: 'member' })
+      }
+      fetchMembers() // Refresh the list
+    } catch (error) {
+      console.error('Error saving member:', error)
+      setError('Failed to save member')
+      throw error
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Members</h2>
+            <p className="text-muted-foreground">Manage gym members</p>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p>Loading members...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Members</h2>
+          <p className="text-muted-foreground">Manage gym members</p>
+        </div>
+        <Button onClick={handleAddMember}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Member
+        </Button>
+      </div>
+
+      {/* Members Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            All Members
+          </CardTitle>
+          <CardDescription>
+            View and manage all gym members
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-4">
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created Date</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {members.map((member) => (
+                <TableRow key={member._id}>
+                  <TableCell className="font-medium">{member.name}</TableCell>
+                  <TableCell>{member.email}</TableCell>
+                  <TableCell>{member.contactNo}</TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusBadgeVariant(member.status)}>
+                      {member.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{new Date(member.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditMember(member)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteMember(member._id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+
+          {members.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No members found</p>
+              <p className="text-sm">Add your first member to get started</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <UserFormModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleModalSubmit}
+        initialData={editingMember ? {
+          name: editingMember.name,
+          email: editingMember.email,
+          contactNo: editingMember.contactNo,
+          role: editingMember.role as 'member' | 'staff' | 'manager',
+          status: editingMember.status as 'active' | 'inactive' | 'expired'
+        } : undefined}
+        mode={editingMember ? 'edit' : 'add'}
+        title={editingMember ? 'Edit Member' : 'Add New Member'}
+      />
+    </div>
+  )
+}
