@@ -28,6 +28,7 @@ import { useAuth } from "@/lib/auth-context"
 import { getUserById, updateUser } from "@/lib/api/userApi"
 import { UserFormModal, UpdateUserFormData } from "@/components/UserFormModal"
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog"
+import { QRCodeModal } from "@/components/QRCodeModal"
 
 interface UserProfileData {
   _id?: string
@@ -150,6 +151,7 @@ export function UserProfile({
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const [showQRModal, setShowQRModal] = useState(false)
 
   // Fetch user profile data if not provided via props
   useEffect(() => {
@@ -494,17 +496,6 @@ export function UserProfile({
                 </div>
               </>
             )}
-
-            {/* QR Code */}
-            {profileData?.qrCode && (
-              <>
-                <Separator />
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm text-muted-foreground">QR Code</h4>
-                  <p className="text-sm font-mono bg-muted p-2 rounded">{profileData.qrCode}</p>
-                </div>
-              </>
-            )}
           </CardContent>
         </Card>
 
@@ -530,6 +521,17 @@ export function UserProfile({
                 <Lock className="mr-2 h-4 w-4" />
                 Change Password
               </Button>
+
+              {profileData?.qrCode && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => setShowQRModal(true)}
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  View QR Code
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -600,6 +602,16 @@ export function UserProfile({
         open={showPasswordDialog}
         onOpenChange={setShowPasswordDialog}
       />
+
+      {/* QR Code Modal */}
+      {profileData?.qrCode && (
+        <QRCodeModal
+          isOpen={showQRModal}
+          onClose={() => setShowQRModal(false)}
+          qrCodeData={profileData.qrCode}
+          userName={profileData.name}
+        />
+      )}
     </div>
   )
 }
