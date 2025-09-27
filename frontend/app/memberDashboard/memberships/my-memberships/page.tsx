@@ -5,6 +5,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Calendar,
   CreditCard,
@@ -12,7 +23,10 @@ import {
   CheckCircle,
   XCircle,
   PauseCircle,
-  RefreshCw
+  RefreshCw,
+  Play,
+  Plus,
+  Eye
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { membershipApi, type Membership } from "@/lib/api/membershipApi"
@@ -22,6 +36,9 @@ export default function MyMembershipsPage() {
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [selectedMembership, setSelectedMembership] = useState<Membership | null>(null)
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
 
   const fetchMemberships = useCallback(async () => {
     if (!user?._id) {
@@ -57,7 +74,7 @@ export default function MyMembershipsPage() {
     switch (status) {
       case 'active':
         return (
-          <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
+          <Badge variant="default" className="bg-primary text-primary-foreground hover:bg-primary">
             <CheckCircle className="w-3 h-3 mr-1" />
             Active
           </Badge>
@@ -108,6 +125,54 @@ export default function MyMembershipsPage() {
     if (diffDays === 0) return 'Expires today'
     if (diffDays === 1) return '1 day left'
     return `${diffDays} days left`
+  }
+
+  const handlePauseMembership = async (membershipId: string) => {
+    try {
+      setActionLoading(membershipId)
+      await membershipApi.pauseMembership(membershipId, { reason: 'Paused by user' })
+      await fetchMemberships() // Refresh the data
+      console.log('Membership paused successfully')
+    } catch (error) {
+      console.error('Failed to pause membership:', error)
+      setError('Failed to pause membership. Please try again.')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleResumeMembership = async (membershipId: string) => {
+    try {
+      setActionLoading(membershipId)
+      await membershipApi.resumeMembership(membershipId)
+      await fetchMemberships() // Refresh the data
+      console.log('Membership resumed successfully')
+    } catch (error) {
+      console.error('Failed to resume membership:', error)
+      setError('Failed to resume membership. Please try again.')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleExtendMembership = async (membershipId: string) => {
+    try {
+      setActionLoading(membershipId)
+      // Default extension of 30 days
+      await membershipApi.extendMembership(membershipId, { additionalDays: 30 })
+      await fetchMemberships() // Refresh the data
+      console.log('Membership extended successfully')
+    } catch (error) {
+      console.error('Failed to extend membership:', error)
+      setError('Failed to extend membership. Please try again.')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleViewDetails = (membership: Membership) => {
+    setSelectedMembership(membership)
+    setIsDetailsDialogOpen(true)
   }
 
   if (loading) {
@@ -201,7 +266,7 @@ export default function MyMembershipsPage() {
             const daysRemaining = getDaysRemaining(membership.endDate, membership.status)
 
             return (
-              <Card key={membership._id} className={membership.status === 'active' ? 'border-green-200' : ''}>
+              <Card key={membership._id}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
@@ -264,20 +329,43 @@ export default function MyMembershipsPage() {
                       <div className="flex gap-2">
                         {membership.status === 'active' && (
                           <>
-                            <Button variant="outline" size="sm">
-                              Extend
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleExtendMembership(membership._id)}
+                              disabled={actionLoading === membership._id}
+                            >
+                              <Plus className="w-3 h-3 mr-1" />
+                              {actionLoading === membership._id ? 'Extending...' : 'Extend'}
                             </Button>
-                            <Button variant="outline" size="sm">
-                              Pause
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handlePauseMembership(membership._id)}
+                              disabled={actionLoading === membership._id}
+                            >
+                              <PauseCircle className="w-3 h-3 mr-1" />
+                              {actionLoading === membership._id ? 'Pausing...' : 'Pause'}
                             </Button>
                           </>
                         )}
                         {membership.status === 'paused' && (
-                          <Button variant="outline" size="sm">
-                            Resume
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleResumeMembership(membership._id)}
+                            disabled={actionLoading === membership._id}
+                          >
+                            <Play className="w-3 h-3 mr-1" />
+                            {actionLoading === membership._id ? 'Resuming...' : 'Resume'}
                           </Button>
                         )}
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleViewDetails(membership)}
+                        >
+                          <Eye className="w-3 h-3 mr-1" />
                           View Details
                         </Button>
                       </div>
@@ -297,6 +385,120 @@ export default function MyMembershipsPage() {
           })}
         </div>
       )}
+
+      {/* Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Membership Details</DialogTitle>
+            <DialogDescription>
+              Complete information about your membership
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedMembership && (
+            <div className="space-y-6">
+              {/* Basic Info */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Membership Plan</Label>
+                  <p className="text-lg font-semibold">
+                    {typeof selectedMembership.membershipPlanId === 'object' && selectedMembership.membershipPlanId?.name || 'Membership Plan'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Status</Label>
+                  <div className="mt-1">
+                    {getStatusBadge(selectedMembership.status)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Start Date</Label>
+                  <p className="font-medium">{formatDate(selectedMembership.startDate)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">End Date</Label>
+                  <p className="font-medium">{formatDate(selectedMembership.endDate)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Duration</Label>
+                  <p className="font-medium">
+                    {typeof selectedMembership.membershipPlanId === 'object' && selectedMembership.membershipPlanId?.durationInDays || 0} days
+                  </p>
+                </div>
+              </div>
+
+              {/* Price & Transaction */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Price</Label>
+                  <p className="text-lg font-semibold">
+                    {typeof selectedMembership.membershipPlanId === 'object' && selectedMembership.membershipPlanId ? 
+                      `${selectedMembership.membershipPlanId.currency} ${selectedMembership.membershipPlanId.price}` : 'N/A'}
+                  </p>
+                </div>
+                {selectedMembership.transactionId && (
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Transaction ID</Label>
+                    <p className="font-mono text-sm">{selectedMembership.transactionId}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Category & Auto Renewal */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Category</Label>
+                  <p className="font-medium capitalize">
+                    {typeof selectedMembership.membershipPlanId === 'object' && selectedMembership.membershipPlanId?.category || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Auto Renewal</Label>
+                  <p className="font-medium">
+                    {selectedMembership.autoRenew ? 'Enabled' : 'Disabled'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {selectedMembership.notes && (
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Notes</Label>
+                  <div className="mt-1 p-3 bg-muted rounded-lg">
+                    <p className="text-sm">{selectedMembership.notes}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Timestamps */}
+              <div className="grid gap-4 md:grid-cols-2 pt-4 border-t">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Created At</Label>
+                  <p className="text-sm">{formatDate(selectedMembership.createdAt)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Last Updated</Label>
+                  <p className="text-sm">{formatDate(selectedMembership.updatedAt)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDetailsDialogOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
