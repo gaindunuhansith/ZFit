@@ -6,23 +6,22 @@ import {
   updateCategory,
   deleteCategory,
 } from '../controllers/inventoryCategory.controller.js';
-import authenticate from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
 // POST   /api/v1/inventory/categories
-router.post('/categories', authenticate(['manager']), createCategory);
+router.post('/categories', createCategory);
 
 // GET    /api/v1/inventory/categories
-router.get('/categories', authenticate(['manager','staff']), getAllCategories);
+router.get('/categories', getAllCategories);
 
 // GET    /api/v1/inventory/categories/:id
-router.get('/categories/:id', authenticate(['manager','staff']), getCategoryById);
+router.get('/categories/:id',  getCategoryById);
 
 // PUT    /api/v1/inventory/categories/:id
-router.put('/categories/:id', authenticate(['manager']), updateCategory);
+router.put('/categories/:id',  updateCategory);
 
 // DELETE /api/v1/inventory/categories/:id
-router.delete('/categories/:id', authenticate(['manager']), deleteCategory);
+router.delete('/categories/:id',  deleteCategory);
 
 export default router;

@@ -11,19 +11,19 @@ import authenticate from '../middleware/auth.middleware.js';
 const router = express.Router();
 
 
-router.get('/items', authenticate(), getAllItems);
+router.get('/items',  getAllItems);
 
 
-router.post('/items', authenticate(['manager']), createItem);
+router.post('/items',  createItem);
 
 
-router.get('/items/:id', authenticate(), getItemById);
+router.get('/items/:id',  getItemById);
 
 
-router.put('/items/:id', authenticate(['manager']), updateItem);
+router.put('/items/:id',  updateItem);
 
 
-router.delete('/items/:id', authenticate(['manager']), deleteItem);
+router.delete('/items/:id',  deleteItem);
 
 
 export default router

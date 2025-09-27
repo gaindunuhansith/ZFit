@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Activity,
   Dumbbell,
+  Package,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -147,6 +148,29 @@ const data = {
         },
       ],
     },
+    {
+      title: "Inventory",
+      url: "/dashboard/inventory",
+      icon: Package,
+      items: [
+        {
+          title: "Categories",
+          url: "/dashboard/inventory/categories",
+        },
+        {
+          title: "Items",
+          url: "/dashboard/inventory/items",
+        },
+        {
+          title: "Stock Management",
+          url: "/dashboard/inventory/stock",
+        },
+        {
+          title: "Suppliers",
+          url: "/dashboard/inventory/suppliers",
+        },
+      ],
+    },
   ],
   projects: [
     {
@@ -173,7 +197,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const userData = {
     name: user?.name || "User",
     email: user?.email || "",
-    avatar: "/avatars/default.jpg",
+    avatar: "/avatars/default.svg",
   }
 
   return (
