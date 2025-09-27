@@ -28,7 +28,7 @@ import { getAllMemberships } from './membership.service.js'
  *     { key: 'position', header: 'Position' },
  *     { key: 'salary', header: 'Salary', type: 'currency' },
  *     { key: 'hireDate', header: 'Hire Date', type: 'date' }
- *   ],
+ *   },
  *   data: staff
  * }
  *
@@ -833,6 +833,70 @@ export async function generateSuppliersReport(): Promise<Buffer> {
       }
     ],
     data: suppliers as any[]
+  }
+
+  return generateGenericReport(config)
+}
+
+/**
+ * Generate Refunds Report
+ */
+export async function generateRefundsReport(): Promise<Buffer> {
+  const { getRefundsService } = await import('./refund.services.js')
+  const refunds = await getRefundsService()
+
+  const config: ReportConfig = {
+    title: 'Refunds Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'refundId',
+        header: 'Refund ID',
+        className: 'refund-id-cell'
+      },
+      {
+        key: 'userId',
+        header: 'User ID',
+        className: 'user-id-cell'
+      },
+      {
+        key: 'paymentId',
+        header: 'Payment ID',
+        className: 'payment-id-cell'
+      },
+      {
+        key: 'refundAmount',
+        header: 'Refund Amount',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'originalAmount',
+        header: 'Original Amount',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'reason',
+        header: 'Reason',
+        formatter: (value) => value ? value.replace('_', ' ').toUpperCase() : 'N/A'
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        formatter: (value) => `<span class="status-badge status-${value}">${value.toUpperCase()}</span>`
+      },
+      {
+        key: 'createdAt',
+        header: 'Created Date',
+        type: 'date',
+        className: 'date-cell'
+      },
+      {
+        key: 'notes',
+        header: 'Notes',
+        className: 'notes-cell'
+      }
+    ],
+    data: refunds as any[]
   }
 
   return generateGenericReport(config)

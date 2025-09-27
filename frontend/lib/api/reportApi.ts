@@ -1,0 +1,19 @@
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
+
+/**
+ * Generate refunds report PDF
+ */
+export const generateRefundsReport = async (): Promise<Blob> => {
+  const response = await fetch(`${API_BASE_URL}/reports/refunds/pdf`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to generate refunds report')
+  }
+
+  return response.blob()
+}
