@@ -129,6 +129,25 @@ const data = {
         },
       ],
     },
+    {
+      title: "Finance",
+      url: "/dashboard/finance",
+      icon: TrendingUp,
+      items: [
+        {
+          title: "Payment Dashboard",
+          url: "/dashboard/finance/payment",
+        },
+        {
+          title: "Invoices",
+          url: "/dashboard/finance/invoice",
+        },
+        {
+          title: "Refunds",
+          url: "/dashboard/finance/refund",
+        },
+      ],
+    },
   ],
   projects: [
     {

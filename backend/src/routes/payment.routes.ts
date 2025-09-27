@@ -12,7 +12,6 @@ import authenticate from '../middleware/auth.middleware.js';
 // Import sub-route files
 import invoiceRoutes from './invoice.routes.js';
 import refundRoutes from './refund.routes.js';
-import payMethodRoutes from './payMethod.routes.js';
 import gatewayRoutes from './gateway.routes.js';
 
 const router = Router();
@@ -31,7 +30,6 @@ router.delete('/:id', authenticate(["manager"]), deletePayment);
 // Sub-routes for payment-related functionality
 router.use('/invoices', invoiceRoutes);
 router.use('/refunds', refundRoutes);
-router.use('/methods', payMethodRoutes);
 router.use('/gateways', gatewayRoutes);
 
 export default router;
