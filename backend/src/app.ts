@@ -13,6 +13,7 @@ import paymentRoutes from "./routes/payment.routes.js";
 import BookingRoutes from "./routes/Booking.routes.js";
 import progressRoutes from "./routes/progress.routes.js";
 import invoiceRoutes from "./routes/invoice.routes.js";
+import gatewayRoutes from "./routes/gateway.routes.js";
 import errorMiddleware from "./middleware/error.middleware.js";
 
 //creating a express app instance
@@ -38,6 +39,7 @@ app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/bookings', BookingRoutes);
 app.use('/api/v1/progress', progressRoutes);
 app.use('/api/v1/invoices', invoiceRoutes);
+app.use('/api/v1/gateways', gatewayRoutes);
 
 app.use(errorMiddleware);
 
