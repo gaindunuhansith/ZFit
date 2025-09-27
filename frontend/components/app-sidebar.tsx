@@ -149,7 +149,7 @@ const data = {
       icon: TrendingUp,
       items: [
         {
-          title: "Management",
+          title: "Payment",
           url: "/dashboard/finance/overview",
         },
         {
