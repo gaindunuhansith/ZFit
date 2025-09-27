@@ -12,6 +12,7 @@ import inventoryRoutes from "./routes/inventory.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";  
 import BookingRoutes from "./routes/Booking.routes.js";
 import progressRoutes from "./routes/progress.routes.js";
+import reportRouter from "./routes/report.routes.js";
 import errorMiddleware from "./middleware/error.middleware.js";
 
 //creating a express app instance
@@ -36,6 +37,7 @@ app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/payments', paymentRoutes);  
 app.use('/api/v1/bookings', BookingRoutes);
 app.use('/api/v1/progress', progressRoutes);
+app.use('/api/v1/reports', reportRouter);
 
 app.use(errorMiddleware);
 

@@ -12,7 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, UserCheck, MoreHorizontal, Search } from 'lucide-react'
+import { Plus, Edit, Trash2, UserCheck, MoreHorizontal, Search, Download } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
   DropdownMenu,
@@ -176,6 +176,31 @@ export default function MembershipsPage() {
     )
   })
 
+  const handleDownloadReport = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/reports/memberships/pdf`, {
+        method: 'GET',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to download report')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'memberships-report.pdf'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Error downloading report:', error)
+      setError('Failed to download report')
+    }
+  }
+
   const handleModalSubmit = async (formData: MembershipFormData | UpdateMembershipFormData) => {
     try {
       if (editingMembership) {
@@ -224,10 +249,16 @@ export default function MembershipsPage() {
           <h2 className="text-3xl font-bold tracking-tight">Memberships</h2>
           <p className="text-muted-foreground">Manage gym memberships</p>
         </div>
-        <Button onClick={handleAddMembership}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Membership
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleDownloadReport}>
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
+          </Button>
+          <Button onClick={handleAddMembership}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Membership
+          </Button>
+        </div>
       </div>
 
       {/* Memberships Table */}

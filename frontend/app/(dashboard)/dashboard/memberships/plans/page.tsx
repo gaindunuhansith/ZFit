@@ -12,7 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, CreditCard, Search } from 'lucide-react'
+import { Plus, Edit, Trash2, CreditCard, Search, Download } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { membershipPlanApi } from '@/lib/api/membershipPlanApi'
 import type { MembershipPlan } from '@/lib/api/membershipPlanApi'
@@ -100,6 +100,31 @@ export default function MembershipPlansPage() {
     )
   })
 
+  const handleDownloadReport = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/reports/membership-plans/pdf`, {
+        method: 'GET',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to download report')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'membership-plans-report.pdf'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Error downloading report:', error)
+      setError('Failed to download report')
+    }
+  }
+
   const handleModalSubmit = async (formData: MembershipPlanFormData | UpdateMembershipPlanFormData) => {
     try {
       if (editingPlan) {
@@ -162,10 +187,16 @@ export default function MembershipPlansPage() {
           <h2 className="text-3xl font-bold tracking-tight">Membership Plans</h2>
           <p className="text-muted-foreground">Manage gym membership plans</p>
         </div>
-        <Button onClick={handleAddMembershipPlan}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Plan
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleDownloadReport}>
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
+          </Button>
+          <Button onClick={handleAddMembershipPlan}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Plan
+          </Button>
+        </div>
       </div>
 
       {/* Membership Plans Table */}

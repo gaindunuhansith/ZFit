@@ -1,0 +1,697 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import puppeteer from 'puppeteer'
+import { getAllMemberships } from './membership.service.js'
+
+/**
+ * Generic Report Service for generating PDF reports
+ *
+ * Usage Examples:
+ *
+ * // For Users Report
+ * const userConfig: ReportConfig = {
+ *   title: 'Users Report',
+ *   companyName: 'ZFit Gym Management System',
+ *   columns: [
+ *     { key: 'name', header: 'Name' },
+ *     { key: 'email', header: 'Email' },
+ *     { key: 'role', header: 'Role', type: 'status' },
+ *     { key: 'createdAt', header: 'Created Date', type: 'date' }
+ *   ],
+ *   data: users
+ * }
+ *
+ * // For Staff Report
+ * const staffConfig: ReportConfig = {
+ *   title: 'Staff Report',
+ *   columns: [
+ *     { key: 'name', header: 'Name' },
+ *     { key: 'position', header: 'Position' },
+ *     { key: 'salary', header: 'Salary', type: 'currency' },
+ *     { key: 'hireDate', header: 'Hire Date', type: 'date' }
+ *   ],
+ *   data: staff
+ * }
+ *
+ * // Generate report
+ * const pdfBuffer = await generateGenericReport(config)
+ */
+
+export interface ReportColumn {
+  key: string
+  header: string
+  type?: 'text' | 'date' | 'currency' | 'status' | 'boolean'
+  className?: string
+  formatter?: (value: any, row?: any) => string
+}
+
+export interface ReportConfig {
+  title: string
+  companyName?: string
+  columns: ReportColumn[]
+  data: any[]
+  customStyles?: string
+}
+
+/**
+ * Generate PDF from HTML content
+ */
+async function generatePDF(htmlContent: string): Promise<Buffer> {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  })
+
+  try {
+    const page = await browser.newPage()
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' })
+
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '20px',
+        right: '20px',
+        bottom: '20px',
+        left: '20px'
+      }
+    })
+
+    return Buffer.from(pdfBuffer)
+  } finally {
+    await browser.close()
+  }
+}
+
+/**
+ * Generate HTML content for a generic report
+ */
+function generateGenericHTML(config: ReportConfig): string {
+  const { title, companyName = 'ZFit Gym Management System', columns, data, customStyles = '' } = config
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${title}</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+
+        body {
+          font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+          background-color: #ffffff;
+          color: #000000;
+          line-height: 1.5;
+        }
+
+        .container {
+          padding: 20px;
+          background-color: #ffffff;
+        }
+
+        .header {
+          background: linear-gradient(135deg, #AAFF69 0%, #7BC96F 100%);
+          color: #000000;
+          padding: 24px 20px;
+          border-radius: 12px;
+          margin-bottom: 24px;
+          box-shadow: 0 4px 12px rgba(170, 255, 105, 0.2);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .header::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="%23000000" opacity="0.03"/><circle cx="75" cy="75" r="1" fill="%23000000" opacity="0.03"/><circle cx="50" cy="10" r="0.5" fill="%23000000" opacity="0.02"/><circle cx="10" cy="50" r="0.5" fill="%23000000" opacity="0.02"/><circle cx="90" cy="30" r="0.5" fill="%23000000" opacity="0.02"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+          pointer-events: none;
+        }
+
+        .header-content {
+          position: relative;
+          z-index: 1;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .header-left {
+          flex: 1;
+        }
+
+        .company-name {
+          font-size: 16px;
+          font-weight: 700;
+          margin: 0;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          opacity: 0.9;
+        }
+
+        .report-title {
+          font-size: 32px;
+          font-weight: 800;
+          margin: 8px 0 0 0;
+          line-height: 1.1;
+          letter-spacing: -0.5px;
+        }
+
+        .header-right {
+          text-align: right;
+          min-width: 200px;
+        }
+
+        .report-meta {
+          font-size: 12px;
+          opacity: 0.8;
+          margin-bottom: 4px;
+        }
+
+        .report-date {
+          font-size: 14px;
+          font-weight: 600;
+          margin: 0;
+        }
+
+        .header-accent {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, #AAFF69, #7BC96F, #AAFF69);
+          border-radius: 0 0 12px 12px;
+        }
+
+        .table-container {
+          background-color: #ffffff;
+          border-radius: 8px;
+          overflow: hidden;
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+
+        thead {
+          background-color: #AAFF69;
+        }
+
+        thead th {
+          color: #000000;
+          font-weight: 600;
+          font-size: 14px;
+          padding: 16px 12px;
+          text-align: left;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        tbody tr {
+          border-bottom: 1px solid #e5e7eb;
+          transition: background-color 0.2s ease;
+        }
+
+        tbody tr:nth-child(even) {
+          background-color: #f9fafb;
+        }
+
+        tbody tr:hover {
+          background-color: #f3f4f6;
+        }
+
+        tbody td {
+          padding: 14px 12px;
+          color: #000000;
+          font-size: 14px;
+          vertical-align: middle;
+        }
+
+        .user-info {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .user-name {
+          font-weight: 500;
+          color: #000000;
+          margin-bottom: 2px;
+        }
+
+        .user-email {
+          font-size: 12px;
+          color: #666666;
+        }
+
+        .plan-info {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .plan-name {
+          font-weight: 500;
+          color: #000000;
+          margin-bottom: 2px;
+        }
+
+        .plan-price {
+          font-size: 12px;
+          color: #666666;
+        }
+
+        .status-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .status-active {
+          background-color: #AAFF69;
+          color: #000000;
+        }
+
+        .status-expired {
+          background-color: #EF4444;
+          color: #ffffff;
+        }
+
+        .status-cancelled {
+          background-color: #6c757d;
+          color: #ffffff;
+        }
+
+        .status-paused {
+          background-color: #f59e0b;
+          color: #000000;
+        }
+
+        .auto-renew-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .auto-renew-yes {
+          background-color: #AAFF69;
+          color: #000000;
+        }
+
+        .auto-renew-no {
+          background-color: #404040;
+          color: #A0A0A0;
+        }
+
+        .date-cell {
+          font-family: 'Inter', monospace;
+          font-size: 13px;
+          color: #000000;
+        }
+
+        .transaction-id {
+          font-family: 'Inter', monospace;
+          font-size: 12px;
+          color: #666666;
+          font-weight: 500;
+        }
+
+        ${customStyles}
+
+        .footer {
+          text-align: center;
+          margin-top: 40px;
+          padding: 20px;
+          border-top: 1px solid #e5e7eb;
+          background-color: #f9fafb;
+          color: #666666;
+          font-size: 12px;
+        }
+
+        .footer-content {
+          max-width: 600px;
+          margin: 0 auto;
+        }
+
+        .footer p {
+          margin: 4px 0;
+        }
+
+        .footer .copyright {
+          font-weight: 500;
+        }
+
+        .footer .generated-notice {
+          font-style: italic;
+          opacity: 0.8;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="header-content">
+            <div class="header-left">
+              <h2 class="company-name">${companyName}</h2>
+              <h1 class="report-title">${title}</h1>
+            </div>
+            <div class="header-right">
+              <div class="report-meta">Report Generated</div>
+              <p class="report-date">${new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}</p>
+              <p class="report-date">${new Date().toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}</p>
+            </div>
+          </div>
+          <div class="header-accent"></div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                ${columns.map(col => `<th>${col.header}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${data.map(row => `
+                <tr>
+                  ${columns.map(col => {
+                    const value = (row as Record<string, unknown>)[col.key]
+                    let displayValue = ''
+
+                    if (col.formatter) {
+                      displayValue = col.formatter(value, row as Record<string, unknown>)
+                    } else if (col.type === 'date' && value) {
+                      displayValue = new Date(value as string).toLocaleDateString()
+                    } else if (col.type === 'currency' && typeof value === 'number') {
+                      displayValue = '$' + value.toFixed(2)
+                    } else if (col.type === 'boolean') {
+                      displayValue = value ? 'Yes' : 'No'
+                    } else {
+                      displayValue = String(value || 'N/A')
+                    }
+
+                    const className = col.className ? ` class="${col.className}"` : ''
+                    return `<td${className}>${displayValue}</td>`
+                  }).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="footer">
+          <div class="footer-content">
+            <p class="copyright">© ${new Date().getFullYear()} ZFit Gym Management System. All rights reserved.</p>
+            <p class="generated-notice">This report was generated online by ZFit Gym Management System</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+}
+
+/**
+ * Generate a generic PDF report
+ */
+export async function generateGenericReport(config: ReportConfig): Promise<Buffer> {
+  const htmlContent = generateGenericHTML(config)
+  return generatePDF(htmlContent)
+}
+
+/**
+ * Generate memberships report
+ */
+export async function generateMembershipsReport(): Promise<Buffer> {
+  // Get all memberships data
+  const memberships = await getAllMemberships()
+
+  const config: ReportConfig = {
+    title: 'Memberships Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'user',
+        header: 'User',
+        formatter: (value, row) => `
+          <div class="user-info">
+            <div class="user-name">${(row as any)?.userId?.name || 'N/A'}</div>
+            <div class="user-email">${(row as any)?.userId?.email || 'N/A'}</div>
+          </div>
+        `
+      },
+      {
+        key: 'membershipPlan',
+        header: 'Membership Plan',
+        formatter: (value, row) => `
+          <div class="plan-info">
+            <div class="plan-name">${(row as any)?.membershipPlanId?.name || 'N/A'}</div>
+            <div class="plan-price">${(row as any)?.membershipPlanId?.price ? '$' + (row as any).membershipPlanId.price : 'N/A'}</div>
+          </div>
+        `
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        type: 'status',
+        formatter: (value) => `<span class="status-badge status-${value}">${value}</span>`
+      },
+      {
+        key: 'startDate',
+        header: 'Start Date',
+        type: 'date',
+        className: 'date-cell'
+      },
+      {
+        key: 'endDate',
+        header: 'End Date',
+        type: 'date',
+        className: 'date-cell'
+      },
+      {
+        key: 'autoRenew',
+        header: 'Auto Renew',
+        type: 'boolean',
+        formatter: (value) => `<span class="auto-renew-badge ${value ? 'auto-renew-yes' : 'auto-renew-no'}">${value ? 'Yes' : 'No'}</span>`
+      },
+      {
+        key: 'transactionId',
+        header: 'Transaction ID',
+        className: 'transaction-id'
+      }
+    ],
+    data: memberships as any[]
+  }
+
+  return generateGenericReport(config)
+}
+
+/**
+ * Generate membership plans report
+ */
+export async function generateMembershipPlansReport(): Promise<Buffer> {
+  // Get all membership plans data
+  const { getAllMembershipPlans } = await import('./membershipPlan.service.js')
+  const membershipPlans = await getAllMembershipPlans()
+
+  const config: ReportConfig = {
+    title: 'Membership Plans Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'name',
+        header: 'Plan Name'
+      },
+      {
+        key: 'description',
+        header: 'Description',
+        formatter: (value) => value || 'No description'
+      },
+      {
+        key: 'price',
+        header: 'Price',
+        type: 'currency',
+        formatter: (value, row) => `${(row as any)?.currency || 'USD'} ${(value as number)?.toLocaleString() || '0'}`
+      },
+      {
+        key: 'durationInDays',
+        header: 'Duration',
+        formatter: (value) => {
+          const days = value as number
+          if (days === 30) return '1 Month'
+          if (days === 90) return '3 Months'
+          if (days === 180) return '6 Months'
+          if (days === 365) return '1 Year'
+          return `${days} Days`
+        }
+      },
+      {
+        key: 'category',
+        header: 'Category',
+        formatter: (value) => `<span class="category-badge category-${value}">${value.charAt(0).toUpperCase() + value.slice(1)}</span>`
+      },
+      {
+        key: 'createdAt',
+        header: 'Created Date',
+        type: 'date',
+        className: 'date-cell'
+      }
+    ],
+    data: membershipPlans as any[]
+  }
+
+  return generateGenericReport(config)
+}
+
+/**
+ * Generate members report
+ */
+export async function generateMembersReport(): Promise<Buffer> {
+  // Get all members data
+  const { getAllMembers } = await import('./user.service.js')
+  const members = await getAllMembers()
+
+  const config: ReportConfig = {
+    title: 'Members Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'name',
+        header: 'Name'
+      },
+      {
+        key: 'email',
+        header: 'Email'
+      },
+      {
+        key: 'contactNo',
+        header: 'Contact Number'
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        formatter: (value) => `<span class="status-badge status-${value}">${value.charAt(0).toUpperCase() + value.slice(1)}</span>`
+      },
+      {
+        key: 'createdAt',
+        header: 'Created Date',
+        type: 'date',
+        className: 'date-cell'
+      }
+    ],
+    data: members as any[]
+  }
+
+  return generateGenericReport(config)
+}
+
+/**
+ * Generate staff report
+ */
+export async function generateStaffReport(): Promise<Buffer> {
+  // Get all staff data
+  const { getAllStaff } = await import('./user.service.js')
+  const staff = await getAllStaff()
+
+  const config: ReportConfig = {
+    title: 'Staff Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'name',
+        header: 'Name'
+      },
+      {
+        key: 'email',
+        header: 'Email'
+      },
+      {
+        key: 'contactNo',
+        header: 'Contact Number'
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        formatter: (value) => `<span class="status-badge status-${value}">${value.charAt(0).toUpperCase() + value.slice(1)}</span>`
+      },
+      {
+        key: 'createdAt',
+        header: 'Created Date',
+        type: 'date',
+        className: 'date-cell'
+      }
+    ],
+    data: staff as any[]
+  }
+
+  return generateGenericReport(config)
+}
+
+/**
+ * Generate managers report
+ */
+export async function generateManagersReport(): Promise<Buffer> {
+  // Get all managers data
+  const { getAllManagers } = await import('./user.service.js')
+  const managers = await getAllManagers()
+
+  const config: ReportConfig = {
+    title: 'Managers Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'name',
+        header: 'Name'
+      },
+      {
+        key: 'email',
+        header: 'Email'
+      },
+      {
+        key: 'contactNo',
+        header: 'Contact Number'
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        formatter: (value) => `<span class="status-badge status-${value}">${value.charAt(0).toUpperCase() + value.slice(1)}</span>`
+      },
+      {
+        key: 'createdAt',
+        header: 'Created Date',
+        type: 'date',
+        className: 'date-cell'
+      }
+    ],
+    data: managers as any[]
+  }
+
+  return generateGenericReport(config)
+}
