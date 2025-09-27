@@ -9,6 +9,11 @@ export const getAllProgress = async (): Promise<ProgressDocument[]> => {
   return ProgressModel.find();
 };
 
+export const getProgressByMember = async (memberId: string): Promise<ProgressDocument[]> => {
+  if (!mongoose.Types.ObjectId.isValid(memberId)) throw new Error("Invalid Member ID");
+  return ProgressModel.find({ memberId }).sort({ date: -1 });
+};
+
 export const getProgressById = async (id: string): Promise<ProgressDocument | null> => {
   if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Progress ID");
   return ProgressModel.findById(id);

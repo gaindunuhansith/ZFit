@@ -12,3 +12,6 @@ router.delete("/:id", WorkoutController.deleteWorkout);
 export default router;
 
 
+
+
+

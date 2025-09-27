@@ -52,6 +52,7 @@ export interface PayHereWebhookData {
     card_holder_name?: string;
     card_no?: string;
     card_expiry?: string;
+    payment_id?: string;
 }
 
 /**
@@ -169,7 +170,7 @@ export class PayHereService {
             const updatedPayment = await updatePaymentService(payment._id as string, {
                 status: paymentStatus,
                 gatewayTransactionId: webhookData.order_id,
-                gatewayPaymentId: webhookData.merchant_id,
+                gatewayPaymentId: webhookData.payment_id || webhookData.merchant_id,
                 gatewayResponse: webhookData as any,
                 ...(paymentStatus === 'failed' && {
                     failureReason: webhookData.status_message

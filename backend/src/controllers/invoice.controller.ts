@@ -8,6 +8,7 @@ import {
     updateInvoiceService,
     deleteInvoiceService
 } from '../services/invoice.services.js';
+import Payment from '../models/payment.model.js';
 
 
 // Zod validation schemas
@@ -21,7 +22,7 @@ const invoiceItemSchema = z.object({
 
 const createInvoiceSchema = z.object({
     paymentId: z.string().min(1, 'Payment ID is required'),
-    items: z.array(invoiceItemSchema).min(1, 'At least one item is required'),
+    items: z.array(invoiceItemSchema).optional(),
     subtotal: z.number().min(0, 'Subtotal must be non-negative'),
     tax: z.number().min(0, 'Tax must be non-negative'),
     discount: z.number().min(0, 'Discount must be non-negative').optional().default(0),
@@ -49,9 +50,26 @@ export const createInvoice = async (req: Request, res: Response, next: NextFunct
     try {
         const validated = createInvoiceSchema.parse(req.body);
 
+        // Look up payment by transactionId or ObjectId
+        let payment;
+        if (mongoose.Types.ObjectId.isValid(validated.paymentId)) {
+            // If it's a valid ObjectId, find by _id
+            payment = await Payment.findById(validated.paymentId);
+        } else {
+            // Otherwise, find by transactionId
+            payment = await Payment.findOne({ transactionId: validated.paymentId });
+        }
+        if (!payment) {
+            return res.status(400).json({
+                success: false,
+                message: 'Payment not found with the provided Payment ID'
+            });
+        }
+
         const invoiceData: any = {
             ...validated,
-            paymentId: new mongoose.Types.ObjectId(validated.paymentId),
+            paymentId: payment._id, // Use the payment's ObjectId
+            userId: payment.userId, // Get userId from the payment
             generatedAt: new Date(validated.generatedAt)
         };
 
@@ -59,7 +77,7 @@ export const createInvoice = async (req: Request, res: Response, next: NextFunct
             invoiceData.dueDate = new Date(validated.dueDate);
         }
 
-        const invoice = await createInvoiceService((req as any).userId, invoiceData);
+        const invoice = await createInvoiceService(invoiceData);
         res.status(201).json({ success: true, data: invoice });
     } catch (error) {
         next(error);
@@ -68,7 +86,8 @@ export const createInvoice = async (req: Request, res: Response, next: NextFunct
 
 export const getInvoices = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const invoices = await getInvoicesService((req as any).userId);
+        const userId = (req as any).userId;
+        const invoices = await getInvoicesService(userId);
         res.json({ success: true, data: invoices });
     } catch (error) {
         next(error);
@@ -99,10 +118,22 @@ export const updateInvoice = async (req: Request, res: Response, next: NextFunct
 
         // Filter out undefined values and convert types
         const updateData: any = {};
-        Object.entries(validated).forEach(([key, value]) => {
+        Object.entries(validated).forEach(async ([key, value]) => {
             if (value !== undefined) {
                 if (key === 'paymentId') {
-                    updateData[key] = new mongoose.Types.ObjectId(value as string);
+                    // Look up payment by transactionId or ObjectId
+                    let payment;
+                    if (mongoose.Types.ObjectId.isValid(value as string)) {
+                        // If it's a valid ObjectId, find by _id
+                        payment = await Payment.findById(value as string);
+                    } else {
+                        // Otherwise, find by transactionId
+                        payment = await Payment.findOne({ transactionId: value as string });
+                    }
+                    if (!payment) {
+                        throw new Error('Payment not found with the provided Payment ID');
+                    }
+                    updateData[key] = payment._id;
                 } else if (key === 'generatedAt' || key === 'dueDate') {
                     updateData[key] = new Date(value as string);
                 } else {

@@ -12,10 +12,39 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { Plus, Edit, Trash2, Truck, Search } from 'lucide-react'
+import { Plus, Edit, Trash2, Truck, Search, FileText } from 'lucide-react'
 import { supplierApiService } from '@/lib/api/supplierApi'
 import type { SupplierData } from '@/lib/api/supplierApi'
 import { SupplierFormModal, SupplierFormData, UpdateSupplierFormData } from '@/components/SupplierFormModal'
+
+const handleGenerateReport = async () => {
+  try {
+    const response = await fetch('/api/reports/suppliers', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to generate report')
+    }
+
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.style.display = 'none'
+    a.href = url
+    a.download = `suppliers-report-${new Date().toISOString().split('T')[0]}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+  } catch (error) {
+    console.error('Error generating report:', error)
+    alert('Failed to generate report')
+  }
+}
 
 interface Supplier {
   _id: string
@@ -132,10 +161,16 @@ export default function SuppliersPage() {
           <h2 className="text-3xl font-bold tracking-tight">Suppliers</h2>
           <p className="text-muted-foreground">Manage inventory suppliers</p>
         </div>
-        <Button onClick={handleAddSupplier}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Supplier
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleGenerateReport}>
+            <FileText className="h-4 w-4 mr-2" />
+            Generate Report
+          </Button>
+          <Button onClick={handleAddSupplier}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Supplier
+          </Button>
+        </div>
       </div>
 
       {/* Suppliers Table */}

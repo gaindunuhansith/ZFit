@@ -12,7 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, UserCheck } from 'lucide-react'
+import { Plus, Edit, Trash2, UserCheck, Download } from 'lucide-react'
 import { apiService } from '@/lib/api/userApi'
 import type { MemberData } from '@/lib/api/userApi'
 import { UserFormModal, UserFormData, UpdateUserFormData } from '@/components/UserFormModal'
@@ -94,6 +94,31 @@ export default function StaffPage() {
     }
   }
 
+  const handleDownloadReport = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/reports/staff/pdf`, {
+        method: 'GET',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to download report')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'staff-report.pdf'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Error downloading report:', error)
+      setError('Failed to download report')
+    }
+  }
+
   const handleModalSubmit = async (formData: UserFormData | UpdateUserFormData) => {
     try {
       if (editingStaff) {
@@ -166,10 +191,16 @@ export default function StaffPage() {
           <h2 className="text-3xl font-bold tracking-tight">Staff</h2>
           <p className="text-muted-foreground">Manage gym staff members</p>
         </div>
-        <Button onClick={handleAddStaff}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Staff
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleDownloadReport}>
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
+          </Button>
+          <Button onClick={handleAddStaff}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Staff
+          </Button>
+        </div>
       </div>
 
       {/* Staff Table */}
