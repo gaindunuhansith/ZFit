@@ -66,6 +66,8 @@ const data = {
           url: "/memberDashboard/memberships/browse",
         },
       ],
+    },
+    {
       title: "Store",
       url: "/memberDashboard/store",
       icon: ShoppingBag,
