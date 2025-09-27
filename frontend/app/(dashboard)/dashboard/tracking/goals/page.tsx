@@ -33,7 +33,7 @@ export default function GoalManagementPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
-  const [formData, setFormData] = useState<GoalData>({
+  const [formData, setFormData] = useState<Omit<GoalData, 'deadline'> & { deadline?: string }>({
     memberId: user?._id || "",
     goalType: "weight_loss",
     target: "",

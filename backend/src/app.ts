@@ -12,9 +12,6 @@ import inventoryRoutes from "./routes/inventory.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";  
 import BookingRoutes from "./routes/Booking.routes.js";
 import progressRoutes from "./routes/progress.routes.js";
-import workoutRoutes from "./routes/workout.routes.js";
-import nutritionRoutes from "./routes/nutrition.routes.js";
-import goalRoutes from "./routes/goal.routes.js";
 import errorMiddleware from "./middleware/error.middleware.js";
 
 //creating a express app instance
@@ -39,9 +36,6 @@ app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/payments', paymentRoutes);  
 app.use('/api/v1/bookings', BookingRoutes);
 app.use('/api/v1/progress', progressRoutes);
-app.use('/api/v1/workouts', workoutRoutes);
-app.use('/api/v1/nutrition', nutritionRoutes);
-app.use('/api/v1/goals', goalRoutes);
 
 app.use(errorMiddleware);
 

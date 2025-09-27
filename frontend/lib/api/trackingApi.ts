@@ -117,76 +117,76 @@ const apiRequest = async <T>(
 
 // Workout API functions
 export const getWorkouts = (memberId?: string) => {
-  const endpoint = memberId ? `/workouts?memberId=${memberId}` : '/workouts'
+  const endpoint = memberId ? `/progress/workouts?memberId=${memberId}` : '/progress/workouts'
   return apiRequest<Workout[]>(endpoint)
 }
 
-export const getWorkoutById = (id: string) => apiRequest<Workout>(`/workouts/${id}`)
+export const getWorkoutById = (id: string) => apiRequest<Workout>(`/progress/workouts/${id}`)
 
 export const createWorkout = (workoutData: WorkoutData) =>
-  apiRequest<Workout>('/workouts', {
+  apiRequest<Workout>('/progress/workouts', {
     method: 'POST',
     body: JSON.stringify(workoutData),
   })
 
 export const updateWorkout = (id: string, workoutData: Partial<WorkoutData>) =>
-  apiRequest<Workout>(`/workouts/${id}`, {
+  apiRequest<Workout>(`/progress/workouts/${id}`, {
     method: 'PUT',
     body: JSON.stringify(workoutData),
   })
 
 export const deleteWorkout = (id: string) =>
-  apiRequest(`/workouts/${id}`, {
+  apiRequest(`/progress/workouts/${id}`, {
     method: 'DELETE',
   })
 
 // Nutrition API functions
 export const getNutrition = (memberId?: string) => {
-  const endpoint = memberId ? `/nutrition?memberId=${memberId}` : '/nutrition'
+  const endpoint = memberId ? `/progress/nutrition?memberId=${memberId}` : '/progress/nutrition'
   return apiRequest<Nutrition[]>(endpoint)
 }
 
-export const getNutritionById = (id: string) => apiRequest<Nutrition>(`/nutrition/${id}`)
+export const getNutritionById = (id: string) => apiRequest<Nutrition>(`/progress/nutrition/${id}`)
 
 export const createNutrition = (nutritionData: NutritionData) =>
-  apiRequest<Nutrition>('/nutrition', {
+  apiRequest<Nutrition>('/progress/nutrition', {
     method: 'POST',
     body: JSON.stringify(nutritionData),
   })
 
 export const updateNutrition = (id: string, nutritionData: Partial<NutritionData>) =>
-  apiRequest<Nutrition>(`/nutrition/${id}`, {
+  apiRequest<Nutrition>(`/progress/nutrition/${id}`, {
     method: 'PUT',
     body: JSON.stringify(nutritionData),
   })
 
 export const deleteNutrition = (id: string) =>
-  apiRequest(`/nutrition/${id}`, {
+  apiRequest(`/progress/nutrition/${id}`, {
     method: 'DELETE',
   })
 
 // Goal API functions
 export const getGoals = (memberId?: string) => {
-  const endpoint = memberId ? `/goals?memberId=${memberId}` : '/goals'
+  const endpoint = memberId ? `/progress/goals?memberId=${memberId}` : '/progress/goals'
   return apiRequest<Goal[]>(endpoint)
 }
 
-export const getGoalById = (id: string) => apiRequest<Goal>(`/goals/${id}`)
+export const getGoalById = (id: string) => apiRequest<Goal>(`/progress/goals/${id}`)
 
 export const createGoal = (goalData: GoalData) =>
-  apiRequest<Goal>('/goals', {
+  apiRequest<Goal>('/progress/goals', {
     method: 'POST',
     body: JSON.stringify(goalData),
   })
 
 export const updateGoal = (id: string, goalData: Partial<GoalData>) =>
-  apiRequest<Goal>(`/goals/${id}`, {
+  apiRequest<Goal>(`/progress/goals/${id}`, {
     method: 'PUT',
     body: JSON.stringify(goalData),
   })
 
 export const deleteGoal = (id: string) =>
-  apiRequest(`/goals/${id}`, {
+  apiRequest(`/progress/goals/${id}`, {
     method: 'DELETE',
   })
 
