@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { TrackingWidget } from "@/components/tracking-widget"
 
 export default function DashboardPage() {
   return (
@@ -133,45 +134,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Quick Stats */}
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Quick Stats</CardTitle>
-            <CardDescription>
-              Key metrics at a glance
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                <span className="text-sm">Membership Growth</span>
-              </div>
-              <span className="text-sm font-medium text-primary">+12.5%</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <BarChart3 className="h-4 w-4 text-primary" />
-                <span className="text-sm">Avg. Session Time</span>
-              </div>
-              <span className="text-sm font-medium">68 min</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Users className="h-4 w-4 text-primary" />
-                <span className="text-sm">Trainer Utilization</span>
-              </div>
-              <span className="text-sm font-medium">89%</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <CreditCard className="h-4 w-4 text-primary" />
-                <span className="text-sm">Payment Success Rate</span>
-              </div>
-              <span className="text-sm font-medium">98.2%</span>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Tracking Widget */}
+        <div className="col-span-3">
+          <TrackingWidget />
+        </div>
       </div>
 
       {/* Upcoming Classes */}

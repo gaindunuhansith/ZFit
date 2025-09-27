@@ -24,9 +24,12 @@ export const createGoal = async (req: Request, res: Response, next: NextFunction
   }
 };
 
-export const getAllGoals = async (_req: Request, res: Response, next: NextFunction) => {
+export const getAllGoals = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const list = await GoalService.getAllGoals();
+    const { memberId } = req.query;
+    const list = memberId 
+      ? await GoalService.getGoalsByMember(memberId as string)
+      : await GoalService.getAllGoals();
     res.status(200).json({ success: true, data: list });
   } catch (err) {
     next(err);

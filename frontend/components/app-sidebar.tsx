@@ -18,6 +18,9 @@ import {
   Activity,
   Dumbbell,
   Package,
+  Target,
+  Apple,
+  LineChart,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -126,21 +129,25 @@ const data = {
       ],
     },
     {
-      title: "Workouts",
-      url: "/dashboard/workouts",
-      icon: Dumbbell,
+      title: "Tracking & Progress",
+      url: "/dashboard/tracking",
+      icon: Activity,
       items: [
         {
-          title: "Workout Plans",
-          url: "/dashboard/workouts/plans",
+          title: "Workout Tracking",
+          url: "/dashboard/tracking/workouts",
         },
         {
-          title: "Exercise Library",
-          url: "/dashboard/workouts/exercises",
+          title: "Nutrition Tracking",
+          url: "/dashboard/tracking/nutrition",
         },
         {
-          title: "Trainer Schedule",
-          url: "/dashboard/workouts/schedule",
+          title: "Goal Management",
+          url: "/dashboard/tracking/goals",
+        },
+        {
+          title: "Progress Overview",
+          url: "/dashboard/tracking/progress",
         },
       ],
     },

@@ -9,6 +9,11 @@ export const getAllGoals = async (): Promise<GoalDocument[]> => {
   return GoalModel.find();
 };
 
+export const getGoalsByMember = async (memberId: string): Promise<GoalDocument[]> => {
+  if (!mongoose.Types.ObjectId.isValid(memberId)) throw new Error("Invalid Member ID");
+  return GoalModel.find({ memberId }).sort({ createdAt: -1 });
+};
+
 export const getGoalById = async (id: string): Promise<GoalDocument | null> => {
   if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Goal ID");
   return GoalModel.findById(id);

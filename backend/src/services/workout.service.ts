@@ -9,6 +9,11 @@ export const getAllWorkouts = async (): Promise<WorkoutDocument[]> => {
   return WorkoutModel.find();
 };
 
+export const getWorkoutsByMember = async (memberId: string): Promise<WorkoutDocument[]> => {
+  if (!mongoose.Types.ObjectId.isValid(memberId)) throw new Error("Invalid Member ID");
+  return WorkoutModel.find({ memberId }).sort({ date: -1 });
+};
+
 export const getWorkoutById = async (id: string): Promise<WorkoutDocument | null> => {
   if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Workout ID");
   return WorkoutModel.findById(id);
