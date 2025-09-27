@@ -12,7 +12,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Package2 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Plus, Edit, Trash2, Package2, Search } from 'lucide-react'
 import { itemApiService } from '@/lib/api/itemApi'
 import { supplierApiService } from '@/lib/api/supplierApi'
 import type { ItemData } from '@/lib/api/itemApi'
@@ -48,6 +49,7 @@ export default function ItemsPage() {
   const [error, setError] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<Item | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -170,6 +172,20 @@ export default function ItemsPage() {
     return quantity <= threshold
   }
 
+  // Filter items based on search term
+  const filteredItems = items.filter(item => {
+    const searchLower = searchTerm.toLowerCase()
+    const supplierName = item.supplierID?.supplierName || ''
+    
+    return (
+      item.itemName.toLowerCase().includes(searchLower) ||
+      item.itemDescription.toLowerCase().includes(searchLower) ||
+      item.categoryID.toLowerCase().includes(searchLower) ||
+      supplierName.toLowerCase().includes(searchLower) ||
+      item.maintenanceStatus.toLowerCase().includes(searchLower)
+    )
+  })
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -223,6 +239,19 @@ export default function ItemsPage() {
             </div>
           )}
 
+          {/* Search Bar */}
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search items..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -236,7 +265,7 @@ export default function ItemsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <TableRow key={item._id}>
                   <TableCell className="font-medium">
                     <div>
@@ -293,6 +322,14 @@ export default function ItemsPage() {
               ))}
             </TableBody>
           </Table>
+
+          {filteredItems.length === 0 && items.length > 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Package2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No items found matching your search</p>
+              <p className="text-sm">Try adjusting your search terms</p>
+            </div>
+          )}
 
           {items.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">

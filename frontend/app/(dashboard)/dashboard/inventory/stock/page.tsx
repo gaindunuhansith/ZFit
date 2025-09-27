@@ -14,8 +14,8 @@ import {
 
 
 
-import { Wrench, AlertTriangle, Activity } from 'lucide-react'
-import { stockApiService } from '@/lib/api/stockApi'
+import { Input } from '@/components/ui/input'
+import { Activity, Search } from 'lucide-react'
 import { itemApiService } from '@/lib/api/itemApi'
 
 interface StockItem {
@@ -37,11 +37,9 @@ interface StockItem {
 
 export default function StockManagementPage() {
   const [items, setItems] = useState<StockItem[]>([])
-  const [lowStockItems, setLowStockItems] = useState<StockItem[]>([])
-  const [maintenanceAlerts, setMaintenanceAlerts] = useState<StockItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
-  
+  const [searchTerm, setSearchTerm] = useState('')
 
 
   useEffect(() => {
@@ -51,15 +49,8 @@ export default function StockManagementPage() {
   const fetchData = async () => {
     try {
       setLoading(true)
-      const [itemsResponse, lowStockResponse, maintenanceResponse] = await Promise.all([
-        itemApiService.getItems(),
-        stockApiService.getLowStockItems(),
-        stockApiService.getMaintenanceAlerts()
-      ])
-      
+      const itemsResponse = await itemApiService.getItems()
       setItems(itemsResponse.data as StockItem[])
-      setLowStockItems(lowStockResponse.data as StockItem[])
-      setMaintenanceAlerts(maintenanceResponse.data as StockItem[])
     } catch (error) {
       console.error('Error fetching data:', error)
       setError('Failed to load stock data')
@@ -68,11 +59,18 @@ export default function StockManagementPage() {
     }
   }
 
-
-
-
-
-
+  // Filter items based on search term
+  const filteredItems = items.filter(item => {
+    const searchLower = searchTerm.toLowerCase()
+    const supplierName = item.supplierID?.supplierName || ''
+    
+    return (
+      item.itemName.toLowerCase().includes(searchLower) ||
+      item.itemDescription.toLowerCase().includes(searchLower) ||
+      item.categoryID.toLowerCase().includes(searchLower) ||
+      supplierName.toLowerCase().includes(searchLower)
+    )
+  })
 
   if (loading) {
     return (
@@ -105,33 +103,6 @@ export default function StockManagementPage() {
         </div>
       </div>
 
-      {/* Alert Cards */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Low Stock Alert */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{lowStockItems.length}</div>
-            <p className="text-xs text-muted-foreground">Items below threshold</p>
-          </CardContent>
-        </Card>
-
-        {/* Maintenance Alerts */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Maintenance Alerts</CardTitle>
-            <Wrench className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-500">{maintenanceAlerts.length}</div>
-            <p className="text-xs text-muted-foreground">Items needing attention</p>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Stock Management Table */}
       <Card>
         <CardHeader>
@@ -150,6 +121,19 @@ export default function StockManagementPage() {
             </div>
           )}
 
+          {/* Search Bar */}
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search stock items..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -160,7 +144,7 @@ export default function StockManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <TableRow key={item._id}>
                   <TableCell className="font-medium">
                     <div>
@@ -185,6 +169,14 @@ export default function StockManagementPage() {
               ))}
             </TableBody>
           </Table>
+
+          {filteredItems.length === 0 && items.length > 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No items found matching your search</p>
+              <p className="text-sm">Try adjusting your search terms</p>
+            </div>
+          )}
 
           {items.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
