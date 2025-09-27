@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   Plus,
   Trash2,
-  Save,
   Calculator,
   User,
   CreditCard,
@@ -35,51 +34,87 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 
-// Mock data - will be replaced with API calls
-const mockUsers = [
-  { id: "1", name: "John Doe", email: "john@example.com" },
-  { id: "2", name: "Jane Smith", email: "jane@example.com" },
-  { id: "3", name: "Bob Johnson", email: "bob@example.com" },
-]
-
-const mockPayments = [
-  { id: "1", userId: "1", amount: 150, type: "membership", status: "completed", date: "2024-01-15" },
-  { id: "2", userId: "2", amount: 75, type: "booking", status: "completed", date: "2024-01-20" },
-  { id: "3", userId: "1", amount: 200, type: "inventory", status: "completed", date: "2024-01-25" },
-]
-
 interface InvoiceItem {
   description: string
   quantity: number
-  unitPrice: number
+  unitPrice: string
   total: number
-  tax: number
+  tax: string
+}
+
+interface Payment {
+  _id: string
+  userId: {
+    _id: string
+    name: string
+    email: string
+  }
+  amount: number
+  type: string
+  status: string
+  date: string
+}
+
+interface User {
+  _id: string
+  name: string
+  email: string
 }
 
 export default function CreateInvoicePage() {
   const router = useRouter()
-  const [selectedUser, setSelectedUser] = useState("")
   const [selectedPayment, setSelectedPayment] = useState("")
   const [status, setStatus] = useState("draft")
   const [dueDate, setDueDate] = useState("")
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState<InvoiceItem[]>([
-    { description: "", quantity: 1, unitPrice: 0, total: 0, tax: 0 }
+    { description: "", quantity: 1, unitPrice: "", total: 0, tax: "" }
   ])
-  const [discount, setDiscount] = useState(0)
+  const [discount, setDiscount] = useState("")
 
-  // Filter payments based on selected user
-  const availablePayments = mockPayments.filter(payment =>
-    !selectedUser || payment.userId === selectedUser
-  )
+  // API data
+  const [payments, setPayments] = useState<Payment[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch payments and users on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch payments
+        const paymentsResponse = await fetch('/api/payments')
+        if (paymentsResponse.ok) {
+          const paymentsData = await paymentsResponse.json()
+          setPayments(paymentsData.data || [])
+        }
+
+        // Fetch users
+        const usersResponse = await fetch('/api/users')
+        if (usersResponse.ok) {
+          const usersData = await usersResponse.json()
+          setUsers(usersData.data || [])
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
+  // Get selected payment details
+  const selectedPaymentData = payments.find(p => p._id === selectedPayment)
 
   // Calculate totals
   const subtotal = items.reduce((sum, item) => sum + item.total, 0)
-  const totalTax = items.reduce((sum, item) => sum + item.tax, 0)
-  const total = subtotal + totalTax - discount
+  const totalTax = items.reduce((sum, item) => sum + (parseFloat(item.tax) || 0), 0)
+  const discountValue = parseFloat(discount) || 0
+  const total = subtotal + totalTax - discountValue
 
   const addItem = () => {
-    setItems([...items, { description: "", quantity: 1, unitPrice: 0, total: 0, tax: 0 }])
+    setItems([...items, { description: "", quantity: 1, unitPrice: "", total: 0, tax: "" }])
   }
 
   const removeItem = (index: number) => {
@@ -95,7 +130,7 @@ export default function CreateInvoicePage() {
     // Recalculate total for the item
     if (field === 'quantity' || field === 'unitPrice') {
       const quantity = field === 'quantity' ? Number(value) : updatedItems[index].quantity
-      const unitPrice = field === 'unitPrice' ? Number(value) : updatedItems[index].unitPrice
+      const unitPrice = field === 'unitPrice' ? (value === '' ? 0 : parseFloat(String(value)) || 0) : (updatedItems[index].unitPrice === '' ? 0 : parseFloat(updatedItems[index].unitPrice) || 0)
       updatedItems[index].total = quantity * unitPrice
     }
 
@@ -106,7 +141,7 @@ export default function CreateInvoicePage() {
     e.preventDefault()
 
     // Basic validation
-    if (!selectedUser || !selectedPayment || items.some(item => !item.description || item.total <= 0)) {
+    if (!selectedPayment || items.some(item => !item.description || item.total <= 0)) {
       alert("Please fill in all required fields and ensure all items have valid amounts.")
       return
     }
@@ -116,13 +151,13 @@ export default function CreateInvoicePage() {
       items: items.map(item => ({
         description: item.description,
         quantity: item.quantity,
-        unitPrice: item.unitPrice,
+        unitPrice: parseFloat(item.unitPrice) || 0,
         total: item.total,
-        tax: item.tax
+        tax: parseFloat(item.tax) || 0
       })),
       subtotal,
       tax: totalTax,
-      discount,
+      discount: discountValue,
       total,
       dueDate: dueDate || null,
       status,
@@ -131,12 +166,22 @@ export default function CreateInvoicePage() {
     }
 
     try {
-      // Here you would make API call to create invoice
-      console.log("Creating invoice:", invoiceData)
+      const response = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(invoiceData)
+      })
 
-      // Mock success - in real app, this would be an API response
-      alert("Invoice created successfully!")
-      router.push("/dashboard/finance/invoice")
+      if (response.ok) {
+        const result = await response.json()
+        alert("Invoice created successfully!")
+        router.push("/dashboard/finance/invoice")
+      } else {
+        const error = await response.json()
+        alert(`Failed to create invoice: ${error.message || 'Unknown error'}`)
+      }
     } catch (error) {
       console.error("Error creating invoice:", error)
       alert("Failed to create invoice. Please try again.")
@@ -160,10 +205,6 @@ export default function CreateInvoicePage() {
           </div>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline">
-            <Save className="mr-2 h-4 w-4" />
-            Save as Draft
-          </Button>
           <Button onClick={handleSubmit}>
             <FileText className="mr-2 h-4 w-4" />
             Create Invoice
@@ -172,53 +213,47 @@ export default function CreateInvoicePage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Customer and Payment Selection */}
+        {/* Payment Selection */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <User className="mr-2 h-5 w-5" />
-              Customer & Payment Details
+              <CreditCard className="mr-2 h-5 w-5" />
+              Payment Details
             </CardTitle>
             <CardDescription>
-              Select the customer and related payment for this invoice.
+              Select the payment that this invoice is for.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="customer">Customer *</Label>
-                <Select value={selectedUser} onValueChange={setSelectedUser}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a customer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockUsers.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name} - {user.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="payment">Related Payment *</Label>
-                <Select
-                  value={selectedPayment}
-                  onValueChange={setSelectedPayment}
-                  disabled={!selectedUser}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a payment" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availablePayments.map((payment) => (
-                      <SelectItem key={payment.id} value={payment.id}>
-                        {payment.type} - ${payment.amount} ({payment.date})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="payment">Payment *</Label>
+              <Select
+                value={selectedPayment}
+                onValueChange={setSelectedPayment}
+                disabled={loading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loading ? "Loading payments..." : "Select a payment"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {payments.map((payment) => (
+                    <SelectItem key={payment._id} value={payment._id}>
+                      {payment.userId.name} - {payment.type} - ${payment.amount} ({new Date(payment.date).toLocaleDateString()})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedPaymentData && (
+                <div className="p-3 bg-muted rounded-md">
+                  <p className="text-sm font-medium">Selected Payment Details:</p>
+                  <p className="text-sm text-muted-foreground">
+                    Customer: {selectedPaymentData.userId.name} ({selectedPaymentData.userId.email})
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Amount: ${selectedPaymentData.amount} | Type: {selectedPaymentData.type} | Status: {selectedPaymentData.status}
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -273,7 +308,7 @@ export default function CreateInvoicePage() {
                       min="0"
                       step="0.01"
                       value={item.unitPrice}
-                      onChange={(e) => updateItem(index, 'unitPrice', Number(e.target.value))}
+                      onChange={(e) => updateItem(index, 'unitPrice', e.target.value)}
                       placeholder="0.00"
                       required
                     />
@@ -286,12 +321,12 @@ export default function CreateInvoicePage() {
                       min="0"
                       step="0.01"
                       value={item.tax}
-                      onChange={(e) => updateItem(index, 'tax', Number(e.target.value))}
+                      onChange={(e) => updateItem(index, 'tax', e.target.value)}
                       placeholder="0.00"
                     />
                   </div>
                   <div className="col-span-1">
-                    <div className="text-sm font-medium">${item.total.toFixed(2)}</div>
+                    <div className="text-sm font-medium">LKR {item.total.toFixed(2)}</div>
                   </div>
                   <div className="col-span-1">
                     {items.length > 1 && (
@@ -348,7 +383,7 @@ export default function CreateInvoicePage() {
                     min="0"
                     step="0.01"
                     value={discount}
-                    onChange={(e) => setDiscount(Number(e.target.value))}
+                    onChange={(e) => setDiscount(e.target.value)}
                     placeholder="0.00"
                   />
                 </div>
@@ -359,20 +394,20 @@ export default function CreateInvoicePage() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>LKR {subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tax:</span>
-                  <span>${totalTax.toFixed(2)}</span>
+                  <span>LKR {totalTax.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Discount:</span>
-                  <span>-${discount.toFixed(2)}</span>
+                  <span>-LKR {discountValue.toFixed(2)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Total:</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>LKR {total.toFixed(2)}</span>
                 </div>
               </div>
 

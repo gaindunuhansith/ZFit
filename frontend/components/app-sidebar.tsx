@@ -131,12 +131,11 @@ const data = {
     },
     {
       title: "Finance",
-      url: "/dashboard/finance",
       icon: TrendingUp,
       items: [
         {
-          title: "Payment Dashboard",
-          url: "/dashboard/finance/payment",
+          title: "Management",
+          url: "/dashboard/finance/overview",
         },
         {
           title: "Invoices",
