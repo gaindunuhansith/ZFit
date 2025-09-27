@@ -27,7 +27,7 @@ export interface IInvoice extends Document {
     paymentId: mongoose.Types.ObjectId;
     userId: mongoose.Types.ObjectId;
     number: string; // Auto-generated, unique
-    items: IInvoiceItem[];
+    items?: IInvoiceItem[];
     subtotal: number;
     tax: number;
     discount: number;
@@ -83,7 +83,7 @@ const invoiceSchema = new mongoose.Schema<IInvoice>({
         unique: true,
         // required: true  // Removed required since it's auto-generated
     },
-    items: [invoiceItemSchema], // Embedded array
+    items: [invoiceItemSchema], // Embedded array (optional)
     subtotal: {
         type: Number,
         required: true,

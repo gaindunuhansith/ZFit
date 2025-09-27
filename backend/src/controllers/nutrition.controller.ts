@@ -31,9 +31,12 @@ export const createNutrition = async (req: Request, res: Response, next: NextFun
   }
 };
 
-export const getAllNutrition = async (_req: Request, res: Response, next: NextFunction) => {
+export const getAllNutrition = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const list = await NutritionService.getAllNutrition();
+    const { memberId } = req.query;
+    const list = memberId 
+      ? await NutritionService.getNutritionByMember(memberId as string)
+      : await NutritionService.getAllNutrition();
     res.status(200).json({ success: true, data: list });
   } catch (err) {
     next(err);
@@ -76,5 +79,8 @@ export const deleteNutrition = async (req: Request, res: Response, next: NextFun
     next(err);
   }
 };
+
+
+
 
 

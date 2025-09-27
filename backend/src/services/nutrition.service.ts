@@ -9,6 +9,11 @@ export const getAllNutrition = async (): Promise<NutritionDocument[]> => {
   return NutritionModel.find();
 };
 
+export const getNutritionByMember = async (memberId: string): Promise<NutritionDocument[]> => {
+  if (!mongoose.Types.ObjectId.isValid(memberId)) throw new Error("Invalid Member ID");
+  return NutritionModel.find({ memberId }).sort({ date: -1 });
+};
+
 export const getNutritionById = async (id: string): Promise<NutritionDocument | null> => {
   if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Nutrition ID");
   return NutritionModel.findById(id);

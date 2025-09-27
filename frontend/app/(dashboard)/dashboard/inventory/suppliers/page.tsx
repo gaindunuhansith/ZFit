@@ -11,7 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Plus, Edit, Trash2, Truck } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Plus, Edit, Trash2, Truck, Search } from 'lucide-react'
 import { supplierApiService } from '@/lib/api/supplierApi'
 import type { SupplierData } from '@/lib/api/supplierApi'
 import { SupplierFormModal, SupplierFormData, UpdateSupplierFormData } from '@/components/SupplierFormModal'
@@ -32,6 +33,7 @@ export default function SuppliersPage() {
   const [error, setError] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     fetchSuppliers()
@@ -89,6 +91,18 @@ export default function SuppliersPage() {
     }
   }
 
+  // Filter suppliers based on search term
+  const filteredSuppliers = suppliers.filter(supplier => {
+    const searchLower = searchTerm.toLowerCase()
+    
+    return (
+      supplier.supplierName.toLowerCase().includes(searchLower) ||
+      supplier.supplierEmail.toLowerCase().includes(searchLower) ||
+      supplier.supplierPhone.toLowerCase().includes(searchLower) ||
+      supplier.supplierAddress.toLowerCase().includes(searchLower)
+    )
+  })
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -142,6 +156,19 @@ export default function SuppliersPage() {
             </div>
           )}
 
+          {/* Search Bar */}
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search suppliers..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -153,7 +180,7 @@ export default function SuppliersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {suppliers.map((supplier) => (
+              {filteredSuppliers.map((supplier) => (
                 <TableRow key={supplier._id}>
                   <TableCell className="font-medium">{supplier.supplierName}</TableCell>
                   <TableCell>{supplier.supplierEmail}</TableCell>
@@ -182,6 +209,14 @@ export default function SuppliersPage() {
               ))}
             </TableBody>
           </Table>
+
+          {filteredSuppliers.length === 0 && suppliers.length > 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Truck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No suppliers found matching your search</p>
+              <p className="text-sm">Try adjusting your search terms</p>
+            </div>
+          )}
 
           {suppliers.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
