@@ -149,6 +149,11 @@ export default function BrowseMembershipsPage() {
       setPurchasingPlan(plan._id)
       setError(null)
 
+      // Extract customer details with proper fallbacks
+      const nameParts = user.name.trim().split(/\s+/)
+      const firstName = nameParts[0] || 'Unknown'
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'User'
+
       const paymentRequest: PayHerePaymentRequest = {
         userId: user._id,
         amount: plan.price,
@@ -156,21 +161,33 @@ export default function BrowseMembershipsPage() {
         type: 'membership',
         relatedId: plan._id,
         description: `Purchase of ${plan.name} membership`,
-        customerFirstName: user.name.split(' ')[0] || user.name,
-        customerLastName: user.name.split(' ').slice(1).join(' ') || '',
+        customerFirstName: firstName,
+        customerLastName: lastName,
         customerEmail: user.email,
-        customerPhone: user.contactNo || '',
+        customerPhone: user.contactNo || '+94700000000', // Fallback phone number
         customerAddress: user.profile?.address || 'No address provided',
         customerCity: user.profile?.address?.split(',')[1]?.trim() || 'Colombo',
       }
 
+      console.log('Payment request data:', paymentRequest) // Debug log
+
       const response = await initiatePayHerePayment(paymentRequest)
 
-      if (response.checkoutUrl) {
-        // Redirect to PayHere payment page
-        window.location.href = response.checkoutUrl
+      if (response.paymentForm) {
+        // Create a new window/tab and submit the PayHere form
+        const paymentWindow = window.open('', '_blank', 'width=800,height=600')
+        if (paymentWindow) {
+          paymentWindow.document.write(response.paymentForm)
+          paymentWindow.document.close()
+        } else {
+          // Fallback: Create form in current window
+          const formContainer = document.createElement('div')
+          formContainer.innerHTML = response.paymentForm
+          document.body.appendChild(formContainer)
+          // The form will auto-submit due to the script in the HTML
+        }
       } else {
-        throw new Error('Failed to initiate payment')
+        throw new Error('Payment form not received')
       }
     } catch (err) {
       console.error('Payment initiation failed:', err)

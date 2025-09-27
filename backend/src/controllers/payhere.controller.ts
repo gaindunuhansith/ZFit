@@ -1,8 +1,25 @@
 import type { Request, Response } from 'express';
 import { PayHereService } from '../services/payhere.service.js';
-import type { PayHerePaymentRequest, PayHereWebhookData } from '../services/payhere.service.js';
+import type { PayHerePaymentRequest, PayHereWebhookData, PayHerePaymentData } from '../services/payhere.service.js';
 
 const payHereService = new PayHereService();
+
+/**
+ * Generate PayHere payment form HTML
+ */
+const generatePayHereForm = (paymentData: PayHerePaymentData, checkoutUrl: string): string => {
+    const formFields = Object.entries(paymentData)
+        .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}">`)
+        .join('\n    ');
+
+    return `
+<form method="post" action="${checkoutUrl}" id="payhere-form">
+    ${formFields}
+</form>
+<script>
+    document.getElementById('payhere-form').submit();
+</script>`;
+};
 
 /**
  * Process PayHere payment
@@ -84,7 +101,9 @@ export const processPayHerePayment = async (req: Request, res: Response) => {
                 paymentId: result.payment._id,
                 orderId: result.paymentData.order_id,
                 checkoutUrl: result.checkoutUrl,
-                paymentData: result.paymentData
+                paymentData: result.paymentData,
+                // Return HTML form for PayHere submission
+                paymentForm: generatePayHereForm(result.paymentData, result.checkoutUrl)
             }
         });
     } catch (error) {

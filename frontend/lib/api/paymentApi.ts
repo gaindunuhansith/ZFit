@@ -174,6 +174,7 @@ export interface PayHerePaymentResponse {
   orderId: string
   checkoutUrl: string
   paymentData: Record<string, unknown>
+  paymentForm: string
 }
 
 // PayHere payment functions
@@ -183,8 +184,8 @@ export const initiatePayHerePayment = async (paymentData: PayHerePaymentRequest)
       method: 'POST',
       body: JSON.stringify(paymentData),
     })
-    if (!response.data) {
-      throw new Error('Failed to initiate PayHere payment')
+    if (!response.success || !response.data) {
+      throw new Error(response.message || 'Failed to initiate PayHere payment')
     }
     return response.data
   } catch (error) {
