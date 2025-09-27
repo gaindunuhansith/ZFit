@@ -12,7 +12,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, CreditCard } from 'lucide-react'
+import { Plus, Edit, Trash2, CreditCard, Search } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import { membershipPlanApi } from '@/lib/api/membershipPlanApi'
 import type { MembershipPlan } from '@/lib/api/membershipPlanApi'
 import { MembershipPlanFormModal, MembershipPlanFormData, UpdateMembershipPlanFormData } from '@/components/MembershipPlanFormModal'
@@ -23,6 +24,7 @@ export default function MembershipPlansPage() {
   const [error, setError] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingPlan, setEditingPlan] = useState<MembershipPlan | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     fetchMembershipPlans()
@@ -85,6 +87,18 @@ export default function MembershipPlansPage() {
     if (days === 365) return '1 Year'
     return `${days} Days`
   }
+
+  // Filter membership plans based on search term
+  const filteredMembershipPlans = membershipPlans.filter(plan => {
+    const searchLower = searchTerm.toLowerCase()
+    return (
+      plan.name.toLowerCase().includes(searchLower) ||
+      (plan.description && plan.description.toLowerCase().includes(searchLower)) ||
+      plan.category.toLowerCase().includes(searchLower) ||
+      plan.currency.toLowerCase().includes(searchLower) ||
+      plan.price.toString().includes(searchTerm)
+    )
+  })
 
   const handleModalSubmit = async (formData: MembershipPlanFormData | UpdateMembershipPlanFormData) => {
     try {
@@ -172,6 +186,19 @@ export default function MembershipPlansPage() {
             </div>
           )}
 
+          {/* Search Bar */}
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search membership plans..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -185,7 +212,7 @@ export default function MembershipPlansPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {membershipPlans.map((plan) => (
+              {filteredMembershipPlans.map((plan) => (
                 <TableRow key={plan._id}>
                   <TableCell className="font-medium">{plan.name}</TableCell>
                   <TableCell className="max-w-xs truncate">
@@ -225,11 +252,11 @@ export default function MembershipPlansPage() {
             </TableBody>
           </Table>
 
-          {membershipPlans.length === 0 && (
+          {filteredMembershipPlans.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No membership plans found</p>
-              <p className="text-sm">Add your first membership plan to get started</p>
+              <p>{searchTerm ? 'No membership plans found matching your search' : 'No membership plans found'}</p>
+              <p className="text-sm">{searchTerm ? 'Try adjusting your search terms' : 'Add your first membership plan to get started'}</p>
             </div>
           )}
         </CardContent>
