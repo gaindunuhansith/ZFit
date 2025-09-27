@@ -60,6 +60,11 @@ const data = {
       isActive: true,
     },
     {
+      title: "My Profile",
+      url: "/dashboard/profile",
+      icon: Users,
+    },
+    {
       title: "Users",
       url: "/dashboard/users",
       icon: Users,

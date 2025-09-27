@@ -5,18 +5,24 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 
 export default function Home() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, user } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
     if (!isLoading) {
-      if (isAuthenticated) {
-        router.push("/dashboard")
+      if (isAuthenticated && user) {
+        // Redirect based on user role
+        if (user.role === 'member') {
+          router.push("/memberDashboard")
+        } else {
+          // staff or manager
+          router.push("/dashboard")
+        }
       } else {
         router.push("/auth/login")
       }
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [isAuthenticated, isLoading, user, router])
 
   return (
     <div className="min-h-screen flex items-center justify-center">

@@ -9,8 +9,24 @@ interface User {
   _id: string
   name: string
   email: string
+  verified: boolean
+  contactNo: string
+  dob?: Date
+  profile: {
+    avatar?: string
+    address?: string
+    emergencyContact?: string
+  }
+  consent: {
+    gdpr: boolean
+    marketing: boolean
+    date: Date
+  }
   role: UserRole
+  qrCode?: string
   status: UserStatus
+  createdAt: Date
+  updatedAt: Date
 }
 
 interface AuthContextType {

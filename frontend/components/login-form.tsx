@@ -54,12 +54,17 @@ export function LoginForm() {
 
       // Success - handle login
       console.log("Login successful:", data)
-      
+
       // Store user data and token in auth context
       login(data.token || 'dummy-token', data.user)
 
-      // Redirect to dashboard
-      router.push("/dashboard")
+      // Redirect based on user role
+      if (data.user?.role === 'member') {
+        router.push("/memberDashboard")
+      } else {
+        // staff or manager
+        router.push("/dashboard")
+      }
 
     } catch (error) {
       console.error("Login error:", error)
