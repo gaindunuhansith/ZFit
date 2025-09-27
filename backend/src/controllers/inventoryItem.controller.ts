@@ -8,7 +8,7 @@ const inventoryItemService = new InventoryItemService();
 export const createItemSchema = z.object({
     itemName: z.string().min(2).max(100),
     itemDescription: z.string().min(2).max(500),
-    categoryID: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid category ID format"),
+    categoryID: z.enum(["supplements", "equipment"]),
     quantity: z.number().min(0),
     price: z.number().min(0),
     supplierID: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid supplier ID format"),
@@ -20,7 +20,7 @@ export const createItemSchema = z.object({
 export const updateItemSchema = z.object({
     itemName: z.string().min(2).max(100).optional(),
     itemDescription: z.string().min(2).max(500).optional(),
-    categoryID: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid category ID format").optional(),
+    categoryID: z.enum(["supplements", "equipment"]).optional(),
     quantity: z.number().min(0).optional(),
     price: z.number().min(0).optional(),
     supplierID: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid supplier ID format").optional(),
@@ -40,7 +40,7 @@ export const createItem = async (req: Request, res: Response, next: NextFunction
         const itemData: any = {
             itemName: validated.itemName,
             itemDescription: validated.itemDescription,
-            categoryID: new mongoose.Types.ObjectId(validated.categoryID),
+            categoryID: validated.categoryID, // Now just a simple string: "supplements" or "equipment"
             quantity: validated.quantity,
             price: validated.price,
             supplierID: new mongoose.Types.ObjectId(validated.supplierID),
@@ -112,13 +112,11 @@ export const updateItem = async (req: Request, res: Response, next: NextFunction
             updatedAt: new Date()
         };
 
-        // Convert string IDs to ObjectIds if they exist
-        if (validated.categoryID) {
-            updateData.categoryID = new mongoose.Types.ObjectId(validated.categoryID);
-        }
+        // Convert supplier ID to ObjectId if it exists (category is now just a string)
         if (validated.supplierID) {
             updateData.supplierID = new mongoose.Types.ObjectId(validated.supplierID);
         }
+        // categoryID is now just a simple string, no conversion needed
 
         const item = await inventoryItemService.updateItem(id, updateData);
         if (!item) {
