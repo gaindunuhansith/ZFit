@@ -145,6 +145,17 @@ export const updatePayment = async (id: string, paymentData: UpdatePaymentData):
   }
 }
 
+export const deletePayment = async (id: string): Promise<void> => {
+  try {
+    await apiRequest(`/payments/${id}`, {
+      method: 'DELETE',
+    })
+  } catch (error) {
+    console.error('Error deleting payment:', error)
+    throw error
+  }
+}
+
 export interface PayHerePaymentRequest {
   userId: string
   amount: number
