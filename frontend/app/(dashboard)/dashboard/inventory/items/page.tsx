@@ -293,7 +293,7 @@ export default function ItemsPage() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>${item.price ? item.price.toFixed(2) : '0.00'}</TableCell>
+                  <TableCell>LKR {item.price ? item.price.toFixed(2) : '0.00'}</TableCell>
                   <TableCell>
                     <Badge variant={getMaintenanceStatusBadgeVariant(item.maintenanceStatus)}>
                       {getMaintenanceStatusLabel(item.maintenanceStatus)}
