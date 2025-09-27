@@ -24,21 +24,21 @@ type UpdateMembershipParams = {
 export const getAllMemberships = async () => {
     const memberships = await MembershipModel.find()
         .populate('userId', 'name email')
-        .populate('membershipPlanId', 'name price durationInDays category');
+        .populate('membershipPlanId', 'name price currency durationInDays category');
     return memberships;
 };
 
 export const getMembershipById = async (membershipId: string) => {
     const membership = await MembershipModel.findById(membershipId)
         .populate('userId', 'name email')
-        .populate('membershipPlanId', 'name price durationInDays category');
+        .populate('membershipPlanId', 'name price currency durationInDays category');
     AppAssert(membership, NOT_FOUND, "Membership not found");
     return membership;
 };
 
 export const getUserMemberships = async (userId: string) => {
     const memberships = await MembershipModel.find({ userId })
-        .populate('membershipPlanId', 'name price durationInDays category')
+        .populate('membershipPlanId', 'name price currency durationInDays category')
         .sort({ createdAt: -1 });
     return memberships;
 };
@@ -58,7 +58,7 @@ export const getUserActiveMembership = async (userId: string) => {
         userId,
         status: 'active',
         endDate: { $gt: new Date() }
-    }).populate('membershipPlanId', 'name price durationInDays category');
+    }).populate('membershipPlanId', 'name price currency durationInDays category');
     
     return membership;
 };
@@ -100,7 +100,7 @@ export const createMembership = async (data: CreateMembershipParams) => {
     // Return with populated data
     const populatedMembership = await MembershipModel.findById(membership._id)
         .populate('userId', 'name email')
-        .populate('membershipPlanId', 'name price durationInDays category');
+        .populate('membershipPlanId', 'name price currency durationInDays category');
 
     return populatedMembership;
 };
@@ -115,7 +115,7 @@ export const updateMembership = async (membershipId: string, updateData: UpdateM
         { new: true }
     )
     .populate('userId', 'name email')
-    .populate('membershipPlanId', 'name price durationInDays category');
+    .populate('membershipPlanId', 'name price currency durationInDays category');
 
     AppAssert(updatedMembership, INTERNAL_SERVER_ERROR, "Failed to update membership");
     return updatedMembership;
@@ -136,7 +136,7 @@ export const cancelMembership = async (membershipId: string, reason?: string) =>
         { new: true }
     )
     .populate('userId', 'name email')
-    .populate('membershipPlanId', 'name price durationInDays category');
+    .populate('membershipPlanId', 'name price currency durationInDays category');
 
     return updatedMembership;
 };
@@ -155,7 +155,7 @@ export const pauseMembership = async (membershipId: string, reason?: string) => 
         { new: true }
     )
     .populate('userId', 'name email')
-    .populate('membershipPlanId', 'name price durationInDays category');
+    .populate('membershipPlanId', 'name price currency durationInDays category');
 
     return updatedMembership;
 };
@@ -174,7 +174,7 @@ export const resumeMembership = async (membershipId: string) => {
         { new: true }
     )
     .populate('userId', 'name email')
-    .populate('membershipPlanId', 'name price durationInDays category');
+    .populate('membershipPlanId', 'name price currency durationInDays category');
 
     return updatedMembership;
 };
@@ -192,7 +192,7 @@ export const extendMembership = async (membershipId: string, additionalDays: num
         { new: true }
     )
     .populate('userId', 'name email')
-    .populate('membershipPlanId', 'name price durationInDays category');
+    .populate('membershipPlanId', 'name price currency durationInDays category');
 
     return updatedMembership;
 };

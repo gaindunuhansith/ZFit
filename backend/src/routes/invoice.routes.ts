@@ -7,10 +7,10 @@ import authenticate from '../middleware/auth.middleware.js';
 const router = Router();
 
 // Invoice routes with authentication
-router.get('/', authenticate(["manager","staff"]), getInvoices);
-router.get('/:id', authenticate(["manager","staff"]), getInvoiceById);
-router.post('/', authenticate(["manager"]), createInvoice);
-router.put('/:id', authenticate(["manager"]), updateInvoice);
-router.delete('/:id', authenticate(["manager"]), deleteInvoice);
+router.get('/',  getInvoices);
+router.get('/:id',  getInvoiceById);
+router.post('/', createInvoice);
+router.put('/:id',  updateInvoice);
+router.delete('/:id', deleteInvoice);
 
 export default router;

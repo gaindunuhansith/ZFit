@@ -16,20 +16,20 @@ import gatewayRoutes from './gateway.routes.js';
 
 const router = Router();
 
-// Main payment routes
-// Process payment 
-router.post('/process/:id', authenticate(["manager","staff"]), processPayment);
-//get all payments
-router.get('/', authenticate(["manager","staff"]), getPayments);
-router.get('/:id', authenticate(["manager","staff"]), getPaymentById);
-
-router.post('/', authenticate(["manager"]), createPayment);
-router.put('/:id', authenticate(["manager"]), updatePayment);
-router.delete('/:id', authenticate(["manager"]), deletePayment);
-
-// Sub-routes for payment-related functionality
+// Sub-routes for payment-related functionality (must come before parameterized routes)
 router.use('/invoices', invoiceRoutes);
 router.use('/refunds', refundRoutes);
 router.use('/gateways', gatewayRoutes);
+
+// Main payment routes
+// Process payment 
+router.post('/process/:id', processPayment);
+//get all payments
+router.get('/', getPayments);
+router.get('/:id', getPaymentById);
+
+router.post('/', createPayment);
+router.put('/:id', updatePayment);
+router.delete('/:id', deletePayment);
 
 export default router;

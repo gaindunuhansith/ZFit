@@ -6,9 +6,9 @@ export interface IRefund extends Document {
     refundId: string; // Auto-generated
     originalAmount: number;
     refundAmount: number;
-    currency: string;
-    reason: 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error';
+    reason?: 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error';
     status: 'pending' | 'completed' | 'failed';
+    notes: string;
     gatewayRefundId?: string; // PayHere refund reference
     gatewayResponse?: mongoose.Schema.Types.Mixed;
     createdAt?: Date;
@@ -41,19 +41,18 @@ const refundSchema = new mongoose.Schema<IRefund>({
         required: true,
         min: 0
     },
-    currency: {
-        type: String,
-        default: 'USD'
-    },
     reason: {
         type: String,
-        enum: ['customer_request', 'duplicate', 'fraud', 'cancelled', 'error'],
-        required: true
+        enum: ['customer_request', 'duplicate', 'fraud', 'cancelled', 'error']
     },
     status: {
         type: String,
         enum: ['pending', 'completed', 'failed'],
         default: 'pending'
+    },
+    notes: {
+        type: String,
+        required: true
     },
     gatewayRefundId: String,
     gatewayResponse: {
@@ -67,8 +66,9 @@ const refundSchema = new mongoose.Schema<IRefund>({
 // Auto-generate refund ID
 refundSchema.pre<IRefund>('save', async function(this: IRefund, next: (err?: Error) => void) {
     if (!this.refundId) {
-        const count = await (this.constructor as mongoose.Model<IRefund>).countDocuments();
-        this.refundId = `ZF-REF-${new Date().getFullYear()}-${String(count + 1).padStart(6, '0')}`;
+        const timestamp = Date.now();
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        this.refundId = `ZF-REF-${new Date().getFullYear()}-${timestamp}-${random}`;
     }
     next();
 });

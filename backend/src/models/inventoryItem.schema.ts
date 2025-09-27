@@ -3,9 +3,9 @@ import mongoose, { Document } from "mongoose";
 export interface IInventoryItem extends Document {
     itemName: string;
     itemDescription: string;
-    categoryID: mongoose.Types.ObjectId;
+    categoryID: string;
     quantity: number;
-    price: number;
+    price?: number;
     supplierID: mongoose.Types.ObjectId;
     lowStockThreshold: number;
     maintenanceStatus: "good" | "maintenance_required" | "under_repair";
@@ -17,9 +17,14 @@ export interface IInventoryItem extends Document {
 const InventoryItemSchema = new mongoose.Schema<IInventoryItem>({
     itemName: { type: String, required: true},
     itemDescription: { type: String, required: true},
-    categoryID: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: true },
+    categoryID: { 
+        type: String, 
+        required: true,
+        maxlength: 50,
+        trim: true
+    },
     quantity: { type: Number, required: true, min: 0 },
-    price: { type: Number, required: true, min: 0 },
+    price: { type: Number, required: false, min: 0, default: 0 },
     supplierID: { type: mongoose.Schema.Types.ObjectId, ref: "Supplier", required: true },
     lowStockThreshold: { type: Number, default: 5 },
     maintenanceStatus: { 

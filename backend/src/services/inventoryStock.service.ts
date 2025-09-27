@@ -30,17 +30,18 @@ export default class StockService {
             quantityChanged: quantity
         });
 
-        return updatedItem;
+        // Return populated item
+        return await Item.findById(itemId).populate("supplierID");
     }
 
     async getLowStockItems(): Promise<IInventoryItem[]> {
-        return await Item.find({ $expr: { $lt: ["$quantity", "$lowStockThreshold"] } }).populate("categoryID").populate("supplierID");
+        return await Item.find({ $expr: { $lt: ["$quantity", "$lowStockThreshold"] } }).populate("supplierID");
     }
 
     async getMaintenanceAlerts(): Promise<IInventoryItem[]> {
         return await Item.find({
             maintenanceStatus: { $in: ["maintenance_required", "under_repair"] }
-        }).populate("categoryID").populate("supplierID");
+        }).populate("supplierID");
     } 
 
         async updateMaintenance(
@@ -56,7 +57,10 @@ export default class StockService {
             item.lastMaintenanceDate = lastMaintenanceDate;
         }
         item.updatedAt = new Date();
-        return await item.save();
+        await item.save();
+        
+        // Return populated item
+        return await Item.findById(itemId).populate("supplierID");
     }
 
 
