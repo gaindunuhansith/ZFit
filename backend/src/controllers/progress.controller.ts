@@ -24,9 +24,12 @@ export const createProgress = async (req: Request, res: Response, next: NextFunc
   }
 };
 
-export const getAllProgress = async (_req: Request, res: Response, next: NextFunction) => {
+export const getAllProgress = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const list = await ProgressService.getAllProgress();
+    const { memberId } = req.query;
+    const list = memberId 
+      ? await ProgressService.getProgressByMember(memberId as string)
+      : await ProgressService.getAllProgress();
     res.status(200).json({ success: true, data: list });
   } catch (err) {
     next(err);
@@ -69,5 +72,8 @@ export const deleteProgress = async (req: Request, res: Response, next: NextFunc
     next(err);
   }
 };
+
+
+
 
 

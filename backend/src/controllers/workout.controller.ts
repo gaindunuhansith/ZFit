@@ -26,9 +26,12 @@ export const createWorkout = async (req: Request, res: Response, next: NextFunct
   }
 };
 
-export const getAllWorkouts = async (_req: Request, res: Response, next: NextFunction) => {
+export const getAllWorkouts = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const list = await WorkoutService.getAllWorkouts();
+    const { memberId } = req.query;
+    const list = memberId 
+      ? await WorkoutService.getWorkoutsByMember(memberId as string)
+      : await WorkoutService.getAllWorkouts();
     res.status(200).json({ success: true, data: list });
   } catch (err) {
     next(err);
