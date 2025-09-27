@@ -7,10 +7,8 @@ import {
   CreditCard,
   Activity,
   Dumbbell,
-  BookOpen,
   Target,
   BarChart3,
-  Settings,
   Home,
 } from "lucide-react"
 
@@ -49,7 +47,7 @@ const data = {
     },
     {
       title: "My Profile",
-      url: "/profile",
+      url: "/memberDashboard/profile",
       icon: User,
     },
     {
