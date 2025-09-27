@@ -171,11 +171,7 @@ export default function StockManagementPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {item.categoryID === 'supplements' 
-                      ? 'Supplements'
-                      : item.categoryID === 'equipment'
-                        ? 'Equipment'
-                        : item.categoryID}
+                    {item.categoryID || 'No Category'}
                   </TableCell>
                   <TableCell>
                     {typeof item.supplierID === 'object' && item.supplierID !== null

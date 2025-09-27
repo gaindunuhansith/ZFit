@@ -8,7 +8,7 @@ const inventoryItemService = new InventoryItemService();
 export const createItemSchema = z.object({
     itemName: z.string().min(2).max(100),
     itemDescription: z.string().min(2).max(500),
-    categoryID: z.enum(["supplements", "equipment"]),
+    categoryID: z.string().min(1).max(50),
     quantity: z.number().min(0),
     price: z.number().min(0).optional(),
     supplierID: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid supplier ID format"),
@@ -20,7 +20,7 @@ export const createItemSchema = z.object({
 export const updateItemSchema = z.object({
     itemName: z.string().min(2).max(100).optional(),
     itemDescription: z.string().min(2).max(500).optional(),
-    categoryID: z.enum(["supplements", "equipment"]).optional(),
+    categoryID: z.string().min(1).max(50).optional(),
     quantity: z.number().min(0).optional(),
     price: z.number().min(0).optional(),
     supplierID: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid supplier ID format").optional(),

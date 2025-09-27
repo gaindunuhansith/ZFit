@@ -22,7 +22,7 @@ interface Item {
   _id: string
   itemName: string
   itemDescription: string
-  categoryID: "supplements" | "equipment"
+  categoryID: string
   quantity: number
   price?: number
   supplierID: {
@@ -247,11 +247,7 @@ export default function ItemsPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {item.categoryID === 'supplements' 
-                      ? 'Supplements'
-                      : item.categoryID === 'equipment'
-                        ? 'Equipment'
-                        : item.categoryID || 'No Category'}
+                    {item.categoryID || 'No Category'}
                   </TableCell>
                   <TableCell>
                     {item.supplierID && typeof item.supplierID === 'object' 
@@ -316,7 +312,7 @@ export default function ItemsPage() {
         initialData={editingItem ? {
           itemName: editingItem.itemName,
           itemDescription: editingItem.itemDescription,
-          categoryID: editingItem.categoryID as "supplements" | "equipment" | undefined,
+          categoryID: editingItem.categoryID,
           quantity: editingItem.quantity,
           price: editingItem.price,
           supplierID: editingItem.supplierID && typeof editingItem.supplierID === 'object' 

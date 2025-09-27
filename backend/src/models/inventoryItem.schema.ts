@@ -3,7 +3,7 @@ import mongoose, { Document } from "mongoose";
 export interface IInventoryItem extends Document {
     itemName: string;
     itemDescription: string;
-    categoryID: "supplements" | "equipment";
+    categoryID: string;
     quantity: number;
     price?: number;
     supplierID: mongoose.Types.ObjectId;
@@ -19,8 +19,9 @@ const InventoryItemSchema = new mongoose.Schema<IInventoryItem>({
     itemDescription: { type: String, required: true},
     categoryID: { 
         type: String, 
-        enum: ["supplements", "equipment"], 
-        required: true 
+        required: true,
+        maxlength: 50,
+        trim: true
     },
     quantity: { type: Number, required: true, min: 0 },
     price: { type: Number, required: false, min: 0, default: 0 },
