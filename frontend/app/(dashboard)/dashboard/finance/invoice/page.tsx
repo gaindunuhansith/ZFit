@@ -62,6 +62,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { getInvoices, createInvoice, updateInvoice, deleteInvoice, type Invoice, type InvoiceItem, type CreateInvoiceData, type UpdateInvoiceData } from "@/lib/api/invoiceApi"
+import { generateInvoicesReport } from "@/lib/api/reportApi"
 
 // Mock invoice data - REMOVED
 // const invoices = [...]
@@ -382,6 +383,24 @@ export default function InvoiceManagementPage() {
     }
   }
 
+  const handleGenerateReport = async () => {
+    try {
+      const blob = await generateInvoicesReport()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.style.display = 'none'
+      a.href = url
+      a.download = `invoices_report_${new Date().toISOString().split('T')[0]}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      a.remove()
+    } catch (error) {
+      console.error('Error generating report:', error)
+      setError('Failed to generate report')
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -413,10 +432,16 @@ export default function InvoiceManagementPage() {
             Create, manage, and track invoices for your members.
           </p>
         </div>
-        <Button onClick={handleCreateInvoice}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Invoice
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleGenerateReport}>
+            <FileText className="mr-2 h-4 w-4" />
+            Generate Report
+          </Button>
+          <Button onClick={handleCreateInvoice}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Invoice
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}

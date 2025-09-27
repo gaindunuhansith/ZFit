@@ -901,3 +901,73 @@ export async function generateRefundsReport(): Promise<Buffer> {
 
   return generateGenericReport(config)
 }
+
+/**
+ * Generate Invoices Report
+ */
+export async function generateInvoicesReport(): Promise<Buffer> {
+  const { getInvoicesService } = await import('./invoice.services.js')
+  const invoices = await getInvoicesService()
+
+  const config: ReportConfig = {
+    title: 'Invoices Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'number',
+        header: 'Invoice Number',
+        className: 'invoice-number-cell'
+      },
+      {
+        key: 'paymentId',
+        header: 'Payment ID',
+        className: 'payment-id-cell'
+      },
+      {
+        key: 'userId',
+        header: 'User ID',
+        className: 'user-id-cell'
+      },
+      {
+        key: 'subtotal',
+        header: 'Subtotal',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'tax',
+        header: 'Tax',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'discount',
+        header: 'Discount',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'total',
+        header: 'Total Amount',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        formatter: (value) => `<span class="status-badge status-${value}">${value.toUpperCase()}</span>`
+      },
+      {
+        key: 'dueDate',
+        header: 'Due Date',
+        type: 'date',
+        className: 'date-cell'
+      },
+      {
+        key: 'generatedAt',
+        header: 'Generated Date',
+        type: 'date',
+        className: 'date-cell'
+      }
+    ],
+    data: invoices as any[]
+  }
+
+  return generateGenericReport(config)
+}
