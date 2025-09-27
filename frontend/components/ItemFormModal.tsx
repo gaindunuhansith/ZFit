@@ -31,13 +31,14 @@ const createItemFormSchema = z.object({
   itemDescription: z.string()
     .min(5, "Item description must be at least 5 characters long")
     .max(200, "Item description must be at most 200 characters long"),
-  categoryID: z.enum(["supplements", "equipment"], {
-    message: "Please select either Supplements or Equipment"
-  }),
+  categoryID: z.string()
+    .min(1, "Category is required")
+    .max(50, "Category must be at most 50 characters long"),
   quantity: z.number()
     .min(0, "Quantity must be 0 or greater"),
   price: z.number()
-    .min(0, "Price must be 0 or greater"),
+    .min(0, "Price must be 0 or greater")
+    .optional(),
   supplierID: z.string()
     .min(1, "Please select a supplier"),
   lowStockThreshold: z.number()
@@ -55,9 +56,10 @@ const updateItemFormSchema = z.object({
     .min(5, "Item description must be at least 5 characters long")
     .max(200, "Item description must be at most 200 characters long")
     .optional(),
-  categoryID: z.enum(["supplements", "equipment"], {
-    message: "Please select either Supplements or Equipment"
-  }).optional(),
+  categoryID: z.string()
+    .min(1, "Category is required")
+    .max(50, "Category must be at most 50 characters long")
+    .optional(),
   quantity: z.number()
     .min(0, "Quantity must be 0 or greater")
     .optional(),
@@ -119,7 +121,7 @@ export function ItemFormModal({
       setFormData({
         itemName: initialData.itemName || '',
         itemDescription: initialData.itemDescription || '',
-        categoryID: initialData.categoryID as "supplements" | "equipment" | undefined,
+        categoryID: initialData.categoryID,
         quantity: initialData.quantity || 0,
         price: initialData.price || 0,
         supplierID: initialData.supplierID || '',
@@ -261,18 +263,14 @@ export function ItemFormModal({
                 Category *
               </Label>
               <div className="col-span-3">
-                <Select
+                <Input
+                  id="categoryID"
+                  type="text"
+                  placeholder="e.g. Supplements, Equipment, Nutrition, etc."
                   value={(formData as ItemFormData).categoryID || ''}
-                  onValueChange={(value) => handleInputChange('categoryID', value)}
-                >
-                  <SelectTrigger className={errors.categoryID ? 'border-red-500' : ''}>
-                    <SelectValue placeholder="Select category type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="supplements">Supplements</SelectItem>
-                    <SelectItem value="equipment">Equipment</SelectItem>
-                  </SelectContent>
-                </Select>
+                  onChange={(e) => handleInputChange('categoryID', e.target.value)}
+                  className={errors.categoryID ? 'border-red-500' : ''}
+                />
                 {errors.categoryID && (
                   <p className="text-sm text-red-500 mt-1">{errors.categoryID}</p>
                 )}
@@ -332,7 +330,7 @@ export function ItemFormModal({
               {/* Price */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="price" className="text-right">
-                  Price *
+                  Price (Optional)
                 </Label>
                 <div className="col-span-3">
                   <Input
