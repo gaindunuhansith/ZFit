@@ -74,8 +74,22 @@ const data = {
       ],
     },
     {
+      title: "Memberships",
+      url: "/dashboard/memberships",
+      icon: Users,
+      items: [
+        {
+          title: "Membership Plans",
+          url: "/dashboard/memberships/plans",
+        },
+        {
+          title: "Memberships",
+          url: "/dashboard/memberships/memberships",
+        },
+      ],
+    },
+    {
       title: "Attendance",
-      url: "/dashboard/attendance",
       icon: Calendar,
       items: [
         {

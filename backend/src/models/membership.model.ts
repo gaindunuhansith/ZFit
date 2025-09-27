@@ -157,7 +157,7 @@ membershipSchema.statics.findActiveMemberships = function() {
   return this.find({ 
     status: 'active', 
     endDate: { $gt: new Date() } 
-  }).populate('userId membershipPlanId');
+  }).populate('userId', 'name email').populate('membershipPlanId', 'name price currency durationInDays category');
 };
 
 membershipSchema.statics.findExpiringMemberships = function(daysAhead: number = 7) {
@@ -168,11 +168,11 @@ membershipSchema.statics.findExpiringMemberships = function(daysAhead: number = 
   return this.find({
     status: 'active',
     endDate: { $gte: now, $lte: futureDate }
-  }).populate('userId membershipPlanId');
+  }).populate('userId', 'name email').populate('membershipPlanId', 'name price currency durationInDays category');
 };
 
 membershipSchema.statics.findByUser = function(userId: mongoose.Types.ObjectId) {
-  return this.find({ userId }).populate('membershipPlanId').sort({ createdAt: -1 });
+  return this.find({ userId }).populate('membershipPlanId', 'name price currency durationInDays category').sort({ createdAt: -1 });
 };
 
 const MembershipModel = mongoose.model<MembershipDocument, MembershipModel>(
