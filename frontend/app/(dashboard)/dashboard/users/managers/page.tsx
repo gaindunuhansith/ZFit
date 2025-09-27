@@ -14,8 +14,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, Shield } from 'lucide-react'
 import { apiService } from '@/lib/api'
-import { UserFormModal } from '@/components/UserFormModal'
-import { UserFormData } from '@/lib/validations/user'
+import type { MemberData } from '@/lib/api'
+import { UserFormModal, UserFormData, UpdateUserFormData } from '@/components/UserFormModal'
 
 interface Manager {
   _id: string
@@ -94,14 +94,33 @@ export default function ManagersPage() {
     }
   }
 
-  const handleModalSubmit = async (formData: UserFormData) => {
+  const handleModalSubmit = async (formData: UserFormData | UpdateUserFormData) => {
     try {
       if (editingManager) {
-        // Update existing manager
-        await apiService.updateUser(editingManager._id, formData)
+        // Update existing manager - send only the fields that were provided
+        const updateData: Partial<MemberData> = {}
+        if (formData.name) updateData.name = formData.name
+        if (formData.email) updateData.email = formData.email
+        if (formData.contactNo) updateData.contactNo = formData.contactNo
+        if (formData.role) updateData.role = formData.role
+        if (formData.status) updateData.status = formData.status
+
+        await apiService.updateUser(editingManager._id, updateData)
       } else {
-        // Create new manager
-        await apiService.createUser({ ...formData, role: 'manager' })
+        // Create new manager - ensure all required fields are present
+        const createData: MemberData = {
+          name: formData.name as string,
+          email: formData.email as string,
+          contactNo: formData.contactNo as string,
+          password: (formData as UserFormData).password,
+          role: 'manager',
+          status: formData.status as 'active' | 'inactive' | 'expired',
+          consent: {
+            gdpr: true,
+            marketing: false,
+          }
+        }
+        await apiService.createUser(createData)
       }
       fetchManagers() // Refresh the list
     } catch (error) {

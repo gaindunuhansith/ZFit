@@ -14,8 +14,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, User } from 'lucide-react'
 import { apiService } from '@/lib/api'
-import { UserFormModal } from '@/components/UserFormModal'
-import { UserFormData } from '@/lib/validations/user'
+import type { MemberData } from '@/lib/api'
+import { UserFormModal, UserFormData, UpdateUserFormData } from '@/components/UserFormModal'
 
 interface Member {
   _id: string
@@ -92,14 +92,33 @@ export default function MembersPage() {
     }
   }
 
-  const handleModalSubmit = async (formData: UserFormData) => {
+  const handleModalSubmit = async (formData: UserFormData | UpdateUserFormData) => {
     try {
       if (editingMember) {
-        // Update existing member
-        await apiService.updateUser(editingMember._id, formData)
+        // Update existing member - send only the fields that were provided
+        const updateData: Partial<MemberData> = {}
+        if (formData.name) updateData.name = formData.name
+        if (formData.email) updateData.email = formData.email
+        if (formData.contactNo) updateData.contactNo = formData.contactNo
+        if (formData.role) updateData.role = formData.role
+        if (formData.status) updateData.status = formData.status
+
+        await apiService.updateUser(editingMember._id, updateData)
       } else {
-        // Create new member
-        await apiService.createUser({ ...formData, role: 'member' })
+        // Create new member - ensure all required fields are present
+        const createData: MemberData = {
+          name: formData.name as string,
+          email: formData.email as string,
+          contactNo: formData.contactNo as string,
+          password: (formData as UserFormData).password,
+          role: 'member',
+          status: formData.status as 'active' | 'inactive' | 'expired',
+          consent: {
+            gdpr: true,
+            marketing: false,
+          }
+        }
+        await apiService.createUser(createData)
       }
       fetchMembers() // Refresh the list
     } catch (error) {

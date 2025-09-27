@@ -14,7 +14,13 @@ interface MemberData {
   password?: string
   role?: 'member' | 'staff' | 'manager'
   status?: 'active' | 'inactive' | 'expired'
+  consent?: {
+    gdpr: boolean
+    marketing: boolean
+  }
 }
+
+export type { MemberData }
 
 class ApiService {
   private async request<T>(
@@ -69,6 +75,7 @@ class ApiService {
   }
 
   async createUser(userData: MemberData) {
+    console.log('API createUser called with:', { ...userData, password: '***masked***' })
     return this.request('/users', {
       method: 'POST',
       body: JSON.stringify(userData),

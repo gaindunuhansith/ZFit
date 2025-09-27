@@ -14,8 +14,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, UserCheck } from 'lucide-react'
 import { apiService } from '@/lib/api'
-import { UserFormModal } from '@/components/UserFormModal'
-import { UserFormData } from '@/lib/validations/user'
+import type { MemberData } from '@/lib/api'
+import { UserFormModal, UserFormData, UpdateUserFormData } from '@/components/UserFormModal'
 
 interface Staff {
   _id: string
@@ -94,14 +94,40 @@ export default function StaffPage() {
     }
   }
 
-  const handleModalSubmit = async (formData: UserFormData) => {
+  const handleModalSubmit = async (formData: UserFormData | UpdateUserFormData) => {
     try {
       if (editingStaff) {
-        // Update existing staff
-        await apiService.updateUser(editingStaff._id, formData)
+        // Update existing staff - send only the fields that were provided
+        const updateData: Partial<MemberData> = {}
+        if (formData.name) updateData.name = formData.name
+        if (formData.email) updateData.email = formData.email
+        if (formData.contactNo) updateData.contactNo = formData.contactNo
+        if (formData.role) updateData.role = formData.role
+        if (formData.status) updateData.status = formData.status
+
+        await apiService.updateUser(editingStaff._id, updateData)
       } else {
-        // Create new staff
-        await apiService.createUser({ ...formData, role: 'staff' })
+        // Create new staff - ensure all required fields are present
+        const createData: MemberData = {
+          name: formData.name as string,
+          email: formData.email as string,
+          contactNo: formData.contactNo as string,
+          password: (formData as UserFormData).password,
+          role: 'staff',
+          status: formData.status as 'active' | 'inactive' | 'expired',
+          consent: {
+            gdpr: true,
+            marketing: false,
+          }
+        }
+        console.log('Form data received:', formData)
+        console.log('Form data has password:', 'password' in formData)
+        if ('password' in formData) {
+          console.log('Password value:', formData.password)
+          console.log('Password type:', typeof formData.password)
+          console.log('Password length:', formData.password.length)
+        }
+        await apiService.createUser(createData)
       }
       fetchStaff() // Refresh the list
     } catch (error) {

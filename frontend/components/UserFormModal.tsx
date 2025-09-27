@@ -22,7 +22,7 @@ import {
 import { z } from 'zod'
 import { ZodError } from 'zod'
 
-// Password validation schema (same as backend)
+// Password validation schema 
 const passwordSchema = z.string()
   .min(8, { message: "Password must be at least 8 characters long" })
   .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
@@ -30,10 +30,10 @@ const passwordSchema = z.string()
   .regex(/[0-9]/, { message: "Password must contain at least one number" })
   .regex(/[^A-Za-z0-9]/, { message: "Password must contain at least one special character" })
 
-// User form validation schemas (matching backend)
+// User form validation schemas 
 const createUserFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email format"),
+  email: z.email("Invalid email format"),
   contactNo: z.string()
     .min(1, "Phone number is required")
     .regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan Phone number"),
@@ -44,7 +44,7 @@ const createUserFormSchema = z.object({
 
 const updateUserFormSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
-  email: z.string().email("Invalid email format").optional(),
+  email: z.email("Invalid email format").optional(),
   contactNo: z.string()
     .regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan Phone number")
     .optional(),
@@ -54,6 +54,8 @@ const updateUserFormSchema = z.object({
 
 type UserFormData = z.infer<typeof createUserFormSchema>
 type UpdateUserFormData = z.infer<typeof updateUserFormSchema>
+
+export type { UserFormData, UpdateUserFormData }
 
 interface UserFormModalProps {
   isOpen: boolean
@@ -148,7 +150,10 @@ type FormDataType = UserFormData | UpdateUserFormData
           }
         })
         dataToSend = filteredData as UserFormData
+        console.log('UserFormModal sending filtered data for edit:', dataToSend)
       }
+
+      console.log('UserFormModal submitting data:', { ...dataToSend, password: dataToSend && 'password' in dataToSend ? '***masked***' : 'no password field' })
 
       await onSubmit(dataToSend)
       onClose()
