@@ -24,7 +24,7 @@ router.get('/:id', getSupplierById);
 router.put('/:id', updateSupplier);
 
 // DELETE /api/v1/suppliers/:id - Delete supplier by ID
-router.delete('/:id', authenticate(['manager']), deleteSupplier);
+router.delete('/:id', deleteSupplier);
 
 export default router;
 
