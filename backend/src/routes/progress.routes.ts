@@ -8,17 +8,17 @@ import nutritionRoutes from "./nutrition.routes.js";
 
 const router = Router();
 
-// ✅ Progress CRUD endpoints
+// ✅ Mount Goal, Workout, and Nutrition routes under /progress FIRST
+router.use("/goals", goalRoutes);
+router.use("/workouts", workoutRoutes);
+router.use("/nutrition", nutritionRoutes);
+
+// ✅ Progress CRUD endpoints (after specific routes to avoid conflicts)
 router.post("/", ProgressController.createProgress);
 router.get("/", ProgressController.getAllProgress);
 router.get("/:id", ProgressController.getProgressById);
 router.put("/:id", ProgressController.updateProgress);
 router.delete("/:id", ProgressController.deleteProgress);
-
-// ✅ Mount Goal, Workout, and Nutrition routes under /progress
-router.use("/goals", goalRoutes);
-router.use("/workouts", workoutRoutes);
-router.use("/nutrition", nutritionRoutes);
 
 export default router;
 

@@ -17,7 +17,7 @@ export function TrackingWidget() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (user?._id) {
+    if (user?._id && user._id.length === 24) {
       fetchRecentData()
     }
   }, [user?._id])
@@ -42,6 +42,10 @@ export function TrackingWidget() {
       }
     } catch (error) {
       console.error("Failed to fetch recent data:", error)
+      // Set empty arrays on error to prevent UI issues
+      setRecentWorkouts([])
+      setRecentNutrition([])
+      setRecentGoals([])
     } finally {
       setLoading(false)
     }
