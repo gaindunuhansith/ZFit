@@ -11,21 +11,24 @@ import {
 
 // Zod schemas
 const createRefundSchema = z.object({
-    paymentId: z.string().min(1, 'Payment ID is required'),
+    paymentId: z.string().min(1, 'Payment ID is required').refine((val) => {
+        return /^[0-9a-fA-F]{24}$/.test(val);
+    }, 'Payment ID must be a valid ObjectId'),
+    userId: z.string().min(1, 'User ID is required').refine((val) => {
+        return /^[0-9a-fA-F]{24}$/.test(val);
+    }, 'User ID must be a valid ObjectId'),
     refundAmount: z.number().positive('Refund amount must be positive'),
     originalAmount: z.number().positive('Original amount must be positive'),
-    reason: z.enum(['customer_request', 'duplicate', 'fraud', 'cancelled', 'error']),
-    currency: z.string().default('USD'),
-    status: z.enum(['pending', 'completed', 'failed']).optional().default('pending'),
-    userId: z.string().optional() // Will be set from auth
+    reason: z.enum(['customer_request', 'duplicate', 'fraud', 'cancelled', 'error']).optional(),
+    notes: z.string().min(1, 'Notes are required')
 });
 
 const updateRefundSchema = z.object({
     refundAmount: z.number().positive('Refund amount must be positive').optional(),
     originalAmount: z.number().positive('Original amount must be positive').optional(),
     reason: z.enum(['customer_request', 'duplicate', 'fraud', 'cancelled', 'error']).optional(),
-    currency: z.string().optional(),
     status: z.enum(['pending', 'completed', 'failed']).optional(),
+    notes: z.string().min(1, 'Notes are required').optional(),
     gatewayRefundId: z.string().optional(),
     gatewayResponse: z.any().optional()
 }).refine((data) => {
@@ -42,9 +45,8 @@ export const createRefund = async (req: Request, res: Response, next: NextFuncti
     try {
         const validatedData = createRefundSchema.parse(req.body);
         
-        // Use authenticated user ID if available, otherwise allow manual specification
-        const userId = (req as any).user?.id || validatedData.userId;
-        const refundData = { ...validatedData, userId };
+        // Use userId from request body since authentication is disabled
+        const refundData = { ...validatedData };
         
         const refund = await createRefundService(refundData);
         res.status(201).json({ success: true, data: refund });
@@ -55,9 +57,8 @@ export const createRefund = async (req: Request, res: Response, next: NextFuncti
 
 export const getRefunds = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        // Use authenticated user ID if available, otherwise get all refunds
-        const userId = (req as any).user?.id;
-        const refunds = await getRefundsService(userId);
+        // Get all refunds since authentication is disabled
+        const refunds = await getRefundsService();
         res.json({ success: true, data: refunds });
     } catch (error) {
         next(error);
