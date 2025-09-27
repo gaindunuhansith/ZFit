@@ -12,6 +12,7 @@ import { refreshTokenSignOptions, signToken, verifyToken} from "../util/jwt.js";
 import { hashValue } from "../util/bcrypt.util.js";
 import { generateQR } from "../util/qrCode.util.js";
 import { CONFLICT, INTERNAL_SERVER_ERROR, NOT_FOUND, TOO_MANY_REQUESTS, UNAUTHORIZED } from "../constants/http.js";
+import type { NextFunction } from "express";
 
 
 type CreateAccountParams = {
@@ -201,7 +202,7 @@ export const refreshAccessToken = async (refreshToken: string) => {
 ;
 };
 
-export const sendPasswordResetEmail = async (email: string) => {
+export const sendPasswordResetEmail = async (email: string, next: NextFunction) => {
     try {
         
         const user = await UserModel.findOne({ email });
@@ -225,7 +226,7 @@ export const sendPasswordResetEmail = async (email: string) => {
             expiresAt,
         });
 
-        const url = `${env.FRONTEND_APP_ORIGIN}/my-account/forgot-password/reset?code=${verficationCode._id}&exp=${expiresAt.getTime()}`;
+        const url = `${env.FRONTEND_APP_ORIGIN}/auth/reset-password/reset?code=${verficationCode._id}&exp=${expiresAt.getTime()}`;
 
         const { data, error } = await sendMail({
             to: email,
@@ -236,7 +237,7 @@ export const sendPasswordResetEmail = async (email: string) => {
 
         return { url, emailId: data.id };
     } catch (error: any) {
-        console.log("SendPasswordResetError: ", error.message);
+        next(error)
     };
 };
 
