@@ -62,6 +62,7 @@ const apiRequest = async <T>(
 }
 
 // User API functions
+export const getUserById = (id: string) => apiRequest(`/users/${id}`)
 export const getMembers = () => apiRequest('/users/members')
 export const getStaff = () => apiRequest('/users/staff')
 export const getManagers = () => apiRequest('/users/managers')

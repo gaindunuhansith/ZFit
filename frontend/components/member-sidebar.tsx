@@ -49,7 +49,7 @@ const data = {
     },
     {
       title: "My Profile",
-      url: "/memberDashboard/profile",
+      url: "/profile",
       icon: User,
     },
     {

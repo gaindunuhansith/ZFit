@@ -40,6 +40,9 @@ const createUserFormSchema = z.object({
   password: passwordSchema,
   role: z.enum(['member', 'staff', 'manager']),
   status: z.enum(['active', 'inactive', 'expired']),
+  dob: z.string().optional(),
+  address: z.string().optional(),
+  emergencyContact: z.string().optional(),
 })
 
 const updateUserFormSchema = z.object({
@@ -50,6 +53,9 @@ const updateUserFormSchema = z.object({
     .optional(),
   role: z.enum(['member', 'staff', 'manager']).optional(),
   status: z.enum(['active', 'inactive', 'expired']).optional(),
+  dob: z.string().optional(),
+  address: z.string().optional(),
+  emergencyContact: z.string().optional(),
 })
 
 type UserFormData = z.infer<typeof createUserFormSchema>
@@ -83,6 +89,9 @@ type FormDataType = UserFormData | UpdateUserFormData
     ...(mode === 'add' ? { password: '' } : {}),
     role: 'member',
     status: 'active',
+    dob: '',
+    address: '',
+    emergencyContact: '',
   })
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -96,6 +105,9 @@ type FormDataType = UserFormData | UpdateUserFormData
         password: '', // Don't populate password for editing
         role: initialData.role || 'member',
         status: initialData.status || 'active',
+        dob: initialData.dob || '',
+        address: initialData.address || '',
+        emergencyContact: initialData.emergencyContact || '',
       })
     } else {
       setFormData({
@@ -105,6 +117,9 @@ type FormDataType = UserFormData | UpdateUserFormData
         password: '',
         role: 'member',
         status: 'active',
+        dob: '',
+        address: '',
+        emergencyContact: '',
       })
     }
     setErrors({})
@@ -281,6 +296,48 @@ type FormDataType = UserFormData | UpdateUserFormData
                     <SelectItem value="expired">Expired</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="dob" className="text-right">
+                Date of Birth
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="dob"
+                  type="date"
+                  value={formData.dob}
+                  onChange={(e) => handleInputChange('dob', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="address" className="text-right">
+                Address
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  placeholder="Enter address"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="emergencyContact" className="text-right">
+                Emergency Contact
+              </Label>
+              <div className="col-span-3">
+                <Input
+                  id="emergencyContact"
+                  value={formData.emergencyContact}
+                  onChange={(e) => handleInputChange('emergencyContact', e.target.value)}
+                  placeholder="Emergency contact phone"
+                />
               </div>
             </div>
 
