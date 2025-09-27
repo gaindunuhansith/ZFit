@@ -35,3 +35,21 @@ export const generateInvoicesReport = async (): Promise<Blob> => {
 
   return response.blob()
 }
+
+/**
+ * Generate payments report PDF
+ */
+export const generatePaymentsReport = async (): Promise<Blob> => {
+  const response = await fetch(`${API_BASE_URL}/reports/payments/pdf`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to generate payments report')
+  }
+
+  return response.blob()
+}

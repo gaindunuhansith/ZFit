@@ -7,6 +7,7 @@ import {
   MoreHorizontal,
   Search,
   Plus,
+  FileText,
 } from "lucide-react"
 
 import {
@@ -43,6 +44,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { getPayments, type Payment } from "@/lib/api/paymentApi"
+import { generatePaymentsReport } from "@/lib/api/reportApi"
 
 const getStatusBadge = (status: string) => {
   const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -119,6 +121,24 @@ export default function PaymentManagementPage() {
     console.log('Delete payment:', payment)
   }
 
+  const handleGenerateReport = async () => {
+    try {
+      const blob = await generatePaymentsReport()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.style.display = 'none'
+      a.href = url
+      a.download = `payments_report_${new Date().toISOString().split('T')[0]}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      a.remove()
+    } catch (error) {
+      console.error('Error generating report:', error)
+      // TODO: Show error toast
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -150,9 +170,9 @@ export default function PaymentManagementPage() {
             Manage all payment transactions and financial records.
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Payment
+        <Button onClick={handleGenerateReport}>
+          <FileText className="mr-2 h-4 w-4" />
+          Generate Report
         </Button>
       </div>
 

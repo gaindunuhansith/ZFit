@@ -131,6 +131,21 @@ export const generateInvoicesReportHandler = async (req: Request, res: Response,
   }
 }
 
+export const generatePaymentsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { generatePaymentsReport } = await import('../services/report.service.js')
+    const pdfBuffer = await generatePaymentsReport()
+
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', 'attachment; filename=payments-report.pdf')
+    res.setHeader('Content-Length', pdfBuffer.length)
+
+    res.send(pdfBuffer)
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const generateRefundsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { generateRefundsReport } = await import('../services/report.service.js')

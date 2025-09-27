@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import puppeteer from 'puppeteer'
 import { getAllMemberships } from './membership.service.js'
+import { getPaymentsService } from './payment.services.js'
 
 /**
  * Generic Report Service for generating PDF reports
@@ -967,6 +968,64 @@ export async function generateInvoicesReport(): Promise<Buffer> {
       }
     ],
     data: invoices as any[]
+  }
+
+  return generateGenericReport(config)
+}
+
+/**
+ * Generate Payments Report
+ */
+export async function generatePaymentsReport(): Promise<Buffer> {
+  const payments = await getPaymentsService('')
+
+  const config: ReportConfig = {
+    title: 'Payments Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'transactionId',
+        header: 'Transaction ID',
+        className: 'transaction-id-cell'
+      },
+      {
+        key: 'userId',
+        header: 'User ID',
+        className: 'user-id-cell'
+      },
+      {
+        key: 'amount',
+        header: 'Amount',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'currency',
+        header: 'Currency',
+        className: 'currency-cell'
+      },
+      {
+        key: 'type',
+        header: 'Type',
+        formatter: (value) => value ? value.replace('_', ' ').toUpperCase() : 'N/A'
+      },
+      {
+        key: 'method',
+        header: 'Method',
+        formatter: (value) => value ? value.replace('_', ' ').toUpperCase() : 'N/A'
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        formatter: (value) => `<span class="status-badge status-${value}">${value.toUpperCase()}</span>`
+      },
+      {
+        key: 'date',
+        header: 'Date',
+        type: 'date',
+        className: 'date-cell'
+      }
+    ],
+    data: payments as any[]
   }
 
   return generateGenericReport(config)
