@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import {
   FileText,
   Plus,
@@ -14,6 +15,8 @@ import {
   Clock,
   AlertCircle,
   XCircle,
+  Edit,
+  Trash2,
 } from "lucide-react"
 
 import {
@@ -82,11 +85,22 @@ const getStatusBadge = (status: string) => {
 }
 
 export default function InvoiceManagementPage() {
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
 
   // Mock data removed - will be replaced with API data
   const invoices: any[] = []
+
+  const handleUpdateInvoice = (invoiceId: string) => {
+    // TODO: Implement update invoice logic
+    console.log("Update invoice:", invoiceId)
+  }
+
+  const handleDeleteInvoice = (invoiceId: string) => {
+    // TODO: Implement delete invoice logic
+    console.log("Delete invoice:", invoiceId)
+  }
 
   const filteredInvoices = invoices.filter(invoice => {
     const matchesSearch = invoice.member.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -105,7 +119,7 @@ export default function InvoiceManagementPage() {
             Create, manage, and track invoices for your members.
           </p>
         </div>
-        <Button>
+        <Button onClick={() => router.push("/dashboard/finance/invoice/create")}>
           <Plus className="mr-2 h-4 w-4" />
           Create Invoice
         </Button>
@@ -135,56 +149,6 @@ export default function InvoiceManagementPage() {
             <SelectItem value="overdue">Overdue</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline">
-          <Filter className="mr-2 h-4 w-4" />
-          More Filters
-        </Button>
-      </div>
-
-      {/* Invoice Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{invoices.length}</div>
-            <p className="text-xs text-muted-foreground">Active invoices</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Paid</CardTitle>
-            <FileText className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{invoices.filter(inv => inv.status === 'paid').length}</div>
-            <p className="text-xs text-muted-foreground">
-              {Math.round((invoices.filter(inv => inv.status === 'paid').length / invoices.length) * 100)}% paid rate
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <FileText className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{invoices.filter(inv => inv.status === 'pending').length}</div>
-            <p className="text-xs text-muted-foreground">Awaiting payment</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-            <FileText className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{invoices.filter(inv => inv.status === 'overdue').length}</div>
-            <p className="text-xs text-muted-foreground">Need attention</p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Invoice Table */}
@@ -224,37 +188,24 @@ export default function InvoiceManagementPage() {
                     <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
                     <TableCell>{new Date(invoice.createdDate).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Download className="mr-2 h-4 w-4" />
-                            Download PDF
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Mail className="mr-2 h-4 w-4" />
-                            Send Email
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem>
-                            <CheckCircle className="mr-2 h-4 w-4" />
-                            Mark as Paid
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <FileText className="mr-2 h-4 w-4" />
-                            Duplicate
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleUpdateInvoice(invoice.id)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteInvoice(invoice.id)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
