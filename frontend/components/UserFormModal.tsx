@@ -242,8 +242,9 @@ type FormDataType = UserFormData | UpdateUserFormData
               <div className="col-span-3">
                 <Input
                   id="contactNo"
+                  type="tel"
                   value={formData.contactNo}
-                  onChange={(e) => handleInputChange('contactNo', e.target.value)}
+                  onChange={(e) => handleInputChange('contactNo', e.target.value.replace(/[^0-9+]/g, ''))}
                   placeholder="+94712345678"
                   className={errors.contactNo ? 'border-red-500' : ''}
                 />
@@ -334,8 +335,9 @@ type FormDataType = UserFormData | UpdateUserFormData
               <div className="col-span-3">
                 <Input
                   id="emergencyContact"
+                  type="tel"
                   value={formData.emergencyContact}
-                  onChange={(e) => handleInputChange('emergencyContact', e.target.value)}
+                  onChange={(e) => handleInputChange('emergencyContact', e.target.value.replace(/[^0-9+]/g, ''))}
                   placeholder="Emergency contact phone"
                 />
               </div>
