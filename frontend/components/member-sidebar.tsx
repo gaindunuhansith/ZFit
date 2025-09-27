@@ -10,6 +10,7 @@ import {
   Target,
   BarChart3,
   Home,
+  Users,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -49,6 +50,21 @@ const data = {
       title: "My Profile",
       url: "/memberDashboard/profile",
       icon: User,
+    },
+    {
+      title: "Memberships",
+      url: "/memberDashboard/memberships",
+      icon: Users,
+      items: [
+        {
+          title: "My Memberships",
+          url: "/memberDashboard/memberships/my-memberships",
+        },
+        {
+          title: "Browse Memberships",
+          url: "/memberDashboard/memberships/browse",
+        },
+      ],
     },
     {
       title: "My Classes",
