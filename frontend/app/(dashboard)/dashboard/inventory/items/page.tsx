@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Plus, Edit, Trash2, Package2, Search } from 'lucide-react'
+import { Plus, Edit, Trash2, Package2, Search, FileText } from 'lucide-react'
 import { itemApiService } from '@/lib/api/itemApi'
 import { supplierApiService } from '@/lib/api/supplierApi'
 import type { ItemData } from '@/lib/api/itemApi'
@@ -186,6 +186,26 @@ export default function ItemsPage() {
     )
   })
 
+  const handleGenerateReport = async () => {
+    try {
+      const response = await fetch('/api/v1/reports/inventory-items/pdf')
+      if (!response.ok) throw new Error('Failed to generate report')
+      
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'inventory-items-report.pdf'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error generating report:', error)
+      setError('Failed to generate report')
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -215,10 +235,16 @@ export default function ItemsPage() {
           <h2 className="text-3xl font-bold tracking-tight">Items</h2>
           <p className="text-muted-foreground">Manage inventory items</p>
         </div>
-        <Button onClick={handleAddItem}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Item
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleGenerateReport}>
+            <FileText className="h-4 w-4 mr-2" />
+            Generate Report
+          </Button>
+          <Button onClick={handleAddItem}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Item
+          </Button>
+        </div>
       </div>
 
       {/* Items Table */}

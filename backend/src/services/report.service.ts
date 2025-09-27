@@ -695,3 +695,145 @@ export async function generateManagersReport(): Promise<Buffer> {
 
   return generateGenericReport(config)
 }
+
+/**
+ * Generate Inventory Items Report
+ */
+export async function generateInventoryItemsReport(): Promise<Buffer> {
+  const inventoryService = new (await import('./inventoryItem.service.js')).default()
+  const items = await inventoryService.getAllItems()
+
+  const config: ReportConfig = {
+    title: 'Inventory Items Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'itemName',
+        header: 'Item Name',
+        className: 'item-name-cell'
+      },
+      {
+        key: 'categoryID',
+        header: 'Category',
+        className: 'category-cell'
+      },
+      {
+        key: 'supplierID',
+        header: 'Supplier',
+        formatter: (value) => value?.supplierName || 'No Supplier'
+      },
+      {
+        key: 'quantity',
+        header: 'Current Stock',
+        className: 'quantity-cell'
+      },
+      {
+        key: 'price',
+        header: 'Price (LKR)',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'lowStockThreshold',
+        header: 'Low Stock Alert',
+        className: 'threshold-cell'
+      },
+      {
+        key: 'maintenanceStatus',
+        header: 'Status',
+        formatter: (value) => `<span class="status-badge status-${value}">${value.replace('_', ' ').toUpperCase()}</span>`
+      }
+    ],
+    data: items as any[]
+  }
+
+  return generateGenericReport(config)
+}
+
+/**
+ * Generate Stock Levels Report
+ */
+export async function generateStockLevelsReport(): Promise<Buffer> {
+  const reportService = new (await import('./reportService.js')).default()
+  const stockData = await reportService.getStockLevels()
+
+  const config: ReportConfig = {
+    title: 'Stock Levels Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'name',
+        header: 'Item Name',
+        className: 'item-name-cell'
+      },
+      {
+        key: 'category',
+        header: 'Category',
+        className: 'category-cell'
+      },
+      {
+        key: 'supplier',
+        header: 'Supplier',
+        formatter: (value) => value?.supplierName || 'No Supplier'
+      },
+      {
+        key: 'quantity',
+        header: 'Current Stock',
+        className: 'quantity-cell'
+      },
+      {
+        key: 'lowStock',
+        header: 'Stock Status',
+        formatter: (value) => value ? 
+          '<span class="status-badge status-warning">LOW STOCK</span>' : 
+          '<span class="status-badge status-good">GOOD</span>'
+      }
+    ],
+    data: stockData as any[]
+  }
+
+  return generateGenericReport(config)
+}
+
+/**
+ * Generate Suppliers Report
+ */
+export async function generateSuppliersReport(): Promise<Buffer> {
+  const supplierService = new (await import('./inventorySupplier.service.js')).default()
+  const suppliers = await supplierService.getAllSuppliers()
+
+  const config: ReportConfig = {
+    title: 'Suppliers Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'supplierName',
+        header: 'Supplier Name',
+        className: 'supplier-name-cell'
+      },
+      {
+        key: 'supplierEmail',
+        header: 'Email',
+        className: 'email-cell'
+      },
+      {
+        key: 'supplierPhone',
+        header: 'Phone',
+        className: 'phone-cell'
+      },
+      {
+        key: 'supplierAddress',
+        header: 'Address',
+        className: 'address-cell'
+      },
+      {
+        key: 'createdAt',
+        header: 'Added Date',
+        type: 'date',
+        className: 'date-cell'
+      }
+    ],
+    data: suppliers as any[]
+  }
+
+  return generateGenericReport(config)
+}

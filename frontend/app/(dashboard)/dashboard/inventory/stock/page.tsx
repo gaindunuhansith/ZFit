@@ -15,8 +15,37 @@ import {
 
 
 import { Input } from '@/components/ui/input'
-import { Activity, Search } from 'lucide-react'
+import { Activity, Search, FileText } from 'lucide-react'
 import { itemApiService } from '@/lib/api/itemApi'
+
+const handleGenerateReport = async () => {
+  try {
+    const response = await fetch('/api/reports/stock-levels', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to generate report')
+    }
+
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.style.display = 'none'
+    a.href = url
+    a.download = `stock-levels-report-${new Date().toISOString().split('T')[0]}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+  } catch (error) {
+    console.error('Error generating report:', error)
+    alert('Failed to generate report')
+  }
+}
 
 interface StockItem {
   _id: string
@@ -72,6 +101,26 @@ export default function StockManagementPage() {
     )
   })
 
+  const handleGenerateReport = async () => {
+    try {
+      const response = await fetch('/api/v1/reports/stock-levels/pdf')
+      if (!response.ok) throw new Error('Failed to generate report')
+      
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'stock-levels-report.pdf'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error generating report:', error)
+      setError('Failed to generate report')
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -101,6 +150,10 @@ export default function StockManagementPage() {
           <h2 className="text-3xl font-bold tracking-tight">Stock Management</h2>
           <p className="text-muted-foreground">Manage inventory stock levels and maintenance</p>
         </div>
+        <Button variant="outline" onClick={handleGenerateReport}>
+          <FileText className="h-4 w-4 mr-2" />
+          Generate Report
+        </Button>
       </div>
 
       {/* Stock Management Table */}
