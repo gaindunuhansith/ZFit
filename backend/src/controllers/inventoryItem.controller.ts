@@ -14,7 +14,7 @@ export const createItemSchema = z.object({
     supplierID: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid supplier ID format"),
     lowStockThreshold: z.number().min(0).optional(),
     maintenanceStatus: z.enum(["good", "maintenance_required", "under_repair"]).optional(),
-    lastMaintenanceDate: z.date().optional(),
+    lastMaintenanceDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
 });
 
 export const updateItemSchema = z.object({
@@ -26,7 +26,7 @@ export const updateItemSchema = z.object({
     supplierID: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid supplier ID format").optional(),
     lowStockThreshold: z.number().min(0).optional(),
     maintenanceStatus: z.enum(["good", "maintenance_required", "under_repair"]).optional(),
-    lastMaintenanceDate: z.date().optional()
+    lastMaintenanceDate: z.string().optional().transform((val) => val ? new Date(val) : undefined)
 });
 
 export const itemIdSchema = z.object({
@@ -36,6 +36,7 @@ export const itemIdSchema = z.object({
 //Controller to create a new inventory item
 export const createItem = async (req: Request, res: Response, next: NextFunction) => {
     try {
+        console.log('Received item data:', JSON.stringify(req.body, null, 2));
         const validated = createItemSchema.parse(req.body);
         const itemData: any = {
             itemName: validated.itemName,
@@ -62,6 +63,14 @@ export const createItem = async (req: Request, res: Response, next: NextFunction
             data: item
         });
     } catch (error) {
+        console.error('Create item error:', error);
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: "Validation error",
+                errors: error.issues
+            });
+        }
         next(error);
     }
 };

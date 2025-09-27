@@ -50,12 +50,16 @@ const apiRequest = async <T>(
     const data = await response.json()
 
     if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`)
+      console.error('API Error Response:', data)
+      throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`)
     }
 
     return data
   } catch (error) {
     console.error('API request failed:', error)
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      throw new Error('Network error: Unable to reach the server')
+    }
     throw error
   }
 }

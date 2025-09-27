@@ -77,14 +77,22 @@ export default function ItemsPage() {
 
   const fetchSuppliers = async () => {
     try {
+      console.log('Fetching suppliers...')
       const response = await supplierApiService.getSuppliers()
+      console.log('Suppliers response:', response)
       setSuppliers(response.data as Supplier[])
+      console.log('Suppliers set:', response.data)
     } catch (error) {
       console.error('Error fetching suppliers:', error)
     }
   }
 
   const handleAddItem = () => {
+    console.log('Add item clicked. Suppliers available:', suppliers.length)
+    if (suppliers.length === 0) {
+      setError('Please create at least one supplier before adding items')
+      return
+    }
     setEditingItem(null)
     setModalOpen(true)
   }
@@ -108,17 +116,26 @@ export default function ItemsPage() {
 
   const handleModalSubmit = async (formData: ItemFormData | UpdateItemFormData) => {
     try {
+      console.log('Submitting form data:', formData)
+      console.log('Form data JSON:', JSON.stringify(formData, null, 2))
+      console.log('Editing item:', editingItem)
+      
       if (editingItem) {
         // Update existing item
+        console.log('Updating item with ID:', editingItem._id)
         await itemApiService.updateItem(editingItem._id, formData)
       } else {
         // Create new item
-        await itemApiService.createItem(formData as ItemData)
+        console.log('Creating new item')
+        console.log('Sending to API:', JSON.stringify(formData, null, 2))
+        const response = await itemApiService.createItem(formData as ItemData)
+        console.log('Create item response:', response)
       }
       fetchItems() // Refresh the list
     } catch (error) {
       console.error('Error saving item:', error)
-      setError('Failed to save item')
+      console.error('Full error details:', error)
+      setError(`Failed to save item: ${error instanceof Error ? error.message : 'Unknown error'}`)
       throw error
     }
   }
