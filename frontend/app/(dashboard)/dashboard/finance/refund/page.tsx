@@ -13,6 +13,9 @@ import {
   Eye,
   Mail,
   DollarSign,
+  Plus,
+  Edit,
+  Trash2,
 } from "lucide-react"
 
 import {
@@ -92,6 +95,7 @@ export default function RefundManagementPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedRefund, setSelectedRefund] = useState<any>(null)
   const [isProcessingModalOpen, setIsProcessingModalOpen] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [processingAction, setProcessingAction] = useState<"approve" | "deny" | "partial" | null>(null)
   const [partialAmount, setPartialAmount] = useState("")
   const [processingNotes, setProcessingNotes] = useState("")
@@ -128,6 +132,16 @@ export default function RefundManagementPage() {
     setProcessingAction(null)
   }
 
+  const handleUpdateRefund = (refund: any) => {
+    // Here you would open an update modal or navigate to update page
+    console.log("Update refund:", refund)
+  }
+
+  const handleDeleteRefund = (refund: any) => {
+    // Here you would show a delete confirmation modal
+    console.log("Delete refund:", refund)
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -143,9 +157,9 @@ export default function RefundManagementPage() {
             <RefreshCw className="mr-2 h-4 w-4" />
             Process Refund
           </Button>
-          <Button variant="outline">
-            <Mail className="mr-2 h-4 w-4" />
-            Notify Members
+          <Button variant="outline" onClick={() => setIsCreateModalOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Refund
           </Button>
         </div>
       </div>
@@ -173,56 +187,6 @@ export default function RefundManagementPage() {
             <SelectItem value="denied">Denied</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline">
-          <Filter className="mr-2 h-4 w-4" />
-          More Filters
-        </Button>
-      </div>
-
-      {/* Refund Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Refunds</CardTitle>
-            <RefreshCw className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{refunds.length}</div>
-            <p className="text-xs text-muted-foreground">This month</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <AlertCircle className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{refunds.filter(r => r.status === 'pending').length}</div>
-            <p className="text-xs text-muted-foreground">Awaiting approval</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Processed</CardTitle>
-            <RefreshCw className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{refunds.filter(r => r.status === 'processed').length}</div>
-            <p className="text-xs text-muted-foreground">Successfully completed</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${refunds.reduce((sum, r) => sum + (r.amount || 0), 0).toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground">Refunded this month</p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Refund Queue Table */}
@@ -260,42 +224,38 @@ export default function RefundManagementPage() {
                     </TableCell>
                     <TableCell>{refund.requestedDate ? new Date(refund.requestedDate).toLocaleDateString() : 'N/A'}</TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => setSelectedRefund(refund)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          {refund.status === 'pending' && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleProcessRefund(refund, 'approve')}>
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Approve Refund
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleProcessRefund(refund, 'partial')}>
-                                <DollarSign className="mr-2 h-4 w-4" />
-                                Partial Refund
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleProcessRefund(refund, 'deny')}>
-                                <XCircle className="mr-2 h-4 w-4" />
-                                Deny Refund
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem>
-                            <Mail className="mr-2 h-4 w-4" />
-                            Notify Member
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex space-x-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleProcessRefund(refund, 'approve')}
+                          disabled={refund.status !== 'pending'}
+                        >
+                          <CheckCircle className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleProcessRefund(refund, 'deny')}
+                          disabled={refund.status !== 'pending'}
+                        >
+                          <XCircle className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleUpdateRefund(refund)}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteRefund(refund)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -366,6 +326,74 @@ export default function RefundManagementPage() {
                 {processingAction === 'partial' && 'Process Partial Refund'}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Refund Modal */}
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Refund Request</DialogTitle>
+            <DialogDescription>
+              Create a new refund request for a member.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="refund-payment">Payment</Label>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a payment to refund" />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* Mock payment options - will be replaced with API data */}
+                  <SelectItem value="payment1">John Doe - Membership ($150) - 2024-01-15</SelectItem>
+                  <SelectItem value="payment2">Jane Smith - Booking ($75) - 2024-01-20</SelectItem>
+                  <SelectItem value="payment3">John Doe - Inventory ($200) - 2024-01-25</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="refund-amount">Refund Amount</Label>
+              <Input
+                id="refund-amount"
+                type="number"
+                step="0.01"
+                placeholder="Enter refund amount"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="refund-reason">Reason</Label>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select refund reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="customer_request">Customer Request</SelectItem>
+                  <SelectItem value="duplicate">Duplicate Payment</SelectItem>
+                  <SelectItem value="fraud">Fraud</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="error">Error</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="refund-notes">Notes</Label>
+              <Textarea
+                id="refund-notes"
+                placeholder="Additional notes about the refund..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setIsCreateModalOpen(false)}>
+              Create Refund Request
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
