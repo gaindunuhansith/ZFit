@@ -28,7 +28,7 @@ interface Item {
   supplierID: {
     _id: string
     supplierName: string
-  }
+  } | null
   lowStockThreshold: number
   maintenanceStatus: "good" | "maintenance_required" | "under_repair"
   lastMaintenanceDate?: string

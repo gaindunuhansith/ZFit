@@ -13,7 +13,7 @@ const updateStockSchema = z.object({
 // Schema to update maintenance
 const updateMaintenanceSchema = z.object({
     maintenanceStatus: z.enum(["good", "maintenance_required", "under_repair"]),
-    lastMaintenanceDate: z.date().optional()
+    lastMaintenanceDate: z.string().optional().transform((val) => val ? new Date(val) : undefined)
 });
 
 // Update stock (increment or decrement)
