@@ -13,8 +13,8 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, UserCheck } from 'lucide-react'
-import { apiService } from '@/lib/api'
-import type { MemberData } from '@/lib/api'
+import { apiService } from '@/lib/api/userApi'
+import type { MemberData } from '@/lib/api/userApi'
 import { UserFormModal, UserFormData, UpdateUserFormData } from '@/components/UserFormModal'
 
 interface Staff {
