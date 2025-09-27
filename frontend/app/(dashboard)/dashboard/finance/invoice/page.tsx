@@ -64,9 +64,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { getInvoices, createInvoice, updateInvoice, deleteInvoice, type Invoice, type InvoiceItem, type CreateInvoiceData, type UpdateInvoiceData } from "@/lib/api/invoiceApi"
 import { generateInvoicesReport } from "@/lib/api/reportApi"
 
-// Mock invoice data - REMOVED
-// const invoices = [...]
-
 const getStatusIcon = (status: string) => {
   switch (status) {
     case "paid":

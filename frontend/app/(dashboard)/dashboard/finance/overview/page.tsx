@@ -107,18 +107,15 @@ export default function PaymentManagementPage() {
   })
 
   const handleViewPayment = (payment: Payment) => {
-    // TODO: Implement view payment details
-    console.log('View payment:', payment)
+    // Placeholder for future view payment details implementation
   }
 
   const handleEditPayment = (payment: Payment) => {
-    // TODO: Implement edit payment
-    console.log('Edit payment:', payment)
+    // Placeholder for future edit payment implementation
   }
 
   const handleDeletePayment = (payment: Payment) => {
-    // TODO: Implement delete payment
-    console.log('Delete payment:', payment)
+    // Placeholder for future delete payment implementation
   }
 
   const handleGenerateReport = async () => {
@@ -135,7 +132,7 @@ export default function PaymentManagementPage() {
       a.remove()
     } catch (error) {
       console.error('Error generating report:', error)
-      // TODO: Show error toast
+      // Error handling for report generation
     }
   }
 

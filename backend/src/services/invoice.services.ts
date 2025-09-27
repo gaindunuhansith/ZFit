@@ -13,7 +13,6 @@ export const getInvoicesService = async (userId?: string): Promise<IInvoice[]> =
     if (userId) {
         return await Invoice.find({ userId });
     } else {
-        // For testing purposes, return all invoices if no userId provided
         return await Invoice.find({});
     }
 };
