@@ -11,6 +11,7 @@ import {
   BarChart3,
   Home,
   Users,
+  ShoppingBag,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -65,6 +66,9 @@ const data = {
           url: "/memberDashboard/memberships/browse",
         },
       ],
+      title: "Store",
+      url: "/memberDashboard/store",
+      icon: ShoppingBag,
     },
     {
       title: "My Classes",
