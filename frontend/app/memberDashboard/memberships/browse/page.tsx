@@ -33,11 +33,11 @@ const categoryIcons = {
 }
 
 const categoryColors = {
-  weights: "bg-blue-100 text-blue-800 hover:bg-blue-100",
-  crossfit: "bg-orange-100 text-orange-800 hover:bg-orange-100",
-  yoga: "bg-purple-100 text-purple-800 hover:bg-purple-100",
-  mma: "bg-red-100 text-red-800 hover:bg-red-100",
-  other: "bg-gray-100 text-gray-800 hover:bg-gray-100",
+  weights: "bg-gray-800 text-gray-200 hover:bg-gray-700",
+  crossfit: "bg-gray-800 text-gray-200 hover:bg-gray-700",
+  yoga: "bg-gray-800 text-gray-200 hover:bg-gray-700",
+  mma: "bg-gray-800 text-gray-200 hover:bg-gray-700",
+  other: "bg-gray-800 text-gray-200 hover:bg-gray-700",
 }
 
 export default function BrowseMembershipsPage() {
