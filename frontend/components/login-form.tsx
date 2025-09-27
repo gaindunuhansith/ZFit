@@ -130,7 +130,7 @@ export function LoginForm() {
         </Button>
       </form>
       <div className="mt-4 text-center">
-        <Link href="/forgot-password" className="text-gray-400 hover:text-gray-200 text-sm font-medium">
+        <Link href="/auth/forgot-password" className="text-gray-400 hover:text-gray-200 text-sm font-medium">
           Forgot Password?
         </Link>
       </div>

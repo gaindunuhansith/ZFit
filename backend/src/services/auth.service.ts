@@ -225,7 +225,7 @@ export const sendPasswordResetEmail = async (email: string) => {
             expiresAt,
         });
 
-        const url = `${env.FRONTEND_APP_ORIGIN}/my-account/forgot-password/reset?code=${verficationCode._id}&exp=${expiresAt.getTime()}`;
+        const url = `${env.FRONTEND_APP_ORIGIN}/auth/forgot-password/reset?code=${verficationCode._id}&exp=${expiresAt.getTime()}`;
 
         const { data, error } = await sendMail({
             to: email,
