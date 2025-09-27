@@ -3,7 +3,7 @@ import mongoose, { Document } from "mongoose";
 export interface IInventoryItem extends Document {
     itemName: string;
     itemDescription: string;
-    categoryID: mongoose.Types.ObjectId;
+    categoryID: "supplements" | "equipment";
     quantity: number;
     price: number;
     supplierID: mongoose.Types.ObjectId;
@@ -17,7 +17,11 @@ export interface IInventoryItem extends Document {
 const InventoryItemSchema = new mongoose.Schema<IInventoryItem>({
     itemName: { type: String, required: true},
     itemDescription: { type: String, required: true},
-    categoryID: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: true },
+    categoryID: { 
+        type: String, 
+        enum: ["supplements", "equipment"], 
+        required: true 
+    },
     quantity: { type: Number, required: true, min: 0 },
     price: { type: Number, required: true, min: 0 },
     supplierID: { type: mongoose.Schema.Types.ObjectId, ref: "Supplier", required: true },
