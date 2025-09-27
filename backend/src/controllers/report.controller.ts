@@ -70,3 +70,48 @@ export const generateManagersReportHandler = async (req: Request, res: Response,
     next(error)
   }
 }
+
+export const generateInventoryItemsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { generateInventoryItemsReport } = await import('../services/report.service.js')
+    const pdfBuffer = await generateInventoryItemsReport()
+
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', 'attachment; filename=inventory-items-report.pdf')
+    res.setHeader('Content-Length', pdfBuffer.length)
+
+    res.send(pdfBuffer)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const generateStockLevelsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { generateStockLevelsReport } = await import('../services/report.service.js')
+    const pdfBuffer = await generateStockLevelsReport()
+
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', 'attachment; filename=stock-levels-report.pdf')
+    res.setHeader('Content-Length', pdfBuffer.length)
+
+    res.send(pdfBuffer)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const generateSuppliersReportHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { generateSuppliersReport } = await import('../services/report.service.js')
+    const pdfBuffer = await generateSuppliersReport()
+
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', 'attachment; filename=suppliers-report.pdf')
+    res.setHeader('Content-Length', pdfBuffer.length)
+
+    res.send(pdfBuffer)
+  } catch (error) {
+    next(error)
+  }
+}
