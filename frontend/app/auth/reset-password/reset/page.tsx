@@ -17,6 +17,7 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const [isValidLink, setIsValidLink] = useState(true)
 
   const router = useRouter()
@@ -122,7 +123,7 @@ export default function ResetPasswordPage() {
             <div className="mb-8">
               <CheckCircle className="h-16 w-16 text-[#AAFF69] mx-auto mb-4" />
               <h1 className="text-4xl font-bold text-white mb-2">Password Reset!</h1>
-              <p className="text-gray-400">
+              <p className="text-[#AAFF69]">
                 Your password has been successfully reset. You can now log in with your new password.
               </p>
             </div>
