@@ -47,6 +47,15 @@ const getStatsSchema = z.object({
   userRole: z.enum(["manager", "staff", "member"]).optional()
 });
 
+const getAllAttendanceSchema = z.object({
+  page: z.string().transform(val => parseInt(val)).optional(),
+  limit: z.string().transform(val => parseInt(val)).optional(),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+  userRole: z.enum(["manager", "staff", "member"]).optional(),
+  status: z.enum(["checked-in", "checked-out", "auto-checkout"]).optional()
+});
+
 /**
  * Generate QR code for user check-in
  */
@@ -264,6 +273,56 @@ export const checkUserStatus = async (req: Request, res: Response, next: NextFun
         attendance: isCheckedIn
       },
       message: "User status retrieved successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAllAttendance = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const validatedData = getAllAttendanceSchema.parse(req.query);
+    
+    const result = await attendanceService.getAllAttendance({
+      page: validatedData.page || 1,
+      limit: validatedData.limit || 20,
+      ...(validatedData.startDate && { startDate: new Date(validatedData.startDate) }),
+      ...(validatedData.endDate && { endDate: new Date(validatedData.endDate) }),
+      ...(validatedData.userRole && { userRole: validatedData.userRole }),
+      ...(validatedData.status && { status: validatedData.status })
+    });
+    
+    res.status(OK).json({
+      success: true,
+      data: result.records,
+      pagination: {
+        page: result.page,
+        limit: result.limit,
+        total: result.total,
+        totalPages: result.totalPages
+      },
+      message: "Attendance records retrieved successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Delete attendance record
+ */
+export const deleteAttendance = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id;
+    if (!id) {
+      return res.status(400).json({ success: false, message: "Attendance ID is required" });
+    }
+
+    const result = await attendanceService.deleteAttendance(id);
+
+    res.status(OK).json({
+      success: true,
+      message: result.message
     });
   } catch (error) {
     next(error);

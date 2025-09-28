@@ -153,11 +153,11 @@ type FormDataType = UserFormData | UpdateUserFormData
 
     setLoading(true)
     try {
-      // For updates, only send fields that have values
+      
       let dataToSend = formData
 
       if (mode === 'edit') {
-        // Filter out empty/undefined values for updates
+        
         const filteredData: Record<string, string> = {}
         Object.entries(formData).forEach(([key, value]) => {
           if (value !== undefined && value !== '' && value !== null) {

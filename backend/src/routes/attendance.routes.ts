@@ -9,7 +9,9 @@ import {
     getTodayAttendance,
     getCurrentlyCheckedIn,
     getAttendanceStats,
-    checkUserStatus
+    checkUserStatus,
+    getAllAttendance,
+    deleteAttendance
 } from "../controllers/attendance.controller.js";
 
 const router = Router();
@@ -26,10 +28,14 @@ router.put("/check-out/:userId", checkOut);
 router.post("/manual-entry", createManualEntry);
 
 // Get attendance data
+router.get("/", getAllAttendance);
 router.get("/user/:userId", getUserAttendance);
 router.get("/today", getTodayAttendance);
 router.get("/currently-checked-in", getCurrentlyCheckedIn);
 router.get("/stats", getAttendanceStats);
 router.get("/status/:userId", checkUserStatus);
+
+// Delete attendance record
+router.delete("/:id", deleteAttendance);
 
 export default router;

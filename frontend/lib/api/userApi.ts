@@ -61,6 +61,9 @@ const apiRequest = async <T>(
   }
 }
 
+// Export the base API request function
+export { apiRequest }
+
 // User API functions
 export const getUserById = (id: string) => apiRequest(`/users/${id}`)
 export const getMembers = () => apiRequest('/users/members')

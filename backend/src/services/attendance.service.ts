@@ -1,7 +1,7 @@
 import AttendanceModel from "../models/attendance.model.js";
 import UserModel from "../models/user.model.js";
 import { verifyQR } from "../util/qrCode.util.js";
-import { getUserActiveSubscription } from "./subscription.service.js";
+import { getUserActiveMembership } from "./membership.service.js";
 import AppAssert from "../util/AppAssert.js";
 import { BAD_REQUEST, NOT_FOUND, FORBIDDEN } from "../constants/http.js";
 
@@ -88,7 +88,7 @@ export const checkIn = async (params: CheckInParams) => {
   
   // For members, check if they have an active subscription
   if (payload.userRole === 'member') {
-    const activeSubscription = await getUserActiveSubscription(payload.userId);
+    const activeSubscription = await getUserActiveMembership(payload.userId);
     AppAssert(activeSubscription, FORBIDDEN, "No active membership found. Access denied.");
   }
   
@@ -327,4 +327,70 @@ export const getAttendanceStats = async (startDate: Date, endDate: Date, userRol
     },
     { $sort: { date: -1, userRole: 1 } }
   ]);
+};
+
+/**
+ * Get all attendance records with pagination and optional filters
+ */
+export const getAllAttendance = async (params: {
+  page?: number;
+  limit?: number;
+  startDate?: Date;
+  endDate?: Date;
+  userRole?: string;
+  status?: string;
+}) => {
+  const { page = 1, limit = 20, startDate, endDate, userRole, status } = params;
+
+  const filter: Record<string, unknown> = {};
+
+  // Date range filter
+  if (startDate && endDate) {
+    filter.date = { $gte: startDate, $lte: endDate };
+  } else if (startDate) {
+    filter.date = { $gte: startDate };
+  } else if (endDate) {
+    filter.date = { $lte: endDate };
+  }
+
+  // User role filter
+  if (userRole) {
+    filter.userRole = userRole;
+  }
+
+  // Status filter
+  if (status) {
+    filter.status = status;
+  }
+
+  const skip = (page - 1) * limit;
+
+  const [records, total] = await Promise.all([
+    AttendanceModel.find(filter)
+      .populate('userId', 'name email')
+      .populate('enteredBy', 'name email')
+      .sort({ date: -1, checkInTime: -1 })
+      .skip(skip)
+      .limit(limit),
+    AttendanceModel.countDocuments(filter)
+  ]);
+
+  return {
+    records,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit)
+  };
+};
+
+/**
+ * Delete attendance record
+ */
+export const deleteAttendance = async (id: string) => {
+  const attendance = await AttendanceModel.findById(id);
+  AppAssert(attendance, NOT_FOUND, "Attendance record not found");
+
+  await AttendanceModel.findByIdAndDelete(id);
+  return { success: true, message: "Attendance record deleted successfully" };
 };
