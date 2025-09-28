@@ -1,28 +1,14 @@
 "use client"
 
-import * as React from "react"
 import {
-  AudioWaveform,
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
-  Map,
-  PieChart,
-  Settings2,
   SquareTerminal,
   Users,
   Calendar,
   BarChart3,
   TrendingUp,
   Activity,
-  Dumbbell,
   Package,
   Store,
-  Target,
-  Apple,
-  LineChart,
-
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -203,19 +189,9 @@ const data = {
   ],
   projects: [
     {
-      name: "Morning Classes",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Evening Sessions",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Weekend Bootcamp",
-      url: "#",
-      icon: Map,
+      name: "QR Code Scanner",
+      url: "/dashboard/attendance/scan",
+      icon: Activity,
     },
   ],
 }

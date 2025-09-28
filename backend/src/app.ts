@@ -15,6 +15,7 @@ import progressRoutes from "./routes/progress.routes.js";
 import reportRouter from "./routes/report.routes.js";
 import invoiceRoutes from "./routes/invoice.routes.js";
 import gatewayRoutes from "./routes/gateway.routes.js";
+import attendanceRouter from "./routes/attendance.routes.js";
 import errorMiddleware from "./middleware/error.middleware.js";
 import { rateLimitMiddleware } from "./middleware/rateLimit.middleware.js";
 
@@ -44,6 +45,7 @@ app.use('/api/v1/progress', progressRoutes);
 app.use('/api/v1/reports', reportRouter);
 app.use('/api/v1/invoices', invoiceRoutes);
 app.use('/api/v1/gateways', gatewayRoutes);
+app.use('/api/v1/attendance', attendanceRouter);
 
 app.use(errorMiddleware);
 

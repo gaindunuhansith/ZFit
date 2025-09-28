@@ -9,7 +9,8 @@ import {
     getTodayAttendance,
     getCurrentlyCheckedIn,
     getAttendanceStats,
-    checkUserStatus
+    checkUserStatus,
+    getAllAttendance
 } from "../controllers/attendance.controller.js";
 
 const router = Router();
@@ -26,6 +27,7 @@ router.put("/check-out/:userId", checkOut);
 router.post("/manual-entry", createManualEntry);
 
 // Get attendance data
+router.get("/", getAllAttendance);
 router.get("/user/:userId", getUserAttendance);
 router.get("/today", getTodayAttendance);
 router.get("/currently-checked-in", getCurrentlyCheckedIn);
