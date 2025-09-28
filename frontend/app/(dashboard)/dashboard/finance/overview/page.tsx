@@ -3,10 +3,9 @@
 import { useState, useEffect } from "react"
 import {
   CreditCard,
-  Eye,
   MoreHorizontal,
   Search,
-  Plus,
+  FileText,
 } from "lucide-react"
 
 import {
@@ -32,7 +31,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -42,7 +40,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { getPayments, type Payment } from "@/lib/api/paymentApi"
+import { getPayments, type Payment, deletePayment } from "@/lib/api/paymentApi"
+import { generatePaymentsReport } from "@/lib/api/reportApi"
 
 const getStatusBadge = (status: string) => {
   const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -104,19 +103,34 @@ export default function PaymentManagementPage() {
     return matchesSearch && matchesStatus && matchesType
   })
 
-  const handleViewPayment = (payment: Payment) => {
-    // TODO: Implement view payment details
-    console.log('View payment:', payment)
+  const handleDeletePayment = async (payment: Payment) => {
+    if (!confirm(`Are you sure you want to delete payment ${payment.transactionId}?`)) return
+
+    try {
+      await deletePayment(payment._id)
+      setPayments(payments.filter(p => p._id !== payment._id))
+    } catch (error) {
+      console.error('Error deleting payment:', error)
+      setError('Failed to delete payment')
+    }
   }
 
-  const handleEditPayment = (payment: Payment) => {
-    // TODO: Implement edit payment
-    console.log('Edit payment:', payment)
-  }
-
-  const handleDeletePayment = (payment: Payment) => {
-    // TODO: Implement delete payment
-    console.log('Delete payment:', payment)
+  const handleGenerateReport = async () => {
+    try {
+      const blob = await generatePaymentsReport()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.style.display = 'none'
+      a.href = url
+      a.download = `payments_report_${new Date().toISOString().split('T')[0]}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      a.remove()
+    } catch (error) {
+      console.error('Error generating report:', error)
+      // Error handling for report generation
+    }
   }
 
   if (loading) {
@@ -150,9 +164,9 @@ export default function PaymentManagementPage() {
             Manage all payment transactions and financial records.
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Payment
+        <Button onClick={handleGenerateReport}>
+          <FileText className="mr-2 h-4 w-4" />
+          Generate Report
         </Button>
       </div>
 
@@ -251,14 +265,6 @@ export default function PaymentManagementPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleViewPayment(payment)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleEditPayment(payment)}>
-                            Edit Payment
-                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDeletePayment(payment)}
                             className="text-destructive"

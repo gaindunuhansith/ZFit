@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Plus, Edit, Trash2, Package2, Search, FileText } from 'lucide-react'
 import { itemApiService } from '@/lib/api/itemApi'
 import { supplierApiService } from '@/lib/api/supplierApi'
+import { generateInvoicesReport } from '@/lib/api/reportApi'
 import type { ItemData } from '@/lib/api/itemApi'
 import { ItemFormModal, ItemFormData, UpdateItemFormData } from '@/components/ItemFormModal'
 
@@ -97,6 +98,11 @@ export default function ItemsPage() {
     }
     setEditingItem(null)
     setModalOpen(true)
+  }
+
+  const handleCreateInvoice = () => {
+    // TODO: Implement invoice creation functionality
+    alert('Invoice creation functionality will be implemented here')
   }
 
   const handleEditItem = (item: Item) => {
@@ -206,6 +212,23 @@ export default function ItemsPage() {
     }
   }
 
+  const handleGenerateInvoiceReport = async () => {
+    try {
+      const blob = await generateInvoicesReport()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'invoices-report.pdf'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error generating invoice report:', error)
+      setError('Failed to generate invoice report')
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -239,6 +262,14 @@ export default function ItemsPage() {
           <Button variant="outline" onClick={handleGenerateReport}>
             <FileText className="h-4 w-4 mr-2" />
             Generate Report
+          </Button>
+          <Button variant="outline" onClick={handleCreateInvoice}>
+            <FileText className="h-4 w-4 mr-2" />
+            Create Invoice
+          </Button>
+          <Button variant="outline" onClick={handleGenerateInvoiceReport}>
+            <FileText className="h-4 w-4 mr-2" />
+            Invoice Report
           </Button>
           <Button onClick={handleAddItem}>
             <Plus className="h-4 w-4 mr-2" />

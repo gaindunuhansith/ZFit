@@ -68,28 +68,28 @@ export const createPayment = async (req: Request, res: Response, next: NextFunct
     }
 };
 
-//get all payments
+// Get all payments
 export const getPayments = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const payments = await getPaymentsService(''); 
+        const payments = await getPaymentsService('');
         res.json({ success: true, data: payments });
     } catch (error) {
         next(error);
     }
 };
 
-//get payment by using ID
+// Get payment by ID
 export const getPaymentById = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = paymentIdSchema.parse({ id: req.params.id });
 
         const payment = await getPaymentByIdService(id);
-        if (!payment) 
+        if (!payment)
             return res.status(404).json({ success: false, message: 'Payment not found' });
 
         res.json({ success: true, data: payment });
     } catch (error) {
-        next(error); 
+        next(error);
     }
 };
 

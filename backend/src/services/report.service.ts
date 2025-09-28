@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import puppeteer from 'puppeteer'
 import { getAllMemberships } from './membership.service.js'
+import { getPaymentsService } from './payment.services.js'
 
 /**
  * Generic Report Service for generating PDF reports
@@ -28,7 +29,7 @@ import { getAllMemberships } from './membership.service.js'
  *     { key: 'position', header: 'Position' },
  *     { key: 'salary', header: 'Salary', type: 'currency' },
  *     { key: 'hireDate', header: 'Hire Date', type: 'date' }
- *   ],
+ *   },
  *   data: staff
  * }
  *
@@ -833,6 +834,198 @@ export async function generateSuppliersReport(): Promise<Buffer> {
       }
     ],
     data: suppliers as any[]
+  }
+
+  return generateGenericReport(config)
+}
+
+/**
+ * Generate Refunds Report
+ */
+export async function generateRefundsReport(): Promise<Buffer> {
+  const { getRefundsService } = await import('./refund.services.js')
+  const refunds = await getRefundsService()
+
+  const config: ReportConfig = {
+    title: 'Refunds Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'refundId',
+        header: 'Refund ID',
+        className: 'refund-id-cell'
+      },
+      {
+        key: 'userId',
+        header: 'User ID',
+        className: 'user-id-cell'
+      },
+      {
+        key: 'paymentId',
+        header: 'Payment ID',
+        className: 'payment-id-cell'
+      },
+      {
+        key: 'refundAmount',
+        header: 'Refund Amount',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'originalAmount',
+        header: 'Original Amount',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'reason',
+        header: 'Reason',
+        formatter: (value) => value ? value.replace('_', ' ').toUpperCase() : 'N/A'
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        formatter: (value) => `<span class="status-badge status-${value}">${value.toUpperCase()}</span>`
+      },
+      {
+        key: 'createdAt',
+        header: 'Created Date',
+        type: 'date',
+        className: 'date-cell'
+      },
+      {
+        key: 'notes',
+        header: 'Notes',
+        className: 'notes-cell'
+      }
+    ],
+    data: refunds as any[]
+  }
+
+  return generateGenericReport(config)
+}
+
+/**
+ * Generate Invoices Report
+ */
+export async function generateInvoicesReport(): Promise<Buffer> {
+  const { getInvoicesService } = await import('./invoice.services.js')
+  const invoices = await getInvoicesService()
+
+  const config: ReportConfig = {
+    title: 'Invoices Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'number',
+        header: 'Invoice Number',
+        className: 'invoice-number-cell'
+      },
+      {
+        key: 'paymentId',
+        header: 'Payment ID',
+        className: 'payment-id-cell'
+      },
+      {
+        key: 'userId',
+        header: 'User ID',
+        className: 'user-id-cell'
+      },
+      {
+        key: 'subtotal',
+        header: 'Subtotal',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'tax',
+        header: 'Tax',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'discount',
+        header: 'Discount',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'total',
+        header: 'Total Amount',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        formatter: (value) => `<span class="status-badge status-${value}">${value.toUpperCase()}</span>`
+      },
+      {
+        key: 'dueDate',
+        header: 'Due Date',
+        type: 'date',
+        className: 'date-cell'
+      },
+      {
+        key: 'generatedAt',
+        header: 'Generated Date',
+        type: 'date',
+        className: 'date-cell'
+      }
+    ],
+    data: invoices as any[]
+  }
+
+  return generateGenericReport(config)
+}
+
+/**
+ * Generate Payments Report
+ */
+export async function generatePaymentsReport(): Promise<Buffer> {
+  const payments = await getPaymentsService('')
+
+  const config: ReportConfig = {
+    title: 'Payments Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'transactionId',
+        header: 'Transaction ID',
+        className: 'transaction-id-cell'
+      },
+      {
+        key: 'userId',
+        header: 'User ID',
+        className: 'user-id-cell'
+      },
+      {
+        key: 'amount',
+        header: 'Amount',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'currency',
+        header: 'Currency',
+        className: 'currency-cell'
+      },
+      {
+        key: 'type',
+        header: 'Type',
+        formatter: (value) => value ? value.replace('_', ' ').toUpperCase() : 'N/A'
+      },
+      {
+        key: 'method',
+        header: 'Method',
+        formatter: (value) => value ? value.replace('_', ' ').toUpperCase() : 'N/A'
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        formatter: (value) => `<span class="status-badge status-${value}">${value.toUpperCase()}</span>`
+      },
+      {
+        key: 'date',
+        header: 'Date',
+        type: 'date',
+        className: 'date-cell'
+      }
+    ],
+    data: payments as any[]
   }
 
   return generateGenericReport(config)
