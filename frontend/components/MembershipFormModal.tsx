@@ -152,24 +152,20 @@ export function MembershipFormModal({
 
     setLoading(true)
     try {
-      // For updates, only send fields that have values
+      
       let dataToSend = formData
 
       if (mode === 'add') {
-        // Convert startDate to full ISO string for backend
         const processedData = { ...formData }
         if (processedData.startDate) {
-          // Convert datetime-local format to full ISO string
           const date = new Date(processedData.startDate)
           processedData.startDate = date.toISOString()
         }
         dataToSend = processedData as MembershipFormData
       } else {
-        // Filter out empty/undefined values for updates and convert dates
         const filteredData: Record<string, string | boolean> = {}
         Object.entries(formData).forEach(([key, value]) => {
           if (value !== undefined && value !== '' && value !== null) {
-            // Convert date fields to full ISO strings
             if ((key === 'startDate' || key === 'endDate') && typeof value === 'string') {
               const date = new Date(value)
               filteredData[key] = date.toISOString()
@@ -401,3 +397,4 @@ export function MembershipFormModal({
     </Dialog>
   )
 }
+

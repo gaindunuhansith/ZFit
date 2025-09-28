@@ -12,7 +12,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, User, Download } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Plus, Edit, Trash2, User, Download, Search } from 'lucide-react'
 import { apiService } from '@/lib/api/userApi'
 import type { MemberData } from '@/lib/api/userApi'
 import { UserFormModal, UserFormData, UpdateUserFormData } from '@/components/UserFormModal'
@@ -39,10 +40,16 @@ export default function MembersPage() {
   const [error, setError] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     fetchMembers()
   }, [])
+
+  const filteredMembers = members.filter(member =>
+    member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    member.email.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   const fetchMembers = async () => {
     try {
@@ -212,6 +219,18 @@ export default function MembersPage() {
             </div>
           )}
 
+          <div className="mb-4">
+            <div className="relative max-w-sm">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search members by name or email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -224,7 +243,7 @@ export default function MembersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {members.map((member) => (
+              {filteredMembers.map((member) => (
                 <TableRow key={member._id}>
                   <TableCell className="font-medium">{member.name}</TableCell>
                   <TableCell>{member.email}</TableCell>
@@ -259,7 +278,7 @@ export default function MembersPage() {
             </TableBody>
           </Table>
 
-          {members.length === 0 && (
+          {filteredMembers.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No members found</p>

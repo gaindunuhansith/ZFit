@@ -12,7 +12,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, UserCheck, Download } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Plus, Edit, Trash2, UserCheck, Download, Search } from 'lucide-react'
 import { apiService } from '@/lib/api/userApi'
 import type { MemberData } from '@/lib/api/userApi'
 import { UserFormModal, UserFormData, UpdateUserFormData } from '@/components/UserFormModal'
@@ -41,10 +42,16 @@ export default function StaffPage() {
   const [error, setError] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     fetchStaff()
   }, [])
+
+  const filteredStaff = staff.filter(staffMember =>
+    staffMember.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    staffMember.email.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   const fetchStaff = async () => {
     try {
@@ -221,6 +228,18 @@ export default function StaffPage() {
             </div>
           )}
 
+          <div className="mb-4">
+            <div className="relative max-w-sm">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search staff by name or email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -233,7 +252,7 @@ export default function StaffPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {staff.map((staffMember) => (
+              {filteredStaff.map((staffMember) => (
                 <TableRow key={staffMember._id}>
                   <TableCell className="font-medium">{staffMember.name}</TableCell>
                   <TableCell>{staffMember.email}</TableCell>
@@ -268,7 +287,7 @@ export default function StaffPage() {
             </TableBody>
           </Table>
 
-          {staff.length === 0 && (
+          {filteredStaff.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <UserCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No staff found</p>

@@ -12,7 +12,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Shield, Download } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Plus, Edit, Trash2, Shield, Download, Search } from 'lucide-react'
 import { apiService } from '@/lib/api/userApi'
 import type { MemberData } from '@/lib/api/userApi'
 import { UserFormModal, UserFormData, UpdateUserFormData } from '@/components/UserFormModal'
@@ -41,6 +42,12 @@ export default function ManagersPage() {
   const [error, setError] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingManager, setEditingManager] = useState<Manager | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const filteredManagers = managers.filter(manager =>
+    manager.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    manager.email.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   useEffect(() => {
     fetchManagers()
@@ -214,6 +221,18 @@ export default function ManagersPage() {
             </div>
           )}
 
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search managers by name or email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -226,7 +245,7 @@ export default function ManagersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {managers.map((manager) => (
+              {filteredManagers.map((manager) => (
                 <TableRow key={manager._id}>
                   <TableCell className="font-medium">{manager.name}</TableCell>
                   <TableCell>{manager.email}</TableCell>
@@ -261,11 +280,11 @@ export default function ManagersPage() {
             </TableBody>
           </Table>
 
-          {managers.length === 0 && (
+          {filteredManagers.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No managers found</p>
-              <p className="text-sm">Add your first manager to get started</p>
+              <p>{searchQuery ? 'No managers found matching your search' : 'No managers found'}</p>
+              <p className="text-sm">{searchQuery ? 'Try adjusting your search terms' : 'Add your first manager to get started'}</p>
             </div>
           )}
         </CardContent>
