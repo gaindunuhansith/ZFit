@@ -63,6 +63,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { getRefunds, approveRefund, denyRefund, deleteRefund, createRefund, updateRefund, type Refund } from "@/lib/api/refundApi"
+import { generateRefundsReport } from "@/lib/api/reportApi"
 
 // Mock refund data - REMOVED
 // const refunds = [...]
@@ -185,6 +186,10 @@ export default function RefundManagementPage() {
   }
 
   const handleUpdateRefund = (refund: Refund) => {
+    if (refund.status === 'failed' || refund.status === 'completed') {
+      return; // Don't allow editing of disapproved or approved refunds
+    }
+    
     setEditingRefund(refund)
     setEditFormData({
       paymentId: refund.paymentId,
@@ -395,6 +400,25 @@ export default function RefundManagementPage() {
     }
   }
 
+  const handleGenerateReport = async () => {
+    try {
+      const reportBlob = await generateRefundsReport()
+
+      // Create a download link and trigger download
+      const url = window.URL.createObjectURL(reportBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'refunds-report.pdf'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error generating report:', error)
+      // TODO: Show error toast
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -406,9 +430,9 @@ export default function RefundManagementPage() {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button>
+          <Button onClick={handleGenerateReport}>
             <RefreshCw className="mr-2 h-4 w-4" />
-            Process Refund
+            Generate Report
           </Button>
           <Button variant="outline" onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -512,6 +536,7 @@ export default function RefundManagementPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleUpdateRefund(refund)}
+                          disabled={refund.status === 'failed' || refund.status === 'completed'}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -888,7 +913,7 @@ export default function RefundManagementPage() {
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleEditRefund}>
+            <Button onClick={handleEditRefund} disabled={editingRefund?.status === 'failed' || editingRefund?.status === 'completed'}>
               Save Changes
             </Button>
           </div>

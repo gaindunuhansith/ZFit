@@ -136,7 +136,7 @@ export const sendPasswordResetHandler = async (req: Request, res: Response, next
     try {
         const email = emailSchema.parse(req.body.email);
 
-        await sendPasswordResetEmail(email);
+        await sendPasswordResetEmail(email, next);
 
         return res.status(OK).json({ message: "Password reset email sent" });
     } catch (error) {
