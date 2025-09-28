@@ -383,3 +383,14 @@ export const getAllAttendance = async (params: {
     totalPages: Math.ceil(total / limit)
   };
 };
+
+/**
+ * Delete attendance record
+ */
+export const deleteAttendance = async (id: string) => {
+  const attendance = await AttendanceModel.findById(id);
+  AppAssert(attendance, NOT_FOUND, "Attendance record not found");
+
+  await AttendanceModel.findByIdAndDelete(id);
+  return { success: true, message: "Attendance record deleted successfully" };
+};

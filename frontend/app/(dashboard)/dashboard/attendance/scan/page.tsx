@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Camera, CameraOff, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { attendanceApi } from '@/lib/api/attendanceApi'
 
 export default function QRScannerPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -31,7 +32,7 @@ export default function QRScannerPage() {
         videoRef.current,
         (result) => {
           setScanResult(result.data)
-          setScanStatus('success')
+          setScanStatus('idle') // Keep as idle until user processes
           setIsScanning(false)
           qrScanner.destroy()
           setScanner(null)
@@ -76,20 +77,26 @@ export default function QRScannerPage() {
     if (!scanResult) return
 
     try {
-      // Here you would typically send the QR code data to your backend
-      // For now, we'll simulate an API call
-      setScanStatus('success')
+      setScanStatus('idle') // Reset to show loading state
+      setErrorMessage('')
 
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const response = await attendanceApi.checkIn({
+        qrToken: scanResult,
+        // location and notes can be added later if needed
+      })
 
-      // You can add your attendance logic here
-      console.log('Processing attendance for:', scanResult)
-
+      if (response.success && response.data) {
+        setScanStatus('success')
+        // The response includes an 'action' field indicating check-in or check-out
+        const action = response.data.action || 'checked-in'
+        setErrorMessage(`${action === 'checked-out' ? 'Checked out' : 'Checked in'} successfully!`)
+      } else {
+        throw new Error('Failed to process attendance')
+      }
     } catch (error) {
       console.error('Error processing attendance:', error)
       setScanStatus('error')
-      setErrorMessage('Failed to process attendance')
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to process attendance. Please try again.')
     }
   }
 
@@ -176,7 +183,7 @@ export default function QRScannerPage() {
               Scan Results
             </CardTitle>
             <CardDescription>
-              {scanResult ? 'QR code detected' : 'Waiting for scan...'}
+              {scanResult ? 'QR code detected - click Process Attendance to record' : 'Waiting for scan...'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -196,12 +203,22 @@ export default function QRScannerPage() {
                     {scanStatus === 'success' ? (
                       <>
                         <CheckCircle className="h-4 w-4 mr-2" />
-                        Attendance Recorded
+                        {errorMessage || 'Attendance Recorded'}
+                      </>
+                    ) : scanStatus === 'error' ? (
+                      <>
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Try Again
+                      </>
+                    ) : scanResult && scanStatus === 'idle' ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Process Attendance
                       </>
                     ) : (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Check Attendance
+                        Processing...
                       </>
                     )}
                   </Button>
@@ -218,8 +235,12 @@ export default function QRScannerPage() {
             )}
 
             {errorMessage && (
-              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <p className="text-sm text-destructive">{errorMessage}</p>
+              <div className={`p-4 border rounded-lg ${
+                scanStatus === 'success'
+                  ? 'bg-primary/10 border-primary/20 text-primary'
+                  : 'bg-destructive/10 border-destructive/20 text-destructive'
+              }`}>
+                <p className="text-sm">{errorMessage}</p>
               </div>
             )}
           </CardContent>

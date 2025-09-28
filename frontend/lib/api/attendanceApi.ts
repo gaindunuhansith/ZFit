@@ -146,6 +146,14 @@ class AttendanceApi {
     );
   }
 
+  // Check in user with QR token
+  async checkIn(data: { qrToken: string; location?: string; notes?: string }) {
+    return apiRequest<AttendanceRecord & { action: string }>(`${this.baseUrl}/check-in`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Force check-in (staff assisted)
   async forceCheckIn(data: { memberQrToken: string; staffQrToken: string; location?: string; notes?: string }) {
     return apiRequest<AttendanceRecord>(`${this.baseUrl}/force-check-in`, {

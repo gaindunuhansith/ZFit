@@ -10,7 +10,8 @@ import {
     getCurrentlyCheckedIn,
     getAttendanceStats,
     checkUserStatus,
-    getAllAttendance
+    getAllAttendance,
+    deleteAttendance
 } from "../controllers/attendance.controller.js";
 
 const router = Router();
@@ -33,5 +34,8 @@ router.get("/today", getTodayAttendance);
 router.get("/currently-checked-in", getCurrentlyCheckedIn);
 router.get("/stats", getAttendanceStats);
 router.get("/status/:userId", checkUserStatus);
+
+// Delete attendance record
+router.delete("/:id", deleteAttendance);
 
 export default router;

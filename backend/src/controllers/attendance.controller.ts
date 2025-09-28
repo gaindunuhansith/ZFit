@@ -307,3 +307,24 @@ export const getAllAttendance = async (req: Request, res: Response, next: NextFu
     next(error);
   }
 };
+
+/**
+ * Delete attendance record
+ */
+export const deleteAttendance = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id;
+    if (!id) {
+      return res.status(400).json({ success: false, message: "Attendance ID is required" });
+    }
+
+    const result = await attendanceService.deleteAttendance(id);
+
+    res.status(OK).json({
+      success: true,
+      message: result.message
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -6,6 +6,7 @@ import {
   Home,
   Users,
   ShoppingBag,
+  Calendar,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -65,6 +66,11 @@ const data = {
       title: "Store",
       url: "/memberDashboard/store",
       icon: ShoppingBag,
+    },
+    {
+      title: "Attendance",
+      url: "/memberDashboard/attendance",
+      icon: Calendar,
     },
   ],
 }

@@ -89,10 +89,6 @@ const data = {
       icon: Calendar,
       items: [
         {
-          title: "Today's Attendance",
-          url: "/dashboard/attendance/today",
-        },
-        {
           title: "Attendance History",
           url: "/dashboard/attendance/history",
         },
