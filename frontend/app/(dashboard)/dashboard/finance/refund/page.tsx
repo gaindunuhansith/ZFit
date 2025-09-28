@@ -186,6 +186,10 @@ export default function RefundManagementPage() {
   }
 
   const handleUpdateRefund = (refund: Refund) => {
+    if (refund.status === 'failed' || refund.status === 'completed') {
+      return; // Don't allow editing of disapproved or approved refunds
+    }
+    
     setEditingRefund(refund)
     setEditFormData({
       paymentId: refund.paymentId,
@@ -532,6 +536,7 @@ export default function RefundManagementPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleUpdateRefund(refund)}
+                          disabled={refund.status === 'failed' || refund.status === 'completed'}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -908,7 +913,7 @@ export default function RefundManagementPage() {
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleEditRefund}>
+            <Button onClick={handleEditRefund} disabled={editingRefund?.status === 'failed' || editingRefund?.status === 'completed'}>
               Save Changes
             </Button>
           </div>
