@@ -54,7 +54,6 @@ export interface Refund {
   refundId: string;
   originalAmount: number;
   refundAmount: number;
-  reason?: 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error';
   status: 'pending' | 'completed' | 'failed';
   notes: string;
   gatewayRefundId?: string;
@@ -68,14 +67,12 @@ export interface CreateRefundData {
   userId: string;
   refundAmount: number;
   originalAmount: number;
-  reason?: 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error';
   notes: string;
 }
 
 export interface UpdateRefundData {
   refundAmount?: number;
   originalAmount?: number;
-  reason?: 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error';
   status?: 'pending' | 'completed' | 'failed';
   notes?: string;
   gatewayRefundId?: string;

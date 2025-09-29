@@ -6,7 +6,6 @@ export interface IRefund extends Document {
     refundId: string; // Auto-generated
     originalAmount: number;
     refundAmount: number;
-    reason?: 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error';
     status: 'pending' | 'completed' | 'failed';
     notes: string;
     gatewayRefundId?: string; // PayHere refund reference
@@ -40,10 +39,6 @@ const refundSchema = new mongoose.Schema<IRefund>({
         type: Number,
         required: true,
         min: 0
-    },
-    reason: {
-        type: String,
-        enum: ['customer_request', 'duplicate', 'fraud', 'cancelled', 'error']
     },
     status: {
         type: String,

@@ -17,6 +17,7 @@ import {
   XCircle,
   Edit,
   Trash2,
+  RefreshCw,
 } from "lucide-react"
 
 import {
@@ -387,7 +388,7 @@ export default function InvoiceManagementPage() {
       const a = document.createElement('a')
       a.style.display = 'none'
       a.href = url
-      a.download = `invoices_report_${new Date().toISOString().split('T')[0]}.pdf`
+      a.download = `ZFit_Invoices_Report_${new Date().toISOString().split('T')[0]}.pdf`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
@@ -430,8 +431,8 @@ export default function InvoiceManagementPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleGenerateReport}>
-            <FileText className="mr-2 h-4 w-4" />
+          <Button onClick={handleGenerateReport}>
+            <RefreshCw className="mr-2 h-4 w-4" />
             Generate Report
           </Button>
           <Button onClick={handleCreateInvoice}>
@@ -534,8 +535,13 @@ export default function InvoiceManagementPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    No invoices found. Create your first invoice to get started.
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <div className="flex flex-col items-center space-y-4">
+                      <Button onClick={handleCreateInvoice}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Invoice
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               )}

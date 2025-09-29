@@ -29,6 +29,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { getPendingRequestsCount } from "@/lib/api/refundRequestApi"
 import {
   Table,
   TableBody,
@@ -107,12 +108,14 @@ export default function RefundManagementPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingRefund, setEditingRefund] = useState<Refund | null>(null)
   const [editFormErrors, setEditFormErrors] = useState<{[key: string]: string}>({})
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+  const [viewingRefund, setViewingRefund] = useState<Refund | null>(null)
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0)
   const [editFormData, setEditFormData] = useState({
     paymentId: '',
     userId: '',
     refundAmount: '',
     originalAmount: '',
-    reason: '' as 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error' | '',
     notes: '',
     status: '' as 'pending' | 'completed' | 'failed'
   })
@@ -121,7 +124,6 @@ export default function RefundManagementPage() {
     userId: '',
     refundAmount: '',
     originalAmount: '',
-    reason: '' as 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error' | '',
     notes: ''
   })
 
@@ -144,12 +146,25 @@ export default function RefundManagementPage() {
     fetchRefunds()
   }, [])
 
+  // Fetch pending requests count
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const count = await getPendingRequestsCount()
+        setPendingRequestsCount(count)
+      } catch (err) {
+        console.error('Failed to fetch pending requests count:', err)
+      }
+    }
+
+    fetchPendingCount()
+  }, [])
+
   const filteredRefunds = refunds.filter(refund => {
     const searchLower = searchTerm.toLowerCase()
     const matchesSearch = refund.refundId?.toLowerCase().includes(searchLower) ||
                          refund.userId?.toLowerCase().includes(searchLower) ||
                          refund.notes?.toLowerCase().includes(searchLower) ||
-                         refund.reason?.toLowerCase().includes(searchLower) ||
                          refund.status?.toLowerCase().includes(searchLower)
     const matchesStatus = statusFilter === "all" || refund.status === statusFilter
     return matchesSearch && matchesStatus
@@ -196,12 +211,16 @@ export default function RefundManagementPage() {
       userId: refund.userId,
       refundAmount: refund.refundAmount.toString(),
       originalAmount: refund.originalAmount.toString(),
-      reason: refund.reason || '',
       notes: refund.notes,
       status: refund.status
     })
     setEditFormErrors({})
     setIsEditModalOpen(true)
+  }
+
+  const handleViewRefund = (refund: Refund) => {
+    setViewingRefund(refund)
+    setIsViewModalOpen(true)
   }
 
   const handleDeleteRefund = async (refund: Refund) => {
@@ -276,7 +295,6 @@ export default function RefundManagementPage() {
         userId: createFormData.userId,
         refundAmount: parseFloat(createFormData.refundAmount),
         originalAmount: parseFloat(createFormData.originalAmount),
-        ...(createFormData.reason && { reason: createFormData.reason }),
         notes: createFormData.notes
       }
 
@@ -288,7 +306,6 @@ export default function RefundManagementPage() {
         userId: '',
         refundAmount: '',
         originalAmount: '',
-        reason: '' as 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error' | '',
         notes: ''
       })
       setIsCreateModalOpen(false)
@@ -364,7 +381,6 @@ export default function RefundManagementPage() {
         userId: editFormData.userId,
         refundAmount: parseFloat(editFormData.refundAmount),
         originalAmount: parseFloat(editFormData.originalAmount),
-        ...(editFormData.reason && { reason: editFormData.reason }),
         status: editFormData.status,
         notes: editFormData.notes
       }
@@ -377,7 +393,6 @@ export default function RefundManagementPage() {
         userId: '',
         refundAmount: '',
         originalAmount: '',
-        reason: '' as 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error' | '',
         notes: '',
         status: '' as 'pending' | 'completed' | 'failed'
       })
@@ -408,7 +423,7 @@ export default function RefundManagementPage() {
       const url = window.URL.createObjectURL(reportBlob)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'refunds-report.pdf'
+      link.download = `ZFit_Refunds_Report_${new Date().toISOString().split('T')[0]}.pdf`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -434,6 +449,18 @@ export default function RefundManagementPage() {
             <RefreshCw className="mr-2 h-4 w-4" />
             Generate Report
           </Button>
+          <Button variant="outline" onClick={() => router.push('/dashboard/finance/refund/requests')} className="relative">
+            <Eye className="mr-2 h-4 w-4" />
+            View Requests
+            {pendingRequestsCount > 0 && (
+              <Badge 
+                variant="destructive" 
+                className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              >
+                {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+              </Badge>
+            )}
+          </Button>
           <Button variant="outline" onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Create Refund
@@ -446,7 +473,7 @@ export default function RefundManagementPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by refund ID, user ID, notes, reason, or status..."
+            placeholder="Search by refund ID, user ID, notes, or status..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-8"
@@ -492,7 +519,6 @@ export default function RefundManagementPage() {
                 <TableHead>User ID</TableHead>
                 <TableHead>Refund Amount</TableHead>
                 <TableHead>Original Amount</TableHead>
-                <TableHead>Reason</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -506,7 +532,6 @@ export default function RefundManagementPage() {
                     <TableCell>{refund.userId}</TableCell>
                     <TableCell>LKR {refund.refundAmount.toFixed(2)}</TableCell>
                     <TableCell>LKR {refund.originalAmount.toFixed(2)}</TableCell>
-                    <TableCell>{refund.reason}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         {getStatusIcon(refund.status)}
@@ -515,40 +540,45 @@ export default function RefundManagementPage() {
                     </TableCell>
                     <TableCell>{new Date(refund.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleProcessRefund(refund, 'approve')}
-                          disabled={refund.status !== 'pending'}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleProcessRefund(refund, 'deny')}
-                          disabled={refund.status !== 'pending'}
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleUpdateRefund(refund)}
-                          disabled={refund.status === 'failed' || refund.status === 'completed'}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteRefund(refund)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => handleViewRefund(refund)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          {refund.status === 'pending' && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleProcessRefund(refund, 'approve')}>
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Approve
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleProcessRefund(refund, 'deny')}>
+                                <XCircle className="mr-2 h-4 w-4" />
+                                Deny
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleUpdateRefund(refund)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteRefund(refund)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
@@ -715,24 +745,6 @@ export default function RefundManagementPage() {
                 <p className="text-sm text-red-600">{createFormErrors.refundAmount}</p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="refund-reason">Reason (Optional)</Label>
-              <Select
-                value={createFormData.reason}
-                onValueChange={(value: 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error') => setCreateFormData(prev => ({ ...prev, reason: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select refund reason (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="customer_request">Customer Request</SelectItem>
-                  <SelectItem value="duplicate">Duplicate Payment</SelectItem>
-                  <SelectItem value="fraud">Fraud</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="error">Error</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div className="space-y-2 col-span-2">
               <Label htmlFor="refund-notes">Notes *</Label>
               <Textarea
@@ -856,24 +868,6 @@ export default function RefundManagementPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-reason">Reason (Optional)</Label>
-              <Select
-                value={editFormData.reason}
-                onValueChange={(value: 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error') => setEditFormData(prev => ({ ...prev, reason: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select refund reason (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="customer_request">Customer Request</SelectItem>
-                  <SelectItem value="duplicate">Duplicate Payment</SelectItem>
-                  <SelectItem value="fraud">Fraud</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="error">Error</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="edit-status">Status *</Label>
               <Select
                 value={editFormData.status}
@@ -915,6 +909,68 @@ export default function RefundManagementPage() {
             </Button>
             <Button onClick={handleEditRefund} disabled={editingRefund?.status === 'failed' || editingRefund?.status === 'completed'}>
               Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Refund Modal */}
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Refund Details</DialogTitle>
+            <DialogDescription>
+              View detailed information about this refund request.
+            </DialogDescription>
+          </DialogHeader>
+          {viewingRefund && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Refund ID</Label>
+                  <p className="text-sm text-muted-foreground">{viewingRefund.refundId}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Status</Label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    {getStatusIcon(viewingRefund.status)}
+                    {getStatusBadge(viewingRefund.status)}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">User ID</Label>
+                  <p className="text-sm text-muted-foreground">{viewingRefund.userId}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Payment ID</Label>
+                  <p className="text-sm text-muted-foreground">{viewingRefund.paymentId}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Refund Amount</Label>
+                  <p className="text-sm text-muted-foreground">LKR {viewingRefund.refundAmount.toFixed(2)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Original Amount</Label>
+                  <p className="text-sm text-muted-foreground">LKR {viewingRefund.originalAmount.toFixed(2)}</p>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium">Notes</Label>
+                  <p className="text-sm text-muted-foreground">{viewingRefund.notes}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Created Date</Label>
+                  <p className="text-sm text-muted-foreground">{new Date(viewingRefund.createdAt).toLocaleString()}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Updated Date</Label>
+                  <p className="text-sm text-muted-foreground">{new Date(viewingRefund.updatedAt).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
+              Close
             </Button>
           </div>
         </DialogContent>
