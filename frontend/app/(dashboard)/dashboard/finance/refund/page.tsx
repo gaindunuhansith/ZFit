@@ -434,6 +434,10 @@ export default function RefundManagementPage() {
             <RefreshCw className="mr-2 h-4 w-4" />
             Generate Report
           </Button>
+          <Button variant="outline" onClick={() => router.push('/dashboard/finance/refund/requests')}>
+            <Eye className="mr-2 h-4 w-4" />
+            View Requests
+          </Button>
           <Button variant="outline" onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Create Refund
