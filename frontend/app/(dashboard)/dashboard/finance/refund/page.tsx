@@ -116,7 +116,6 @@ export default function RefundManagementPage() {
     userId: '',
     refundAmount: '',
     originalAmount: '',
-    reason: '' as 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error' | '',
     notes: '',
     status: '' as 'pending' | 'completed' | 'failed'
   })
@@ -125,7 +124,6 @@ export default function RefundManagementPage() {
     userId: '',
     refundAmount: '',
     originalAmount: '',
-    reason: '' as 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error' | '',
     notes: ''
   })
 
@@ -167,7 +165,6 @@ export default function RefundManagementPage() {
     const matchesSearch = refund.refundId?.toLowerCase().includes(searchLower) ||
                          refund.userId?.toLowerCase().includes(searchLower) ||
                          refund.notes?.toLowerCase().includes(searchLower) ||
-                         refund.reason?.toLowerCase().includes(searchLower) ||
                          refund.status?.toLowerCase().includes(searchLower)
     const matchesStatus = statusFilter === "all" || refund.status === statusFilter
     return matchesSearch && matchesStatus
@@ -214,7 +211,6 @@ export default function RefundManagementPage() {
       userId: refund.userId,
       refundAmount: refund.refundAmount.toString(),
       originalAmount: refund.originalAmount.toString(),
-      reason: refund.reason || '',
       notes: refund.notes,
       status: refund.status
     })
@@ -299,7 +295,6 @@ export default function RefundManagementPage() {
         userId: createFormData.userId,
         refundAmount: parseFloat(createFormData.refundAmount),
         originalAmount: parseFloat(createFormData.originalAmount),
-        ...(createFormData.reason && { reason: createFormData.reason }),
         notes: createFormData.notes
       }
 
@@ -311,7 +306,6 @@ export default function RefundManagementPage() {
         userId: '',
         refundAmount: '',
         originalAmount: '',
-        reason: '' as 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error' | '',
         notes: ''
       })
       setIsCreateModalOpen(false)
@@ -387,7 +381,6 @@ export default function RefundManagementPage() {
         userId: editFormData.userId,
         refundAmount: parseFloat(editFormData.refundAmount),
         originalAmount: parseFloat(editFormData.originalAmount),
-        ...(editFormData.reason && { reason: editFormData.reason }),
         status: editFormData.status,
         notes: editFormData.notes
       }
@@ -400,7 +393,6 @@ export default function RefundManagementPage() {
         userId: '',
         refundAmount: '',
         originalAmount: '',
-        reason: '' as 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error' | '',
         notes: '',
         status: '' as 'pending' | 'completed' | 'failed'
       })
@@ -431,7 +423,7 @@ export default function RefundManagementPage() {
       const url = window.URL.createObjectURL(reportBlob)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'refunds-report.pdf'
+      link.download = `ZFit_Refunds_Report_${new Date().toISOString().split('T')[0]}.pdf`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -481,7 +473,7 @@ export default function RefundManagementPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by refund ID, user ID, notes, reason, or status..."
+            placeholder="Search by refund ID, user ID, notes, or status..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-8"
@@ -527,7 +519,6 @@ export default function RefundManagementPage() {
                 <TableHead>User ID</TableHead>
                 <TableHead>Refund Amount</TableHead>
                 <TableHead>Original Amount</TableHead>
-                <TableHead>Reason</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -541,7 +532,6 @@ export default function RefundManagementPage() {
                     <TableCell>{refund.userId}</TableCell>
                     <TableCell>LKR {refund.refundAmount.toFixed(2)}</TableCell>
                     <TableCell>LKR {refund.originalAmount.toFixed(2)}</TableCell>
-                    <TableCell>{refund.reason}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         {getStatusIcon(refund.status)}
@@ -755,24 +745,6 @@ export default function RefundManagementPage() {
                 <p className="text-sm text-red-600">{createFormErrors.refundAmount}</p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="refund-reason">Reason (Optional)</Label>
-              <Select
-                value={createFormData.reason}
-                onValueChange={(value: 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error') => setCreateFormData(prev => ({ ...prev, reason: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select refund reason (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="customer_request">Customer Request</SelectItem>
-                  <SelectItem value="duplicate">Duplicate Payment</SelectItem>
-                  <SelectItem value="fraud">Fraud</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="error">Error</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div className="space-y-2 col-span-2">
               <Label htmlFor="refund-notes">Notes *</Label>
               <Textarea
@@ -896,24 +868,6 @@ export default function RefundManagementPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-reason">Reason (Optional)</Label>
-              <Select
-                value={editFormData.reason}
-                onValueChange={(value: 'customer_request' | 'duplicate' | 'fraud' | 'cancelled' | 'error') => setEditFormData(prev => ({ ...prev, reason: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select refund reason (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="customer_request">Customer Request</SelectItem>
-                  <SelectItem value="duplicate">Duplicate Payment</SelectItem>
-                  <SelectItem value="fraud">Fraud</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="error">Error</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="edit-status">Status *</Label>
               <Select
                 value={editFormData.status}
@@ -998,10 +952,6 @@ export default function RefundManagementPage() {
                 <div>
                   <Label className="text-sm font-medium">Original Amount</Label>
                   <p className="text-sm text-muted-foreground">LKR {viewingRefund.originalAmount.toFixed(2)}</p>
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-sm font-medium">Reason</Label>
-                  <p className="text-sm text-muted-foreground">{viewingRefund.reason || 'Not specified'}</p>
                 </div>
                 <div className="col-span-2">
                   <Label className="text-sm font-medium">Notes</Label>

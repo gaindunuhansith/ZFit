@@ -6,6 +6,7 @@ import {
   MoreHorizontal,
   Search,
   FileText,
+  RefreshCw,
 } from "lucide-react"
 
 import {
@@ -122,7 +123,7 @@ export default function PaymentManagementPage() {
       const a = document.createElement('a')
       a.style.display = 'none'
       a.href = url
-      a.download = `payments_report_${new Date().toISOString().split('T')[0]}.pdf`
+      a.download = `ZFit_Payments_Report_${new Date().toISOString().split('T')[0]}.pdf`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
@@ -165,7 +166,7 @@ export default function PaymentManagementPage() {
           </p>
         </div>
         <Button onClick={handleGenerateReport}>
-          <FileText className="mr-2 h-4 w-4" />
+          <RefreshCw className="mr-2 h-4 w-4" />
           Generate Report
         </Button>
       </div>

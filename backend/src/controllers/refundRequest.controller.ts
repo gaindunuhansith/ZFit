@@ -18,13 +18,11 @@ const createRefundRequestSchema = z.object({
         return /^[0-9a-fA-F]{24}$/.test(val);
     }, 'Payment ID must be a valid ObjectId'),
     requestedAmount: z.number().positive('Requested amount must be positive'),
-    reason: z.enum(['unsatisfied_service', 'wrong_item', 'duplicate_charge', 'cancelled_membership', 'technical_issues', 'other']),
     notes: z.string().min(1, 'Notes are required')
 });
 
 const updateRefundRequestSchema = z.object({
     requestedAmount: z.number().positive('Requested amount must be positive').optional(),
-    reason: z.enum(['unsatisfied_service', 'wrong_item', 'duplicate_charge', 'cancelled_membership', 'technical_issues', 'other']).optional(),
     notes: z.string().min(1, 'Notes are required').optional(),
     adminNotes: z.string().optional()
 });

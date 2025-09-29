@@ -4,7 +4,6 @@ export interface IRefundRequest extends Document {
     userId: mongoose.Types.ObjectId;
     paymentId: mongoose.Types.ObjectId;
     requestedAmount: number;
-    reason: string;
     notes: string;
     status: 'pending' | 'approved' | 'declined';
     adminNotes?: string;
@@ -28,11 +27,6 @@ const refundRequestSchema = new mongoose.Schema<IRefundRequest>({
         type: Number,
         required: true,
         min: 0
-    },
-    reason: {
-        type: String,
-        required: true,
-        enum: ['unsatisfied_service', 'wrong_item', 'duplicate_charge', 'cancelled_membership', 'technical_issues', 'other']
     },
     notes: {
         type: String,

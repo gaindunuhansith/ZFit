@@ -19,14 +19,12 @@ const createRefundSchema = z.object({
     }, 'User ID must be a valid ObjectId'),
     refundAmount: z.number().positive('Refund amount must be positive'),
     originalAmount: z.number().positive('Original amount must be positive'),
-    reason: z.enum(['customer_request', 'duplicate', 'fraud', 'cancelled', 'error']).optional(),
     notes: z.string().min(1, 'Notes are required')
 });
 
 const updateRefundSchema = z.object({
     refundAmount: z.number().positive('Refund amount must be positive').optional(),
     originalAmount: z.number().positive('Original amount must be positive').optional(),
-    reason: z.enum(['customer_request', 'duplicate', 'fraud', 'cancelled', 'error']).optional(),
     status: z.enum(['pending', 'completed', 'failed']).optional(),
     notes: z.string().min(1, 'Notes are required').optional(),
     gatewayRefundId: z.string().optional(),

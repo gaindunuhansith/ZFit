@@ -52,7 +52,6 @@ export interface RefundRequest {
   userId: string | any // Can be string or populated object
   paymentId: string | any // Can be string or populated object
   requestedAmount: number
-  reason: 'unsatisfied_service' | 'wrong_item' | 'duplicate_charge' | 'cancelled_membership' | 'technical_issues' | 'other'
   notes: string
   status: 'pending' | 'approved' | 'declined'
   adminNotes?: string
@@ -65,13 +64,11 @@ export interface CreateRefundRequestData {
   paymentId: string
   userId: string
   requestedAmount: number
-  reason: 'unsatisfied_service' | 'wrong_item' | 'duplicate_charge' | 'cancelled_membership' | 'technical_issues' | 'other'
   notes: string
 }
 
 export interface UpdateRefundRequestData {
   requestedAmount?: number
-  reason?: 'unsatisfied_service' | 'wrong_item' | 'duplicate_charge' | 'cancelled_membership' | 'technical_issues' | 'other'
   notes?: string
   adminNotes?: string
 }

@@ -70,18 +70,6 @@ const getStatusBadge = (status: string) => {
   return <Badge variant={variants[status] || "outline"}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>
 }
 
-const getReasonBadge = (reason: string) => {
-  const reasonLabels: Record<string, string> = {
-    unsatisfied_service: "Unsatisfied Service",
-    wrong_item: "Wrong Item",
-    duplicate_charge: "Duplicate Charge",
-    cancelled_membership: "Cancelled Membership",
-    technical_issues: "Technical Issues",
-    other: "Other"
-  }
-  return <Badge variant="outline">{reasonLabels[reason] || reason}</Badge>
-}
-
 export default function RefundRequestsManagementPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -127,7 +115,6 @@ export default function RefundRequestsManagementPage() {
                          userName?.toLowerCase().includes(searchLower) ||
                          userEmail?.toLowerCase().includes(searchLower) ||
                          request.notes?.toLowerCase().includes(searchLower) ||
-                         request.reason?.toLowerCase().includes(searchLower) ||
                          request.status?.toLowerCase().includes(searchLower)
     const matchesStatus = statusFilter === "all" || request.status === statusFilter
     return matchesSearch && matchesStatus
@@ -258,7 +245,6 @@ export default function RefundRequestsManagementPage() {
                   <TableHead>Request ID</TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>Amount</TableHead>
-                  <TableHead>Reason</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -280,7 +266,6 @@ export default function RefundRequestsManagementPage() {
                         </div>
                       </TableCell>
                       <TableCell>LKR {request.requestedAmount.toFixed(2)}</TableCell>
-                      <TableCell>{getReasonBadge(request.reason)}</TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           {getStatusIcon(request.status)}
@@ -375,9 +360,6 @@ export default function RefundRequestsManagementPage() {
                   <div className="mt-1 p-3 bg-gray-50 rounded-md">
                     <p className="font-medium">LKR {selectedRequest.requestedAmount.toFixed(2)}</p>
                     <p className="text-sm text-gray-600">
-                      Reason: {getReasonBadge(selectedRequest.reason)}
-                    </p>
-                    <p className="text-sm text-gray-600">
                       Status: {getStatusBadge(selectedRequest.status)}
                     </p>
                   </div>
@@ -443,8 +425,9 @@ export default function RefundRequestsManagementPage() {
                 Cancel
               </Button>
               <Button
+                variant="outline"
                 onClick={handleConfirmProcessing}
-                className={processingAction === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
+                className={processingAction === 'approve' ? 'text-green-600 hover:text-green-700 border-green-600 hover:border-green-700' : 'text-red-600 hover:text-red-700 border-red-600 hover:border-red-700'}
               >
                 {processingAction === 'approve' && 'Approve Request'}
                 {processingAction === 'decline' && 'Decline Request'}
