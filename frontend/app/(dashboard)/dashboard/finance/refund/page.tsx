@@ -29,6 +29,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { getPendingRequestsCount } from "@/lib/api/refundRequestApi"
 import {
   Table,
   TableBody,
@@ -107,6 +108,7 @@ export default function RefundManagementPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingRefund, setEditingRefund] = useState<Refund | null>(null)
   const [editFormErrors, setEditFormErrors] = useState<{[key: string]: string}>({})
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0)
   const [editFormData, setEditFormData] = useState({
     paymentId: '',
     userId: '',
@@ -142,6 +144,20 @@ export default function RefundManagementPage() {
     }
 
     fetchRefunds()
+  }, [])
+
+  // Fetch pending requests count
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const count = await getPendingRequestsCount()
+        setPendingRequestsCount(count)
+      } catch (err) {
+        console.error('Failed to fetch pending requests count:', err)
+      }
+    }
+
+    fetchPendingCount()
   }, [])
 
   const filteredRefunds = refunds.filter(refund => {
@@ -434,9 +450,17 @@ export default function RefundManagementPage() {
             <RefreshCw className="mr-2 h-4 w-4" />
             Generate Report
           </Button>
-          <Button variant="outline" onClick={() => router.push('/dashboard/finance/refund/requests')}>
+          <Button variant="outline" onClick={() => router.push('/dashboard/finance/refund/requests')} className="relative">
             <Eye className="mr-2 h-4 w-4" />
             View Requests
+            {pendingRequestsCount > 0 && (
+              <Badge 
+                variant="destructive" 
+                className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              >
+                {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+              </Badge>
+            )}
           </Button>
           <Button variant="outline" onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
