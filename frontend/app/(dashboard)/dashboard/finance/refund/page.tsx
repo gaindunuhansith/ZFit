@@ -108,6 +108,8 @@ export default function RefundManagementPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingRefund, setEditingRefund] = useState<Refund | null>(null)
   const [editFormErrors, setEditFormErrors] = useState<{[key: string]: string}>({})
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+  const [viewingRefund, setViewingRefund] = useState<Refund | null>(null)
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0)
   const [editFormData, setEditFormData] = useState({
     paymentId: '',
@@ -218,6 +220,11 @@ export default function RefundManagementPage() {
     })
     setEditFormErrors({})
     setIsEditModalOpen(true)
+  }
+
+  const handleViewRefund = (refund: Refund) => {
+    setViewingRefund(refund)
+    setIsViewModalOpen(true)
   }
 
   const handleDeleteRefund = async (refund: Refund) => {
@@ -543,40 +550,45 @@ export default function RefundManagementPage() {
                     </TableCell>
                     <TableCell>{new Date(refund.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleProcessRefund(refund, 'approve')}
-                          disabled={refund.status !== 'pending'}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleProcessRefund(refund, 'deny')}
-                          disabled={refund.status !== 'pending'}
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleUpdateRefund(refund)}
-                          disabled={refund.status === 'failed' || refund.status === 'completed'}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteRefund(refund)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => handleViewRefund(refund)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          {refund.status === 'pending' && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleProcessRefund(refund, 'approve')}>
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Approve
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleProcessRefund(refund, 'deny')}>
+                                <XCircle className="mr-2 h-4 w-4" />
+                                Deny
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleUpdateRefund(refund)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteRefund(refund)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
@@ -943,6 +955,72 @@ export default function RefundManagementPage() {
             </Button>
             <Button onClick={handleEditRefund} disabled={editingRefund?.status === 'failed' || editingRefund?.status === 'completed'}>
               Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Refund Modal */}
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Refund Details</DialogTitle>
+            <DialogDescription>
+              View detailed information about this refund request.
+            </DialogDescription>
+          </DialogHeader>
+          {viewingRefund && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Refund ID</Label>
+                  <p className="text-sm text-muted-foreground">{viewingRefund.refundId}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Status</Label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    {getStatusIcon(viewingRefund.status)}
+                    {getStatusBadge(viewingRefund.status)}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">User ID</Label>
+                  <p className="text-sm text-muted-foreground">{viewingRefund.userId}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Payment ID</Label>
+                  <p className="text-sm text-muted-foreground">{viewingRefund.paymentId}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Refund Amount</Label>
+                  <p className="text-sm text-muted-foreground">LKR {viewingRefund.refundAmount.toFixed(2)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Original Amount</Label>
+                  <p className="text-sm text-muted-foreground">LKR {viewingRefund.originalAmount.toFixed(2)}</p>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium">Reason</Label>
+                  <p className="text-sm text-muted-foreground">{viewingRefund.reason || 'Not specified'}</p>
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-sm font-medium">Notes</Label>
+                  <p className="text-sm text-muted-foreground">{viewingRefund.notes}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Created Date</Label>
+                  <p className="text-sm text-muted-foreground">{new Date(viewingRefund.createdAt).toLocaleString()}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Updated Date</Label>
+                  <p className="text-sm text-muted-foreground">{new Date(viewingRefund.updatedAt).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
+              Close
             </Button>
           </div>
         </DialogContent>
