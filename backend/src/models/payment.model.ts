@@ -7,7 +7,7 @@ export interface IPayment extends Document {
   type: 'membership' | 'inventory' | 'booking' | 'other';
   status: 'pending' | 'completed' | 'failed' | 'refunded';
   method: 'card' | 'bank-transfer' | 'cash';
-  relatedId: mongoose.Types.ObjectId;
+  relatedId?: mongoose.Types.ObjectId; // Optional for 'other' type payments like cart
   transactionId: string;
   gatewayTransactionId?: string;
   gatewayPaymentId?: string;
@@ -28,7 +28,7 @@ const paymentSchema = new mongoose.Schema<IPayment>(
     type: { type: String, enum: ['membership', 'inventory', 'booking', 'other'], required: true },
     status: { type: String, enum: ['pending', 'completed', 'failed', 'refunded'], required: true },
     method: { type: String, enum: ['card', 'bank-transfer', 'cash'], required: true },
-    relatedId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    relatedId: { type: mongoose.Schema.Types.ObjectId, required: false }, // Optional for 'other' type payments like cart
     transactionId: { type: String, required: true, unique: true, index: true },
     gatewayTransactionId: String,
     gatewayPaymentId: String,
