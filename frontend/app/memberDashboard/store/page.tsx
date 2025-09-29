@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,6 +37,8 @@ export default function MemberStorePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const [searchTerm, setSearchTerm] = useState('')
+
+  const router = useRouter()
 
   useEffect(() => {
     fetchSupplements()
@@ -132,6 +135,25 @@ export default function MemberStorePage() {
     return supplement.quantity - cartQuantity
   }
 
+  const handleCheckout = () => {
+    if (cart.length === 0) return
+
+    // Prepare cart payment data
+    const cartPaymentData = {
+      type: 'cart',
+      items: cart,
+      totalAmount: getTotalPrice(),
+      totalItems: getTotalCartItems(),
+      currency: 'LKR'
+    }
+
+    // Store cart data in localStorage
+    localStorage.setItem('cartPaymentData', JSON.stringify(cartPaymentData))
+
+    // Navigate to payment method page
+    router.push('/payment/method')
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -201,7 +223,7 @@ export default function MemberStorePage() {
                 </div>
               </div>
               
-              <Button className="w-full" size="sm">
+              <Button className="w-full" size="sm" onClick={handleCheckout}>
                 Proceed to Checkout
               </Button>
             </CardContent>
