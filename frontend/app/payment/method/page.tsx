@@ -4,22 +4,32 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CreditCard, Building2, ArrowRight, Loader2 } from "lucide-react"
-import { initiatePayHerePayment, type PayHerePaymentRequest } from "@/lib/api/paymentApi"
+import { initiatePayHerePayment, type PayHerePaymentRequest, uploadBankTransferReceipt, createBankTransferPayment } from "@/lib/api/paymentApi"
 import { useAuth } from "@/lib/auth-context"
+import BankTransferForm, { type BankTransferFormData } from "@/components/BankTransferForm"
 
 interface PaymentData {
-  planId: string
-  planName: string
-  amount: number
-  currency: string
-  type: string
-  description: string
-  customerFirstName: string
-  customerLastName: string
-  customerEmail: string
-  customerPhone: string
-  customerAddress: string
-  customerCity: string
+  planId?: string
+  planName?: string
+  amount?: number
+  currency?: string
+  type?: string
+  description?: string
+  customerFirstName?: string
+  customerLastName?: string
+  customerEmail?: string
+  customerPhone?: string
+  customerAddress?: string
+  customerCity?: string
+  // Cart payment fields
+  items?: Array<{
+    _id: string
+    itemName: string
+    price: number
+    cartQuantity: number
+  }>
+  totalAmount?: number
+  totalItems?: number
 }
 
 export default function PaymentMethodPage() {
@@ -27,6 +37,7 @@ export default function PaymentMethodPage() {
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showBankTransferForm, setShowBankTransferForm] = useState(false)
 
   const { user } = useAuth()
 
@@ -37,18 +48,28 @@ export default function PaymentMethodPage() {
       return
     }
 
-    // Load payment data from localStorage
-    const storedData = localStorage.getItem('membershipPaymentData')
-    if (storedData) {
+    // Load payment data from localStorage - check for both membership and cart payments
+    const membershipData = localStorage.getItem('membershipPaymentData')
+    const cartData = localStorage.getItem('cartPaymentData')
+
+    if (membershipData) {
       try {
-        const parsedData = JSON.parse(storedData)
+        const parsedData = JSON.parse(membershipData)
         setPaymentData(parsedData)
       } catch (err) {
-        console.error('Error parsing payment data:', err)
+        console.error('Error parsing membership payment data:', err)
         setError('Invalid payment data. Please try purchasing again.')
       }
+    } else if (cartData) {
+      try {
+        const parsedData = JSON.parse(cartData)
+        setPaymentData(parsedData)
+      } catch (err) {
+        console.error('Error parsing cart payment data:', err)
+        setError('Invalid cart data. Please try again.')
+      }
     } else {
-      setError('No payment data found. Please select a membership plan first.')
+      setError('No payment data found. Please select a membership plan or add items to cart first.')
     }
   }, [user])
 
@@ -70,25 +91,51 @@ export default function PaymentMethodPage() {
       setError(null)
 
       try {
-        // Prepare PayHere payment request
-        const paymentRequest: PayHerePaymentRequest = {
-          userId: user?._id || '',
-          amount: paymentData.amount,
-          currency: paymentData.currency,
-          type: 'membership' as const,
-          relatedId: paymentData.planId,
-          description: paymentData.description,
-          customerFirstName: paymentData.customerFirstName,
-          customerLastName: paymentData.customerLastName,
-          customerEmail: paymentData.customerEmail,
-          customerPhone: paymentData.customerPhone,
-          customerAddress: paymentData.customerAddress,
-          customerCity: paymentData.customerCity,
+        let response: { paymentForm: string }
+
+        if (paymentData.type === 'cart') {
+          // Handle cart payment
+          const nameParts = (user.name || 'Customer').split(' ')
+          const paymentRequest: PayHerePaymentRequest = {
+            userId: user?._id || '',
+            amount: paymentData.totalAmount || 0,
+            currency: paymentData.currency || 'LKR',
+            type: 'other' as const,
+            relatedId: '', // Cart payments don't have a single related ID
+            description: `Purchase of ${paymentData.totalItems} items`,
+            customerFirstName: nameParts[0] || 'Customer',
+            customerLastName: nameParts.slice(1).join(' ') || 'User',
+            customerEmail: user.email || 'customer@example.com',
+            customerPhone: user.contactNo || '0000000000',
+            customerAddress: user.profile?.address || 'No address provided',
+            customerCity: 'Colombo', // Default city
+          }
+
+          console.log('Initiating PayHere cart payment:', paymentRequest)
+
+          response = await initiatePayHerePayment(paymentRequest)
+        } else {
+          // Handle membership payment
+          const nameParts = (user.name || 'Customer').split(' ')
+          const paymentRequest: PayHerePaymentRequest = {
+            userId: user?._id || '',
+            amount: paymentData.amount || 0,
+            currency: paymentData.currency || 'LKR',
+            type: 'membership' as const,
+            relatedId: paymentData.planId || '',
+            description: paymentData.description || '',
+            customerFirstName: nameParts[0] || 'Customer',
+            customerLastName: nameParts.slice(1).join(' ') || 'User',
+            customerEmail: user.email || 'customer@example.com',
+            customerPhone: user.contactNo || '0000000000',
+            customerAddress: user.profile?.address || 'No address provided',
+            customerCity: 'Colombo', // Default city
+          }
+
+          console.log('Initiating PayHere membership payment:', paymentRequest)
+
+          response = await initiatePayHerePayment(paymentRequest)
         }
-
-        console.log('Initiating PayHere payment:', paymentRequest)
-
-        const response = await initiatePayHerePayment(paymentRequest)
 
         if (response.paymentForm) {
           console.log('Payment form received, submitting...')
@@ -116,22 +163,93 @@ export default function PaymentMethodPage() {
         setIsProcessing(false)
       }
     } else if (selectedMethod === 'bank') {
-      // For bank transfer, you could redirect to a bank transfer instructions page
-      console.log('Bank transfer selected - showing instructions')
-      // For now, just show an alert
-      alert('Bank transfer instructions would be shown here. Please contact support for bank details.')
+      // Show bank transfer form
+      setShowBankTransferForm(true)
+    }
+  }
+
+  const handleBankTransferSubmit = async (formData: BankTransferFormData) => {
+    if (!paymentData || !user) return
+
+    setIsProcessing(true)
+    setError(null)
+
+    try {
+      // Step 1: Upload the receipt image
+      console.log('Uploading receipt image...')
+      const uploadResponse = await uploadBankTransferReceipt(formData.receiptImage!)
+      console.log('Receipt uploaded successfully:', uploadResponse)
+
+      if (paymentData.type === 'cart') {
+        // For cart payments, we need to create an order first
+        // For now, show an error as cart bank transfers are not implemented yet
+        throw new Error('Bank transfer for cart payments is not yet implemented. Please use card payment.')
+      } else {
+        // Step 2: Create bank transfer payment record for membership
+        console.log('Creating bank transfer payment...')
+        const paymentRequest = {
+          membershipId: paymentData.planId || '',
+          amount: paymentData.amount || 0,
+          currency: paymentData.currency || 'LKR',
+          receiptImageUrl: uploadResponse.fileUrl,
+          notes: formData.notes
+        }
+
+        const paymentResponse = await createBankTransferPayment(paymentRequest)
+        console.log('Bank transfer payment created successfully:', paymentResponse)
+      }
+
+      // Success - redirect to success page
+      alert('Bank transfer payment submitted successfully! Your payment will be reviewed by our admin team within 24 hours.')
+
+      // Reset form and redirect
+      setShowBankTransferForm(false)
+      setSelectedMethod(null)
+      localStorage.removeItem(paymentData.type === 'cart' ? 'cartPaymentData' : 'membershipPaymentData')
+
+      // Redirect to success page
+      window.location.href = '/payment/success'
+
+    } catch (err) {
+      console.error('Bank transfer submission failed:', err)
+      setError(err instanceof Error ? err.message : 'Failed to submit bank transfer payment. Please try again.')
+    } finally {
+      setIsProcessing(false)
     }
   }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl">
+      {showBankTransferForm && paymentData ? (
+        <div className="w-full max-w-4xl">
+          <div className="mb-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowBankTransferForm(false)}
+              className="mb-4"
+            >
+              ← Back to Payment Methods
+            </Button>
+          </div>
+          <BankTransferForm
+            paymentData={{
+              planId: paymentData.type === 'cart' ? 'cart-payment' : (paymentData.planId || ''),
+              planName: paymentData.type === 'cart' ? `Cart Purchase (${paymentData.totalItems} items)` : (paymentData.planName || ''),
+              amount: paymentData.type === 'cart' ? (paymentData.totalAmount || 0) : (paymentData.amount || 0),
+              currency: paymentData.currency || 'LKR'
+            }}
+            onSubmit={handleBankTransferSubmit}
+            isSubmitting={isProcessing}
+          />
+        </div>
+      ) : (
+        <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold text-foreground">
             Choose Payment Method
           </CardTitle>
           <CardDescription className="text-lg">
-            Select how you'd like to complete your payment
+            Select how you&apos;d like to complete your payment
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -229,6 +347,7 @@ export default function PaymentMethodPage() {
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   )
 }

@@ -1,12 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import {
   CreditCard,
   MoreHorizontal,
   Search,
   FileText,
   RefreshCw,
+  Building2,
 } from "lucide-react"
 
 import {
@@ -61,7 +63,11 @@ const getTypeBadge = (type: string) => {
     inventory: "outline",
     other: "destructive",
   }
-  return <Badge variant={variants[type] || "outline"}>{type}</Badge>
+
+  // Display "inventory" for cart payments (stored as 'other' type)
+  const displayText = type === 'other' ? 'inventory' : type
+
+  return <Badge variant={variants[type] || "outline"}>{displayText}</Badge>
 }
 
 const getMethodBadge = (method: string) => {
@@ -75,6 +81,8 @@ export default function PaymentManagementPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
+  const [methodFilter, setMethodFilter] = useState("all")
+  const router = useRouter()
 
   // Fetch payments on component mount
   useEffect(() => {
@@ -101,7 +109,8 @@ export default function PaymentManagementPage() {
                          payment._id?.toLowerCase().includes(searchLower)
     const matchesStatus = statusFilter === "all" || payment.status === statusFilter
     const matchesType = typeFilter === "all" || payment.type === typeFilter
-    return matchesSearch && matchesStatus && matchesType
+    const matchesMethod = methodFilter === "all" || payment.method === methodFilter
+    return matchesSearch && matchesStatus && matchesType && matchesMethod
   })
 
   const handleDeletePayment = async (payment: Payment) => {
@@ -165,10 +174,16 @@ export default function PaymentManagementPage() {
             Manage all payment transactions and financial records.
           </p>
         </div>
-        <Button onClick={handleGenerateReport}>
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Generate Report
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => router.push('/dashboard/finance/bank-transfers')}>
+            <Building2 className="mr-2 h-4 w-4" />
+            Bank Transactions
+          </Button>
+          <Button onClick={handleGenerateReport}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Generate Report
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -204,6 +219,16 @@ export default function PaymentManagementPage() {
             <SelectItem value="booking">Booking</SelectItem>
             <SelectItem value="inventory">Inventory</SelectItem>
             <SelectItem value="other">Other</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={methodFilter} onValueChange={setMethodFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Method" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Methods</SelectItem>
+            <SelectItem value="card">Card</SelectItem>
+            <SelectItem value="bank-transfer">Bank Transfer</SelectItem>
           </SelectContent>
         </Select>
       </div>

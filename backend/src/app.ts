@@ -17,6 +17,7 @@ import invoiceRoutes from "./routes/invoice.routes.js";
 import gatewayRoutes from "./routes/gateway.routes.js";
 import attendanceRouter from "./routes/attendance.routes.js";
 import refundRequestRouter from "./routes/refundRequest.routes.js";
+import bankTransferRouter from "./routes/bankTransfer.routes.js";
 import errorMiddleware from "./middleware/error.middleware.js";
 import { rateLimitMiddleware } from "./middleware/rateLimit.middleware.js";
 
@@ -27,12 +28,16 @@ const app: express.Application = express();
 app.use(cookieParser());
 app.use(helmet());
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  // for open bank transfer slip in another tab to checking the image
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001', 'http://127.0.0.1:3001'],
   credentials: true
 }));
 app.use(express.json());
 app.use(morgan("dev"));
 app.use('/', rateLimitMiddleware);
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
 
 //routes
 app.use("/api/v1/auth", authRouter);
@@ -48,6 +53,7 @@ app.use('/api/v1/invoices', invoiceRoutes);
 app.use('/api/v1/gateways', gatewayRoutes);
 app.use('/api/v1/attendance', attendanceRouter);
 app.use('/api/v1/refund-requests', refundRequestRouter);
+app.use('/api/v1/payments/bank-transfer', bankTransferRouter);
 
 app.use(errorMiddleware);
 
