@@ -535,8 +535,13 @@ export default function InvoiceManagementPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    No invoices found. Create your first invoice to get started.
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <div className="flex flex-col items-center space-y-4">
+                      <Button onClick={handleCreateInvoice}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Invoice
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               )}
