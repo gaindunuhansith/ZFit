@@ -92,7 +92,17 @@ export class PayHereService {
             const orderId = PayHereUtils.generateOrderId('ZFIT');
             
             // Create payment record in database first
-            const paymentData: any = {
+            const paymentData: {
+                userId: mongoose.Types.ObjectId;
+                amount: number;
+                currency: string;
+                type: 'membership' | 'inventory' | 'booking' | 'other';
+                status: 'pending';
+                method: 'card';
+                transactionId: string;
+                date: Date;
+                relatedId?: mongoose.Types.ObjectId;
+            } = {
                 userId: new mongoose.Types.ObjectId(paymentRequest.userId),
                 amount: paymentRequest.amount,
                 currency: paymentRequest.currency,
