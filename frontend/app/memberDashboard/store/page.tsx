@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -135,25 +135,6 @@ export default function MemberStorePage() {
     return supplement.quantity - cartQuantity
   }
 
-  const handleCheckout = () => {
-    if (cart.length === 0) return
-
-    // Prepare cart payment data
-    const cartPaymentData = {
-      type: 'cart',
-      items: cart,
-      totalAmount: getTotalPrice(),
-      totalItems: getTotalCartItems(),
-      currency: 'LKR'
-    }
-
-    // Store cart data in localStorage
-    localStorage.setItem('cartPaymentData', JSON.stringify(cartPaymentData))
-
-    // Navigate to payment method page
-    router.push('/payment/method')
-  }
-
   if (loading) {
     return (
       <div className="space-y-6">
@@ -184,51 +165,29 @@ export default function MemberStorePage() {
           <p className="text-muted-foreground">Browse and purchase supplements</p>
         </div>
         
-        {/* Cart Summary */}
-        {cart.length > 0 && (
-          <Card className="w-80">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <ShoppingCart className="h-5 w-5" />
-                Shopping Cart
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Cart Items List */}
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {cart.map((item) => (
-                  <div key={item._id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{item.itemName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        LKR {item.price?.toFixed(2) || '0.00'} × {item.cartQuantity}
-                      </p>
-                    </div>
-                    <div className="text-sm font-semibold ml-2">
-                      LKR {((item.price || 0) * item.cartQuantity).toFixed(2)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Cart Summary */}
-              <div className="border-t pt-3 space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Total Items:</span>
-                  <span className="font-medium">{getTotalCartItems()}</span>
-                </div>
-                <div className="flex items-center justify-between text-lg font-bold">
-                  <span>Total Amount:</span>
-                  <span className="text-primary">LKR {getTotalPrice().toFixed(2)}</span>
-                </div>
-              </div>
-              
-              <Button className="w-full" size="sm" onClick={handleCheckout}>
-                Proceed to Checkout
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        {/* Cart Button */}
+        <div className="flex items-center gap-4">
+          {cart.length > 0 && (
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">
+                {getTotalCartItems()} items • LKR {getTotalPrice().toFixed(2)}
+              </p>
+            </div>
+          )}
+          <Button
+            onClick={() => router.push('/memberDashboard/cart')}
+            variant={cart.length > 0 ? 'default' : 'outline'}
+            className="flex items-center gap-2"
+          >
+            <ShoppingCart className="h-4 w-4" />
+            View Cart
+            {cart.length > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {getTotalCartItems()}
+              </Badge>
+            )}
+          </Button>
+        </div>
       </div>
 
       {error && (
