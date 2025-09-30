@@ -52,7 +52,7 @@ export default function MemberStorePage() {
       // Filter only supplements (case-insensitive)
       const allItems = response.data as SupplementItem[]
       const supplementItems = allItems.filter(item => 
-        item.categoryID.toLowerCase().includes('supplement')
+        item.categoryID && item.categoryID.toLowerCase().includes('supplement')
       )
       
       setSupplements(supplementItems)
@@ -68,10 +68,12 @@ export default function MemberStorePage() {
   const filteredSupplements = supplements.filter(supplement => {
     const searchLower = searchTerm.toLowerCase()
     const supplierName = supplement.supplierID?.supplierName || ''
+    const itemName = supplement.itemName || ''
+    const itemDescription = supplement.itemDescription || ''
     
     return (
-      supplement.itemName.toLowerCase().includes(searchLower) ||
-      supplement.itemDescription.toLowerCase().includes(searchLower) ||
+      itemName.toLowerCase().includes(searchLower) ||
+      itemDescription.toLowerCase().includes(searchLower) ||
       supplierName.toLowerCase().includes(searchLower)
     )
   })
@@ -124,10 +126,6 @@ export default function MemberStorePage() {
 
   const getTotalPrice = () => {
     return cart.reduce((total, item) => total + (item.price || 0) * item.cartQuantity, 0)
-  }
-
-  const isOutOfStock = (supplement: SupplementItem) => {
-    return supplement.quantity === 0
   }
 
   const getAvailableQuantity = (supplement: SupplementItem) => {
