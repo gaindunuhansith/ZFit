@@ -9,6 +9,7 @@ import {
   FileText,
   RefreshCw,
   Building2,
+  Eye,
 } from "lucide-react"
 
 import {
@@ -43,7 +44,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { getPayments, type Payment, deletePayment } from "@/lib/api/paymentApi"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { getPayments, getPaymentsByUserId, type Payment, deletePayment } from "@/lib/api/paymentApi"
 import { generatePaymentsReport } from "@/lib/api/reportApi"
 
 const getStatusBadge = (status: string) => {
@@ -82,6 +91,9 @@ export default function PaymentManagementPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
   const [methodFilter, setMethodFilter] = useState("all")
+  const [showUserModal, setShowUserModal] = useState(false)
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
+  const [notification, setNotification] = useState<string | null>(null)
   const router = useRouter()
 
   // Fetch payments on component mount
@@ -101,6 +113,42 @@ export default function PaymentManagementPage() {
     }
 
     fetchPayments()
+  }, [])
+
+  // Auto-remove pending payments after 10 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date()
+      let removedCount = 0
+      
+      setPayments(currentPayments => 
+        currentPayments.filter(payment => {
+          // Only remove pending payments that are older than 10 minutes
+          if (payment.status === 'pending') {
+            const paymentDate = new Date(payment.createdAt)
+            const timeDiff = now.getTime() - paymentDate.getTime()
+            const minutesDiff = timeDiff / (1000 * 60) // Convert to minutes
+            
+            if (minutesDiff >= 10) {
+              removedCount++
+              console.log(`Auto-removing expired pending payment: ${payment.transactionId || payment._id}`)
+              return false // Remove this payment
+            }
+          }
+          return true // Keep this payment
+        })
+      )
+      
+      // Show notification if payments were removed
+      if (removedCount > 0) {
+        setNotification(`${removedCount} expired pending payment${removedCount > 1 ? 's' : ''} removed automatically`)
+        // Clear notification after 5 seconds
+        setTimeout(() => setNotification(null), 5000)
+      }
+    }, 60000) // Check every 60 seconds (1 minute)
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(interval)
   }, [])
 
   const filteredPayments = payments.filter(payment => {
@@ -141,6 +189,225 @@ export default function PaymentManagementPage() {
       console.error('Error generating report:', error)
       // Error handling for report generation
     }
+  }
+
+  const handleViewUserDetails = async (payment: Payment) => {
+    console.log('Selected payment:', payment)
+    console.log('User ID type:', typeof payment.userId)
+    console.log('User ID value:', payment.userId)
+    
+    setSelectedPayment(payment)
+    setShowUserModal(true)
+  }
+
+  const getUserData = (payment: Payment) => {
+    console.log('Getting user data for payment:', payment)
+    console.log('UserId:', payment.userId)
+    console.log('UserId type:', typeof payment.userId)
+    
+    // Check if userId is an object with user details (populated)
+    if (typeof payment.userId === 'object' && payment.userId !== null && '_id' in payment.userId) {
+      console.log('Found populated user data:', payment.userId)
+      return payment.userId
+    }
+    
+    // If userId is just a string (ObjectId), create a fallback object
+    if (typeof payment.userId === 'string') {
+      console.log('UserId is string, creating fallback')
+      return {
+        _id: payment.userId,
+        name: 'User details not loaded',
+        email: 'Please ensure backend is running',
+        contactNo: 'N/A',
+        role: 'unknown',
+        status: 'unknown'
+      }
+    }
+    
+    console.log('No valid user data found')
+    return null
+  }
+
+  // UserDetailsModal Component
+  const UserDetailsModal = () => {
+    const userData = selectedPayment ? getUserData(selectedPayment) : null
+    
+    console.log('Modal userData:', userData)
+    console.log('Selected payment in modal:', selectedPayment)
+    
+    if (!userData) {
+      return (
+        <Dialog open={showUserModal} onOpenChange={setShowUserModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>User Details</DialogTitle>
+              <DialogDescription>
+                User information for this payment
+              </DialogDescription>
+            </DialogHeader>
+            <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+              <p className="text-sm text-muted-foreground">User details not available</p>
+              {selectedPayment && (
+                <div className="text-xs text-muted-foreground">
+                  <p>Debug Info:</p>
+                  <p>User ID: {typeof selectedPayment.userId === 'string' ? selectedPayment.userId : 'Object'}</p>
+                  <p>Type: {typeof selectedPayment.userId}</p>
+                  <p>Transaction ID: {selectedPayment.transactionId}</p>
+                  <p className="text-red-500 mt-2">
+                    Note: Make sure the backend server is running with populated user data
+                  </p>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )
+    }
+
+    return (
+      <Dialog open={showUserModal} onOpenChange={setShowUserModal}>
+        <DialogContent className="sm:max-w-[700px] h-[600px] flex flex-col">
+          <DialogHeader className="pb-4 flex-shrink-0">
+            <DialogTitle className="text-xl">User Details</DialogTitle>
+            <DialogDescription className="text-base">
+              Customer information for payment {selectedPayment?.transactionId}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* Show warning if this is fallback data */}
+          {userData.name === 'User details not loaded' && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-4 flex-shrink-0">
+              <p className="text-sm text-yellow-800">
+                ⚠️ Showing limited data. Backend server may not be running or user data not populated.
+              </p>
+            </div>
+          )}
+          
+          {/* Main content with fixed height */}
+          <div className="flex-1 min-h-0 space-y-6">
+            {/* User Information Section */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                User Information
+              </h4>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Full Name</label>
+                  <p className="text-sm font-medium">{userData.name}</p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Role</label>
+                  <div>
+                    <Badge variant="outline" className="capitalize text-xs">{userData.role}</Badge>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Status</label>
+                  <div>
+                    <Badge 
+                      variant={userData.status === 'active' ? 'default' : 'secondary'} 
+                      className="capitalize text-xs"
+                    >
+                      {userData.status}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Email Address</label>
+                  <p className="text-sm break-all">{userData.email}</p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Contact Number</label>
+                  <p className="text-sm font-medium">{userData.contactNo}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-gray-200"></div>
+
+            {/* Current Payment Information Section */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                Current Payment Information
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Amount</label>
+                  <p className="text-lg font-semibold text-green-600">
+                    {selectedPayment?.currency} {selectedPayment?.amount.toFixed(2)}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Payment Method</label>
+                  <p className="text-sm capitalize">{selectedPayment?.method}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Transaction Type</label>
+                  <p className="text-sm capitalize">{selectedPayment?.type}</p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Payment Status</label>
+                  <div>
+                    {selectedPayment && getStatusBadge(selectedPayment.status)}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Transaction ID</label>
+                  <p className="text-xs font-mono bg-muted px-2 py-1 rounded">
+                    {selectedPayment?.transactionId || 'N/A'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Transaction Date</label>
+                  <p className="text-sm">{selectedPayment ? new Date(selectedPayment.date).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }) : 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Footer with Action Button */}
+          <DialogFooter className="pt-4 border-t flex-shrink-0">
+            <div className="flex justify-end space-x-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowUserModal(false)}
+              >
+                Close
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (userData._id) {
+                    setShowUserModal(false)
+                    // Store userId in sessionStorage to avoid showing in URL
+                    sessionStorage.setItem('paymentHistoryUserId', userData._id)
+                    router.push('/dashboard/finance/payment-history')
+                  }
+                }}
+                className="bg-primary hover:bg-primary/90"
+              >
+                View Payment History
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
   }
 
   if (loading) {
@@ -185,6 +452,22 @@ export default function PaymentManagementPage() {
           </Button>
         </div>
       </div>
+
+      {/* Notification */}
+      {notification && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center space-x-3">
+          <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+            <span className="text-white text-xs font-bold">i</span>
+          </div>
+          <p className="text-sm text-blue-800">{notification}</p>
+          <button 
+            onClick={() => setNotification(null)}
+            className="ml-auto text-blue-600 hover:text-blue-800"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="flex items-center space-x-2">
@@ -292,6 +575,13 @@ export default function PaymentManagementPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem
+                            onClick={() => handleViewUserDetails(payment)}
+                            className="flex items-center"
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            View User Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() => handleDeletePayment(payment)}
                             className="text-destructive"
                           >
@@ -313,6 +603,9 @@ export default function PaymentManagementPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* User Details Modal */}
+      <UserDetailsModal />
     </div>
   )
 }
