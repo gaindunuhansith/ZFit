@@ -161,7 +161,7 @@ export interface PayHerePaymentRequest {
   amount: number
   currency?: string
   type: 'membership' | 'inventory' | 'booking' | 'other'
-  relatedId: string
+  relatedId?: string // Optional for 'other' type payments like cart
   description: string
   customerFirstName: string
   customerLastName: string
@@ -196,6 +196,184 @@ export const initiatePayHerePayment = async (paymentData: PayHerePaymentRequest)
     return response.data
   } catch (error) {
     console.error('Error initiating PayHere payment:', error)
+    throw error
+  }
+}
+
+// Bank Transfer types
+export interface BankTransferUploadResponse {
+  fileUrl: string
+  filename: string
+  size: number
+  mimetype: string
+}
+
+export interface BankTransferPaymentRequest {
+  membershipId: string
+  amount: number
+  currency?: string
+  receiptImageUrl: string
+  notes?: string
+}
+
+export interface BankTransferPaymentResponse {
+  id: string
+  status: string
+  createdAt: string
+}
+
+// Bank Transfer functions
+export const uploadBankTransferReceipt = async (file: File): Promise<BankTransferUploadResponse> => {
+  try {
+    const formData = new FormData()
+    formData.append('receipt', file)
+
+    const response = await fetch(`${API_BASE_URL}/payments/bank-transfer/upload`, {
+      method: 'POST',
+      // Temporarily remove authorization for testing
+      // headers: {
+      //   'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      // },
+      body: formData,
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.message || `HTTP error! status: ${response.status}`)
+    }
+
+    if (!data.success || !data.data) {
+      throw new Error(data.message || 'Failed to upload receipt')
+    }
+
+    return data.data
+  } catch (error) {
+    console.error('Error uploading bank transfer receipt:', error)
+    throw error
+  }
+}
+
+export const createBankTransferPayment = async (paymentData: BankTransferPaymentRequest): Promise<BankTransferPaymentResponse> => {
+  try {
+    const response = await apiRequest<BankTransferPaymentResponse>('/payments/bank-transfer', {
+      method: 'POST',
+      body: JSON.stringify(paymentData),
+    })
+
+    if (!response.success || !response.data) {
+      throw new Error(response.message || 'Failed to create bank transfer payment')
+    }
+
+    return response.data
+  } catch (error) {
+    console.error('Error creating bank transfer payment:', error)
+    throw error
+  }
+}
+
+// Bank Transfer Admin types
+export interface BankTransferAdmin {
+  _id: string
+  userId: {
+    _id: string
+    name: string
+    email: string
+    contactNo?: string
+  } | null
+  membershipId: {
+    _id: string
+    name: string
+    price: number
+  } | null
+  amount: number
+  currency: string
+  receiptImageUrl: string
+  status: 'pending' | 'approved' | 'declined'
+  bankDetails: {
+    accountNumber: string
+    bankName: string
+    accountHolder: string
+  }
+  notes?: string
+  adminNotes?: string
+  processedBy?: {
+    _id: string
+    name: string
+  } | null
+  processedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface BankTransferAdminResponse {
+  payments: BankTransferAdmin[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    pages: number
+  }
+}
+
+export interface ApproveDeclineRequest {
+  adminNotes?: string
+}
+
+// Bank Transfer Admin functions
+export const getPendingBankTransfers = async (page: number = 1, limit: number = 10): Promise<BankTransferAdminResponse> => {
+  try {
+    const response = await apiRequest<{ payments: BankTransferAdmin[], pagination: { page: number, limit: number, total: number, pages: number } }>(`/payments/bank-transfer/pending?page=${page}&limit=${limit}`)
+
+    if (!response.success || !response.data) {
+      throw new Error(response.message || 'Failed to fetch pending bank transfers')
+    }
+
+    return response.data
+  } catch (error) {
+    console.error('Error fetching pending bank transfers:', error)
+    throw error
+  }
+}
+
+export const approveBankTransfer = async (transferId: string, data: ApproveDeclineRequest = {}): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await apiRequest<{ success: boolean; message: string }>(`/payments/bank-transfer/${transferId}/approve`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to approve bank transfer')
+    }
+
+    return {
+      success: response.success,
+      message: response.message || 'Bank transfer approved successfully'
+    }
+  } catch (error) {
+    console.error('Error approving bank transfer:', error)
+    throw error
+  }
+}
+
+export const declineBankTransfer = async (transferId: string, data: ApproveDeclineRequest = {}): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await apiRequest<{ success: boolean; message: string }>(`/payments/bank-transfer/${transferId}/decline`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to decline bank transfer')
+    }
+
+    return {
+      success: response.success,
+      message: response.message || 'Bank transfer declined successfully'
+    }
+  } catch (error) {
+    console.error('Error declining bank transfer:', error)
     throw error
   }
 }

@@ -26,6 +26,7 @@
     "mongodb": "^6.20.0",
     "mongoose": "^8.17.1",
     "morgan": "^1.10.1",
+    "multer": "^2.0.2",
     "puppeteer": "^24.22.3",
     "resend": "^6.1.0",
     "zod": "^4.1.9"

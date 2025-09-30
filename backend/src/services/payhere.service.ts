@@ -10,7 +10,7 @@ export interface PayHerePaymentRequest {
     amount: number;
     currency: string;
     type: 'membership' | 'inventory' | 'booking' | 'other';
-    relatedId: string;
+    relatedId?: string; // Optional for 'other' type payments like cart
     description: string;
     customerFirstName: string;
     customerLastName: string;
@@ -92,17 +92,31 @@ export class PayHereService {
             const orderId = PayHereUtils.generateOrderId('ZFIT');
             
             // Create payment record in database first
-            const paymentData = {
+            const paymentData: {
+                userId: mongoose.Types.ObjectId;
+                amount: number;
+                currency: string;
+                type: 'membership' | 'inventory' | 'booking' | 'other';
+                status: 'pending';
+                method: 'card';
+                transactionId: string;
+                date: Date;
+                relatedId?: mongoose.Types.ObjectId;
+            } = {
                 userId: new mongoose.Types.ObjectId(paymentRequest.userId),
                 amount: paymentRequest.amount,
                 currency: paymentRequest.currency,
                 type: paymentRequest.type,
                 status: 'pending' as const,
                 method: 'card' as const,
-                relatedId: new mongoose.Types.ObjectId(paymentRequest.relatedId),
                 transactionId: orderId,
                 date: new Date()
             };
+
+            // Only add relatedId if it exists
+            if (paymentRequest.relatedId) {
+                paymentData.relatedId = new mongoose.Types.ObjectId(paymentRequest.relatedId);
+            }
 
             const payment = await createPaymentService(paymentData);
 
@@ -233,7 +247,7 @@ export class PayHereService {
                 shouldCreateMembership: paymentStatus === 'completed' && payment.type === 'membership'
             });
             
-            if (paymentStatus === 'completed' && payment.type === 'membership') {
+            if (paymentStatus === 'completed' && payment.type === 'membership' && payment.relatedId) {
                 try {
                     console.log('Creating membership with data:', {
                         userId: payment.userId.toString(),

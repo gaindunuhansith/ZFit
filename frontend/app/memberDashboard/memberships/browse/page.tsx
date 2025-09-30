@@ -155,68 +155,30 @@ export default function BrowseMembershipsPage() {
       setPurchasingPlan(plan._id)
       setPaymentError(null)
 
-      // Extract customer details with proper fallbacks
-      const nameParts = user.name.trim().split(/\s+/)
-      const firstName = nameParts[0] || 'Unknown'
-      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'User'
-
-      const paymentRequest: PayHerePaymentRequest = {
-        userId: user._id,
+      // Store membership plan data in localStorage for the payment method page
+      const paymentData = {
+        planId: plan._id,
+        planName: plan.name,
         amount: plan.price,
         currency: plan.currency || 'LKR',
         type: 'membership',
-        relatedId: plan._id,
         description: `Purchase of ${plan.name} membership`,
-        customerFirstName: firstName,
-        customerLastName: lastName,
+        customerFirstName: user.name.trim().split(/\s+/)[0] || 'Unknown',
+        customerLastName: user.name.trim().split(/\s+/).slice(1).join(' ') || 'User',
         customerEmail: user.email,
-        customerPhone: user.contactNo || '+94700000000', // Fallback phone number
+        customerPhone: user.contactNo || '+94700000000',
         customerAddress: user.profile?.address || 'No address provided',
         customerCity: user.profile?.address?.split(',')[1]?.trim() || 'Colombo',
       }
 
-      console.log('Payment request data:', paymentRequest) // Debug log
+      localStorage.setItem('membershipPaymentData', JSON.stringify(paymentData))
 
-      const response = await initiatePayHerePayment(paymentRequest)
-      
-      console.log('Payment response received:', response)
-      console.log('Payment form exists:', !!response.paymentForm)
+      // Redirect to payment method selection page
+      window.location.href = '/payment/method'
 
-      if (response.paymentForm) {
-        console.log('Creating payment form...')
-        // Show the redirecting modal
-        setIsRedirecting(true)
-        
-        // Create form in current window and submit immediately
-        const formContainer = document.createElement('div')
-        formContainer.innerHTML = response.paymentForm
-        document.body.appendChild(formContainer)
-        
-        // Find the form and submit it manually instead of relying on inline script
-        const paymentForm = document.getElementById('payhere-form') as HTMLFormElement
-        if (paymentForm) {
-          console.log('Found payment form, submitting manually...')
-          // Small delay to ensure the form is properly added to DOM
-          setTimeout(() => {
-            paymentForm.submit()
-          }, 100)
-        } else {
-          console.error('Could not find payment form with id payhere-form')
-          setIsRedirecting(false)
-          throw new Error('Payment form element not found')
-        }
-        
-        console.log('Payment form added to DOM and should auto-submit')
-        // The form will auto-submit due to the script in the HTML
-      } else {
-        console.error('No payment form received in response')
-        throw new Error('Payment form not received')
-      }
-    } catch (err) {
-      console.error('Payment initiation failed:', err)
-      setPaymentError('Failed to initiate payment. Please try again.')
-      setIsRedirecting(false)
-    } finally {
+    } catch (error) {
+      console.error('Error preparing payment:', error)
+      setPaymentError('Failed to prepare payment. Please try again.')
       setPurchasingPlan(null)
     }
   }

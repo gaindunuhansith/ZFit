@@ -46,7 +46,7 @@ export const processPayHerePayment = async (req: Request, res: Response) => {
         } = req.body;
 
         // Basic validation
-        if (!userId || !amount || !type || !relatedId || !description || 
+        if (!userId || !amount || !type || !description || 
             !customerFirstName || !customerLastName || !customerEmail || 
             !customerPhone || !customerAddress || !customerCity) {
             console.log('Missing required fields:', {
@@ -65,6 +65,14 @@ export const processPayHerePayment = async (req: Request, res: Response) => {
             return res.status(400).json({
                 success: false,
                 message: 'Missing required fields for PayHere payment'
+            });
+        }
+
+        // relatedId is required for membership, inventory, booking but optional for other types (like cart)
+        if (!relatedId && !['other'].includes(type)) {
+            return res.status(400).json({
+                success: false,
+                message: 'relatedId is required for this payment type'
             });
         }
 
