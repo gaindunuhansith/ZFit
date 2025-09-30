@@ -13,8 +13,7 @@ import {
   Trash2,
   Package,
   ArrowLeft,
-  CreditCard,
-  RefreshCw
+  CreditCard
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { cartApi, type Cart, type CartItem } from '@/lib/api/cartApi'
@@ -201,10 +200,6 @@ export default function CartPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={fetchCart} variant="outline" size="sm">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
-          </Button>
           {cart?.items && cart.items.length > 0 && (
             <Button onClick={clearCart} variant="outline" size="sm">
               <Trash2 className="w-4 h-4 mr-2" />
