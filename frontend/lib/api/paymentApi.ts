@@ -38,9 +38,25 @@ const apiRequest = async <T>(
 }
 
 // Types based on backend model
+export interface User {
+  _id: string
+  name: string
+  email: string
+  contactNo: string
+  role: string
+  status: string
+}
+
 export interface Payment {
   _id: string
-  userId: string
+  userId: string | {
+    _id: string
+    name: string
+    email: string
+    contactNo: string
+    role: string
+    status: string
+  }
   amount: number
   currency: string
   type: 'membership' | 'inventory' | 'booking' | 'other'
@@ -100,6 +116,23 @@ export const getPayments = async (): Promise<Payment[]> => {
   }
 }
 
+export const getPaymentsByUserId = async (userId: string): Promise<ApiResponse<Payment[]>> => {
+  try {
+    const response = await apiRequest<Payment[]>(`/payments?userId=${userId}`)
+    return {
+      success: true,
+      data: response.data || []
+    }
+  } catch (error) {
+    console.error('Error fetching user payments:', error)
+    return {
+      success: false,
+      data: [],
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
 export const getPaymentById = async (id: string): Promise<Payment> => {
   try {
     const response = await apiRequest<Payment>(`/payments/${id}`)
@@ -153,6 +186,23 @@ export const deletePayment = async (id: string): Promise<void> => {
   } catch (error) {
     console.error('Error deleting payment:', error)
     throw error
+  }
+}
+
+// User API functions
+export const getUserById = async (userId: string): Promise<ApiResponse<User>> => {
+  try {
+    const response = await apiRequest<User>(`/users/${userId}`)
+    return {
+      success: true,
+      data: response.data
+    }
+  } catch (error) {
+    console.error('Error fetching user:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
   }
 }
 
