@@ -330,6 +330,8 @@ export interface BankTransferAdmin {
     name: string
     email: string
     contactNo?: string
+    role: string
+    status: string
   } | null
   membershipId: {
     _id: string

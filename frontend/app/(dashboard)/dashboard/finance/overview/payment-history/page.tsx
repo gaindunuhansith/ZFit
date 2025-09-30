@@ -29,9 +29,7 @@ import {
 import { getPaymentsByUserId, getUserById } from "@/lib/api/paymentApi"
 import { Payment, User as UserType } from "@/lib/api/paymentApi"
 
-interface PaymentHistoryPageProps {}
-
-export default function PaymentHistoryPage({}: PaymentHistoryPageProps) {
+export default function PaymentHistoryPage() {
   const router = useRouter()
   // Get userId from sessionStorage instead of URL params
   const userId = typeof window !== 'undefined' ? sessionStorage.getItem('paymentHistoryUserId') : null
