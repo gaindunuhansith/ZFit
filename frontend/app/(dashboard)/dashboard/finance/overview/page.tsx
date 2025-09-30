@@ -396,7 +396,7 @@ export default function PaymentManagementPage() {
                     setShowUserModal(false)
                     // Store userId in sessionStorage to avoid showing in URL
                     sessionStorage.setItem('paymentHistoryUserId', userData._id)
-                    router.push('/dashboard/finance/payment-history')
+                    router.push('/dashboard/finance/overview/payment-history')
                   }
                 }}
                 className="bg-primary hover:bg-primary/90"
