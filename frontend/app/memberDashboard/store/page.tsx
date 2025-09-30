@@ -1,13 +1,15 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ShoppingCart, Search, Package, Store } from 'lucide-react'
 import { itemApiService } from '@/lib/api/itemApi'
+import { cartApi, type Cart } from '@/lib/api/cartApi'
+import { useAuth } from '@/lib/auth-context'
 import { SupplementCard } from '@/components/SupplementCard'
 
 interface SupplementItem {
@@ -27,22 +29,16 @@ interface SupplementItem {
   createdAt: string
 }
 
-interface CartItem extends SupplementItem {
-  cartQuantity: number
-}
-
 export default function MemberStorePage() {
   const [supplements, setSupplements] = useState<SupplementItem[]>([])
-  const [cart, setCart] = useState<CartItem[]>([])
+  const [cart, setCart] = useState<Cart | null>(null)
   const [loading, setLoading] = useState(true)
+  const [cartLoading, setCartLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [searchTerm, setSearchTerm] = useState('')
 
   const router = useRouter()
-
-  useEffect(() => {
-    fetchSupplements()
-  }, [])
+  const { user } = useAuth()
 
   const fetchSupplements = async () => {
     try {
@@ -52,7 +48,7 @@ export default function MemberStorePage() {
       // Filter only supplements (case-insensitive)
       const allItems = response.data as SupplementItem[]
       const supplementItems = allItems.filter(item => 
-        item.categoryID.toLowerCase().includes('supplement')
+        item.categoryID && item.categoryID.toLowerCase().includes('supplement')
       )
       
       setSupplements(supplementItems)
@@ -64,94 +60,109 @@ export default function MemberStorePage() {
     }
   }
 
+  const fetchCart = useCallback(async () => {
+    if (!user?._id) return
+    
+    try {
+      const response = await cartApi.getCartByMember(user._id)
+      setCart(response.data)
+    } catch (error) {
+      console.error('Error fetching cart:', error)
+      // Don't show error for cart fetch failure - just keep cart as null
+    }
+  }, [user?._id])
+
+  useEffect(() => {
+    fetchSupplements()
+  }, [])
+
+  useEffect(() => {
+    if (user?._id) {
+      fetchCart()
+    }
+  }, [user?._id, fetchCart])
+
   // Filter supplements based on search term
   const filteredSupplements = supplements.filter(supplement => {
     const searchLower = searchTerm.toLowerCase()
     const supplierName = supplement.supplierID?.supplierName || ''
+    const itemName = supplement.itemName || ''
+    const itemDescription = supplement.itemDescription || ''
     
     return (
-      supplement.itemName.toLowerCase().includes(searchLower) ||
-      supplement.itemDescription.toLowerCase().includes(searchLower) ||
+      itemName.toLowerCase().includes(searchLower) ||
+      itemDescription.toLowerCase().includes(searchLower) ||
       supplierName.toLowerCase().includes(searchLower)
     )
   })
 
-  const addToCart = (supplement: SupplementItem) => {
-    setCart(prevCart => {
-      const existingItem = prevCart.find(item => item._id === supplement._id)
-      
-      if (existingItem) {
-        // Check if we can add more (don't exceed available quantity)
-        if (existingItem.cartQuantity < supplement.quantity) {
-          return prevCart.map(item =>
-            item._id === supplement._id
-              ? { ...item, cartQuantity: item.cartQuantity + 1 }
-              : item
-          )
-        }
-        return prevCart // Don't add if already at max quantity
-      } else {
-        // Add new item to cart
-        return [...prevCart, { ...supplement, cartQuantity: 1 }]
-      }
-    })
+  const addToCart = async (supplement: SupplementItem) => {
+    if (!user?._id) return
+    
+    try {
+      setCartLoading(true)
+      await cartApi.addToCart({
+        memberId: user._id,
+        itemId: supplement._id,
+        quantity: 1
+      })
+      // Refresh cart after adding
+      await fetchCart()
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      setError('Failed to add item to cart')
+    } finally {
+      setCartLoading(false)
+    }
   }
 
-  const removeFromCart = (supplementId: string) => {
-    setCart(prevCart => {
-      return prevCart.reduce((acc, item) => {
-        if (item._id === supplementId) {
-          if (item.cartQuantity > 1) {
-            acc.push({ ...item, cartQuantity: item.cartQuantity - 1 })
-          }
-          // If cartQuantity is 1, don't add it back (remove from cart)
-        } else {
-          acc.push(item)
-        }
-        return acc
-      }, [] as CartItem[])
-    })
+  const removeFromCart = async (supplementId: string) => {
+    if (!user?._id || !cart) return
+    
+    try {
+      setCartLoading(true)
+      
+      // Find the item in cart to determine current quantity
+      const cartItem = cart.items.find(item => item.itemId._id === supplementId)
+      if (!cartItem) return
+      
+      if (cartItem.quantity > 1) {
+        // Update quantity if more than 1
+        await cartApi.updateCartItem(user._id, supplementId, { quantity: cartItem.quantity - 1 })
+      } else {
+        // Remove item completely if quantity is 1
+        await cartApi.removeCartItem(user._id, supplementId)
+      }
+      
+      // Refresh cart after removing/updating
+      await fetchCart()
+    } catch (error) {
+      console.error('Error removing from cart:', error)
+      setError('Failed to remove item from cart')
+    } finally {
+      setCartLoading(false)
+    }
   }
 
   const getCartQuantity = (supplementId: string) => {
-    const cartItem = cart.find(item => item._id === supplementId)
-    return cartItem ? cartItem.cartQuantity : 0
+    if (!cart?.items) return 0
+    const cartItem = cart.items.find(item => item.itemId._id === supplementId)
+    return cartItem ? cartItem.quantity : 0
   }
 
   const getTotalCartItems = () => {
-    return cart.reduce((total, item) => total + item.cartQuantity, 0)
+    if (!cart?.items) return 0
+    return cart.items.reduce((total, item) => total + item.quantity, 0)
   }
 
   const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + (item.price || 0) * item.cartQuantity, 0)
-  }
-
-  const isOutOfStock = (supplement: SupplementItem) => {
-    return supplement.quantity === 0
+    if (!cart?.items) return 0
+    return cart.items.reduce((total, item) => total + (item.itemId.price || 0) * item.quantity, 0)
   }
 
   const getAvailableQuantity = (supplement: SupplementItem) => {
     const cartQuantity = getCartQuantity(supplement._id)
     return supplement.quantity - cartQuantity
-  }
-
-  const handleCheckout = () => {
-    if (cart.length === 0) return
-
-    // Prepare cart payment data
-    const cartPaymentData = {
-      type: 'cart',
-      items: cart,
-      totalAmount: getTotalPrice(),
-      totalItems: getTotalCartItems(),
-      currency: 'LKR'
-    }
-
-    // Store cart data in localStorage
-    localStorage.setItem('cartPaymentData', JSON.stringify(cartPaymentData))
-
-    // Navigate to payment method page
-    router.push('/payment/method')
   }
 
   if (loading) {
@@ -184,51 +195,30 @@ export default function MemberStorePage() {
           <p className="text-muted-foreground">Browse and purchase supplements</p>
         </div>
         
-        {/* Cart Summary */}
-        {cart.length > 0 && (
-          <Card className="w-80">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <ShoppingCart className="h-5 w-5" />
-                Shopping Cart
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Cart Items List */}
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {cart.map((item) => (
-                  <div key={item._id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{item.itemName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        LKR {item.price?.toFixed(2) || '0.00'} × {item.cartQuantity}
-                      </p>
-                    </div>
-                    <div className="text-sm font-semibold ml-2">
-                      LKR {((item.price || 0) * item.cartQuantity).toFixed(2)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Cart Summary */}
-              <div className="border-t pt-3 space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Total Items:</span>
-                  <span className="font-medium">{getTotalCartItems()}</span>
-                </div>
-                <div className="flex items-center justify-between text-lg font-bold">
-                  <span>Total Amount:</span>
-                  <span className="text-primary">LKR {getTotalPrice().toFixed(2)}</span>
-                </div>
-              </div>
-              
-              <Button className="w-full" size="sm" onClick={handleCheckout}>
-                Proceed to Checkout
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        {/* Cart Button */}
+        <div className="flex items-center gap-4">
+          {cart?.items && cart.items.length > 0 && (
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">
+                {getTotalCartItems()} items • LKR {getTotalPrice().toFixed(2)}
+              </p>
+            </div>
+          )}
+          <Button
+            onClick={() => router.push('/memberDashboard/cart')}
+            variant={cart?.items && cart.items.length > 0 ? 'default' : 'outline'}
+            className="flex items-center gap-2"
+            disabled={cartLoading}
+          >
+            <ShoppingCart className="h-4 w-4" />
+            View Cart
+            {cart?.items && cart.items.length > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {getTotalCartItems()}
+              </Badge>
+            )}
+          </Button>
+        </div>
       </div>
 
       {error && (

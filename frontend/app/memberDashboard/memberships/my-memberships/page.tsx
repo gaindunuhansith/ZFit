@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -25,20 +25,25 @@ import {
   PauseCircle,
   RefreshCw,
   Play,
-  Plus,
-  Eye
+  RotateCcw,
+  Eye,
+  X
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { membershipApi, type Membership } from "@/lib/api/membershipApi"
 
 export default function MyMembershipsPage() {
   const { user } = useAuth()
+  const router = useRouter()
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [selectedMembership, setSelectedMembership] = useState<Membership | null>(null)
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [membershipToCancel, setMembershipToCancel] = useState<Membership | null>(null)
 
   const fetchMemberships = useCallback(async () => {
     if (!user?._id) {
@@ -155,16 +160,42 @@ export default function MyMembershipsPage() {
     }
   }
 
-  const handleExtendMembership = async (membershipId: string) => {
+  const handleRenewMembership = (membership: Membership) => {
+    // Get the membership plan ID to redirect to the purchase page
+    const membershipPlan = typeof membership.membershipPlanId === 'object' && membership.membershipPlanId !== null
+      ? membership.membershipPlanId
+      : null
+
+    if (membershipPlan?._id) {
+      // Redirect to the membership plans page with the specific plan ID
+      router.push(`/memberDashboard/memberships/browse?planId=${membershipPlan._id}&renew=true`)
+    } else {
+      // Redirect to the general browse page if no specific plan ID
+      router.push('/memberDashboard/memberships/browse')
+    }
+  }
+
+  const handleCancelMembership = (membership: Membership) => {
+    setMembershipToCancel(membership)
+    setIsCancelDialogOpen(true)
+  }
+
+  const confirmCancelMembership = async () => {
+    if (!membershipToCancel) return
+
     try {
-      setActionLoading(membershipId)
-      // Default extension of 30 days
-      await membershipApi.extendMembership(membershipId, { additionalDays: 30 })
+      setActionLoading(membershipToCancel._id)
+      await membershipApi.cancelMembership(membershipToCancel._id, { 
+        reason: cancelReason || 'Cancelled by user' 
+      })
       await fetchMemberships() // Refresh the data
-      console.log('Membership extended successfully')
+      setIsCancelDialogOpen(false)
+      setMembershipToCancel(null)
+      setCancelReason('')
+      console.log('Membership cancelled successfully')
     } catch (error) {
-      console.error('Failed to extend membership:', error)
-      setError('Failed to extend membership. Please try again.')
+      console.error('Failed to cancel membership:', error)
+      setError('Failed to cancel membership. Please try again.')
     } finally {
       setActionLoading(null)
     }
@@ -252,7 +283,7 @@ export default function MyMembershipsPage() {
             <p className="text-muted-foreground text-center mb-4">
               You don&apos;t have any memberships yet. Browse available membership plans to get started.
             </p>
-            <Button>
+            <Button onClick={() => router.push('/memberDashboard/memberships/browse')}>
               Browse Memberships
             </Button>
           </CardContent>
@@ -332,11 +363,10 @@ export default function MyMembershipsPage() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => handleExtendMembership(membership._id)}
-                              disabled={actionLoading === membership._id}
+                              onClick={() => handleRenewMembership(membership)}
                             >
-                              <Plus className="w-3 h-3 mr-1" />
-                              {actionLoading === membership._id ? 'Extending...' : 'Extend'}
+                              <RotateCcw className="w-3 h-3 mr-1" />
+                              Renew
                             </Button>
                             <Button 
                               variant="outline" 
@@ -347,17 +377,49 @@ export default function MyMembershipsPage() {
                               <PauseCircle className="w-3 h-3 mr-1" />
                               {actionLoading === membership._id ? 'Pausing...' : 'Pause'}
                             </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleCancelMembership(membership)}
+                              disabled={actionLoading === membership._id}
+                              className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                            >
+                              <X className="w-3 h-3 mr-1" />
+                              Cancel
+                            </Button>
                           </>
                         )}
                         {membership.status === 'paused' && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleResumeMembership(membership._id)}
+                              disabled={actionLoading === membership._id}
+                            >
+                              <Play className="w-3 h-3 mr-1" />
+                              {actionLoading === membership._id ? 'Resuming...' : 'Resume'}
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleCancelMembership(membership)}
+                              disabled={actionLoading === membership._id}
+                              className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                            >
+                              <X className="w-3 h-3 mr-1" />
+                              Cancel
+                            </Button>
+                          </>
+                        )}
+                        {membership.status === 'expired' && (
                           <Button 
-                            variant="outline" 
+                            variant="default" 
                             size="sm"
-                            onClick={() => handleResumeMembership(membership._id)}
-                            disabled={actionLoading === membership._id}
+                            onClick={() => handleRenewMembership(membership)}
                           >
-                            <Play className="w-3 h-3 mr-1" />
-                            {actionLoading === membership._id ? 'Resuming...' : 'Resume'}
+                            <RotateCcw className="w-3 h-3 mr-1" />
+                            Renew
                           </Button>
                         )}
                         <Button 
@@ -495,6 +557,63 @@ export default function MyMembershipsPage() {
               onClick={() => setIsDetailsDialogOpen(false)}
             >
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Membership Dialog */}
+      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Membership</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this membership? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {membershipToCancel && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <h4 className="font-semibold">
+                  {typeof membershipToCancel.membershipPlanId === 'object' && membershipToCancel.membershipPlanId?.name || 'Membership Plan'}
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  Valid until: {new Date(membershipToCancel.endDate).toLocaleDateString()}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cancel-reason">Reason for cancellation (optional)</Label>
+                <Textarea
+                  id="cancel-reason"
+                  placeholder="Please let us know why you're cancelling..."
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsCancelDialogOpen(false)
+                setMembershipToCancel(null)
+                setCancelReason('')
+              }}
+            >
+              Keep Membership
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={confirmCancelMembership}
+              disabled={actionLoading === membershipToCancel?._id}
+              className="text-red-600 hover:bg-red-50 hover:text-red-700"
+            >
+              {actionLoading === membershipToCancel?._id ? 'Cancelling...' : 'Cancel Membership'}
             </Button>
           </DialogFooter>
         </DialogContent>
