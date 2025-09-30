@@ -79,7 +79,7 @@ export default function PaymentSuccessPage() {
                 Membership Activation in Progress
               </p>
               <p className="text-muted-foreground text-xs">
-                Your membership will be automatically activated within 60 seconds. You&apos;ll see it in your dashboard shortly!
+                Your membership will be automatically activated within 10-30 seconds. Click &quot;View My Memberships&quot; and use the refresh button if you don&apos;t see it immediately!
               </p>
             </div>
             

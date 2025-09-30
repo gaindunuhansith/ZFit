@@ -151,7 +151,7 @@ export class PayHereService {
 
             // For sandbox environment, simulate automatic payment completion after a delay
             if (env.PAYHERE_ENV === 'sandbox') {
-                console.log('Sandbox mode: Will auto-complete payment after 60 seconds');
+                console.log('Sandbox mode: Will auto-complete payment after 10 seconds');
                 setTimeout(async () => {
                     try {
                         console.log(`Auto-completing sandbox payment: ${orderId}`);
@@ -173,7 +173,7 @@ export class PayHereService {
                     } catch (error) {
                         console.error(`Failed to auto-complete sandbox payment ${orderId}:`, error);
                     }
-                }, 60000); // 60 seconds delay
+                }, 10000); // 10 seconds delay instead of 60
             }
 
             return {
