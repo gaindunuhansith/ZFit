@@ -54,7 +54,7 @@ const apiRequest = async <T>(
     let data
     try {
       data = await response.json()
-    } catch (parseError) {
+    } catch {
       // If JSON parsing fails, create a fallback error
       data = { message: `HTTP error! status: ${response.status}` }
     }
@@ -62,7 +62,14 @@ const apiRequest = async <T>(
     if (!response.ok) {
       // Backend sends errors in 'error' field, successes in 'message' field
       const errorMessage = data.error || data.message || `HTTP error! status: ${response.status}`
-      const error: any = new Error(errorMessage)
+      const error = new Error(errorMessage) as Error & {
+        response?: {
+          data: unknown
+          status: number
+          statusText: string
+        }
+        status?: number
+      }
       error.response = { 
         data, 
         status: response.status,
@@ -70,20 +77,23 @@ const apiRequest = async <T>(
       }
       error.status = response.status
       throw error
-    }
+``    }
 
     return data
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API request failed:', error)
-    console.error('Error details:', {
-      message: error.message,
-      response: error.response,
-      status: error.status
-    })
     
-    // If it's a network error, provide better context
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      error.message = 'Network error - unable to connect to server'
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        response: 'response' in error ? error.response : undefined,
+        status: 'status' in error ? error.status : undefined
+      })
+      
+      // If it's a network error, provide better context
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        error.message = 'Network error - unable to connect to server'
+      }
     }
     
     throw error

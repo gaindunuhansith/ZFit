@@ -8,7 +8,6 @@ import {
   TrendingUp,
   Activity,
   Package,
-  Store,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -180,11 +179,6 @@ const data = {
           url: "/dashboard/inventory/suppliers",
         },
       ],
-    },
-    {
-      title: "Store",
-      url: "/dashboard/store",
-      icon: Store,
     },
   ],
   projects: [
