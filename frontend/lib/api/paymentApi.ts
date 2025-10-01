@@ -375,7 +375,7 @@ export interface ApproveDeclineRequest {
 // Bank Transfer Admin functions
 export const getPendingBankTransfers = async (page: number = 1, limit: number = 10): Promise<BankTransferAdminResponse> => {
   try {
-    const response = await apiRequest<{ payments: BankTransferAdmin[], pagination: { page: number, limit: number, total: number, pages: number } }>(`/payments/bank-transfer/pending?page=${page}&limit=${limit}`)
+    const response = await apiRequest<{ payments: BankTransferAdmin[], pagination: { page: number, limit: number, total: number, pages: number } }>(`/admin/payments/bank-transfer/pending?page=${page}&limit=${limit}`)
 
     if (!response.success || !response.data) {
       throw new Error(response.message || 'Failed to fetch pending bank transfers')
@@ -390,7 +390,7 @@ export const getPendingBankTransfers = async (page: number = 1, limit: number = 
 
 export const approveBankTransfer = async (transferId: string, data: ApproveDeclineRequest = {}): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await apiRequest<{ success: boolean; message: string }>(`/payments/bank-transfer/${transferId}/approve`, {
+    const response = await apiRequest<{ success: boolean; message: string }>(`/admin/payments/bank-transfer/${transferId}/approve`, {
       method: 'PUT',
       body: JSON.stringify(data),
     })
@@ -411,7 +411,7 @@ export const approveBankTransfer = async (transferId: string, data: ApproveDecli
 
 export const declineBankTransfer = async (transferId: string, data: ApproveDeclineRequest = {}): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await apiRequest<{ success: boolean; message: string }>(`/payments/bank-transfer/${transferId}/decline`, {
+    const response = await apiRequest<{ success: boolean; message: string }>(`/admin/payments/bank-transfer/${transferId}/decline`, {
       method: 'PUT',
       body: JSON.stringify(data),
     })
