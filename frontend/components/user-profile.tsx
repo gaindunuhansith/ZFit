@@ -27,8 +27,8 @@ import {
 import { useAuth } from "@/lib/auth-context"
 import { getUserById, updateUser } from "@/lib/api/userApi"
 import { UserFormModal, UpdateUserFormData } from "@/components/UserFormModal"
-import { ChangePasswordDialog } from "@/components/ChangePasswordDialog"
 import { QRCodeModal } from "@/components/QRCodeModal"
+import { authApi } from "@/lib/api/authApi"
 
 interface UserProfileData {
   _id?: string
@@ -150,8 +150,9 @@ export function UserProfile({
   const [loading, setLoading] = useState(!initialProfileData)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [showQRModal, setShowQRModal] = useState(false)
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false)
+  const [resetPasswordMessage, setResetPasswordMessage] = useState<string | null>(null)
 
   // Fetch user profile data if not provided via props
   useEffect(() => {
@@ -250,6 +251,31 @@ export function UserProfile({
         updatedAt: new Date(userData.updatedAt).toISOString(),
       }
       setProfileData(mappedData)
+    }
+  }
+
+  const handleResetPassword = async () => {
+    if (!profileData?.email) {
+      setResetPasswordMessage("Email address not found")
+      return
+    }
+
+    try {
+      setResetPasswordLoading(true)
+      setResetPasswordMessage(null)
+
+      const response = await authApi.sendPasswordResetEmail(profileData.email)
+
+      if (response.message) {
+        setResetPasswordMessage("Password reset email sent successfully! Please check your inbox.")
+      } else {
+        setResetPasswordMessage("Failed to send password reset email")
+      }
+    } catch (error) {
+      console.error("Error sending password reset email:", error)
+      setResetPasswordMessage("Failed to send password reset email. Please try again.")
+    } finally {
+      setResetPasswordLoading(false)
     }
   }
 
@@ -516,11 +542,18 @@ export function UserProfile({
               <Button
                 variant="outline"
                 className="w-full justify-start"
-                onClick={() => setShowPasswordDialog(true)}
+                onClick={handleResetPassword}
+                disabled={resetPasswordLoading}
               >
                 <Lock className="mr-2 h-4 w-4" />
-                Change Password
+                {resetPasswordLoading ? "Sending..." : "Reset Password"}
               </Button>
+
+              {resetPasswordMessage && (
+                <p className={`text-sm ${resetPasswordMessage.includes("successfully") ? "text-[#AAFF69]" : "text-red-600"}`}>
+                  {resetPasswordMessage}
+                </p>
+              )}
 
               {profileData?.qrCode && (
                 <Button
@@ -596,12 +629,6 @@ export function UserProfile({
           </CardContent>
         </Card>
       )}
-
-      {/* Change Password Dialog */}
-      <ChangePasswordDialog
-        open={showPasswordDialog}
-        onOpenChange={setShowPasswordDialog}
-      />
 
       {/* QR Code Modal */}
       {profileData?.qrCode && (

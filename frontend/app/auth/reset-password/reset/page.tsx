@@ -17,30 +17,30 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
-  const [isValidLink, setIsValidLink] = useState(true)
+  const [isValidLink, setIsValidLink] = useState<boolean | null>(null) // null = checking, true = valid, false = invalid
 
   const router = useRouter()
   const searchParams = useSearchParams()
   const code = searchParams.get('code')
-  const exp = searchParams.get('exp')
 
   useEffect(() => {
-    // Check if the link is valid (not expired)
-    if (exp) {
-      const expiryTime = parseInt(exp)
-      const now = Date.now()
-      if (now > expiryTime) {
-        setIsValidLink(false)
-        setError("This reset link has expired. Please request a new one.")
+    // Validate the reset code with the backend first
+    if (code) {
+      const validateCode = async () => {
+        try {
+          setIsValidLink(null) // checking
+          await authApi.validateResetCode(code)
+          setIsValidLink(true) // valid
+        } catch {
+          // Don't log to console, just mark as invalid
+          setIsValidLink(false) // invalid
+        }
       }
-    }
-
-    if (!code) {
+      validateCode()
+    } else {
       setIsValidLink(false)
-      setError("Invalid reset link. Please request a new password reset.")
     }
-  }, [code, exp])
+  }, [code])
 
   const validatePassword = (password: string) => {
     const minLength = password.length >= 8
@@ -85,14 +85,14 @@ export default function ResetPasswordPage() {
     try {
       const response = await authApi.resetPassword(password, code)
 
-      if (response.success) {
+      if (response.message) {
         setSuccess(true)
         // Redirect to login after 3 seconds
         setTimeout(() => {
           router.push("/auth/login")
         }, 3000)
       } else {
-        setError(response.message || "Failed to reset password")
+        setError("Failed to reset password")
       }
     } catch (error: unknown) {
       console.error("Reset password error:", error)
@@ -115,42 +115,7 @@ export default function ResetPasswordPage() {
     }
   }
 
-  if (success) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <div className="flex-1 flex items-center justify-center bg-black px-4">
-          <div className="w-full max-w-sm mx-auto text-center">
-            <div className="mb-8">
-              <CheckCircle className="h-16 w-16 text-[#AAFF69] mx-auto mb-4" />
-              <h1 className="text-4xl font-bold text-white mb-2">Password Reset!</h1>
-              <p className="text-[#AAFF69]">
-                Your password has been successfully reset. You can now log in with your new password.
-              </p>
-            </div>
-
-            <Button
-              onClick={() => router.push("/auth/login")}
-              className="w-full px-8 py-5 bg-white hover:bg-gray-100 text-black border border-gray-300"
-            >
-              Continue to Login
-            </Button>
-          </div>
-        </div>
-        <div className="pb-8 text-center">
-          <div className="flex justify-center space-x-6 text-xs">
-            <Link href="/terms" className="text-gray-500 hover:text-gray-300 transition-colors">
-              Terms and Conditions
-            </Link>
-            <Link href="/privacy" className="text-gray-500 hover:text-gray-300 transition-colors">
-              Privacy Policy
-            </Link>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!isValidLink) {
+  if (isValidLink === false) {
     return (
       <div className="min-h-screen flex flex-col">
         <div className="flex-1 flex items-center justify-center bg-black px-4">
@@ -178,6 +143,59 @@ export default function ResetPasswordPage() {
                 Back to Login
               </Button>
             </div>
+          </div>
+        </div>
+        <div className="pb-8 text-center">
+          <div className="flex justify-center space-x-6 text-xs">
+            <Link href="/terms" className="text-gray-500 hover:text-gray-300 transition-colors">
+              Terms and Conditions
+            </Link>
+            <Link href="/privacy" className="text-gray-500 hover:text-gray-300 transition-colors">
+              Privacy Policy
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show loading while validating
+  if (isValidLink === null) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <div className="flex-1 flex items-center justify-center bg-black px-4">
+          <div className="w-full max-w-sm mx-auto text-center">
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold text-white mb-2">Validating Link...</h1>
+              <p className="text-gray-400">
+                Please wait while we validate your reset link.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (success) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <div className="flex-1 flex items-center justify-center bg-black px-4">
+          <div className="w-full max-w-sm mx-auto text-center">
+            <div className="mb-8">
+              <CheckCircle className="h-16 w-16 text-[#AAFF69] mx-auto mb-4" />
+              <h1 className="text-4xl font-bold text-white mb-2">Password Reset!</h1>
+              <p className="text-[#AAFF69]">
+                Your password has been successfully reset. You can now log in with your new password.
+              </p>
+            </div>
+
+            <Button
+              onClick={() => router.push("/auth/login")}
+              className="w-full px-8 py-5 bg-white hover:bg-gray-100 text-black border border-gray-300"
+            >
+              Continue to Login
+            </Button>
           </div>
         </div>
         <div className="pb-8 text-center">
