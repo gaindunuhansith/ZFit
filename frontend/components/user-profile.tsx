@@ -550,7 +550,7 @@ export function UserProfile({
               </Button>
 
               {resetPasswordMessage && (
-                <p className={`text-sm ${resetPasswordMessage.includes("successfully") ? "text-green-500" : "text-red-600"}`}>
+                <p className={`text-sm ${resetPasswordMessage.includes("successfully") ? "text-[#AAFF69]" : "text-red-600"}`}>
                   {resetPasswordMessage}
                 </p>
               )}

@@ -1,10 +1,12 @@
 import {type Request, type Response, type NextFunction } from "express";
 import { z } from "zod"
 
-import { CREATED, OK, UNAUTHORIZED } from "../constants/http.js";
+import { CREATED, OK, UNAUTHORIZED, NOT_FOUND } from "../constants/http.js";
 import { createAccount, loginUser, logoutUser, refreshAccessToken, resetPassword, sendPasswordResetEmail, verifyEmail } from "../services/auth.service.js";
 import { clearAuthcookies, getAccessTokenCookieOptions, getRefreshCookieOptions, setAuthCookies } from "../util/cookies.js"
 import AppAssert from "../util/AppAssert.js";
+import VerificationCodeModel from "../models/verficationCode.model.js";
+import VerificationCodeType from "../constants/verificationCodeType.js";
 
 export const emailSchema = z.email().min(1).max(255);
 
@@ -144,6 +146,26 @@ export const sendPasswordResetHandler = async (req: Request, res: Response, next
     }
 };
 
+
+export const validateResetCodeHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { code } = req.params;
+
+        const validVerificationCode = await VerificationCodeModel.findOne({
+            _id: code,
+            type: VerificationCodeType.PasswordReset,
+            expiresAt: { $gt: new Date() },
+        });
+
+        if (validVerificationCode) {
+            return res.status(OK).json({ valid: true, message: "Reset code is valid" });
+        } else {
+            return res.status(NOT_FOUND).json({ valid: false, error: "Invalid or expired verification code" });
+        }
+    } catch (error) {
+        next(error);
+    }
+};
 
 export const resetPasswordHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {

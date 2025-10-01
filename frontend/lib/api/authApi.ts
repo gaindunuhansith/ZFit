@@ -27,7 +27,7 @@ const apiRequest = async <T>(
     const data = await response.json()
 
     if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`)
+      throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`)
     }
 
     return data
@@ -44,6 +44,9 @@ export const sendPasswordResetEmail = (email: string) =>
     body: JSON.stringify({ email }),
   })
 
+export const validateResetCode = (code: string) =>
+  apiRequest(`/api/v1/auth/password/validate/${code}`)
+
 export const resetPassword = (password: string, verificationCode: string) =>
   apiRequest('/api/v1/auth/password/reset', {
     method: 'POST',
@@ -53,5 +56,6 @@ export const resetPassword = (password: string, verificationCode: string) =>
 // Combined API service for backward compatibility
 export const authApi = {
   sendPasswordResetEmail,
+  validateResetCode,
   resetPassword,
 }
