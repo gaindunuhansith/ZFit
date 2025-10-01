@@ -11,9 +11,7 @@ import { itemApiService, type Item } from '@/lib/api/itemApi'
 import { cartApi, type Cart } from '@/lib/api/cartApi'
 import { useAuth } from '@/lib/auth-context'
 
-interface StoreItem extends Item {
-  // Store-specific properties if needed
-}
+type StoreItem = Item
 
 export default function MemberStorePage() {
   const [items, setItems] = useState<StoreItem[]>([])

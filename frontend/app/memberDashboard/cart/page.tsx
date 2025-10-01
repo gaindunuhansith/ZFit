@@ -105,7 +105,7 @@ export default function CartPage() {
 
   const getTotalPrice = () => {
     if (!cart?.items) return 0
-    return cart.items.reduce((total, item) => total + (item.itemId.price * item.quantity), 0)
+    return cart.items.reduce((total, item) => total + ((item.itemId.price || 0) * item.quantity), 0)
   }
 
   const handleCheckout = () => {
@@ -116,10 +116,10 @@ export default function CartPage() {
       type: 'cart',
       items: cart.items.map(item => ({
         _id: item.itemId._id,
-        itemName: item.itemId.itemName,
-        price: item.itemId.price,
+        itemName: item.itemId.name,
+        price: item.itemId.price || 0,
         cartQuantity: item.quantity,
-        quantity: item.itemId.quantity
+        quantity: item.itemId.stock || 0
       })),
       totalAmount: getTotalPrice(),
       totalItems: getTotalItems(),
@@ -134,11 +134,17 @@ export default function CartPage() {
   }
 
   const isOutOfStock = (item: CartItem) => {
-    return item.itemId.quantity === 0
+    return (item.itemId.stock || 0) === 0
   }
 
   const getMaxQuantity = (item: CartItem) => {
-    return item.itemId.quantity
+    return item.itemId.stock || 0
+  }
+
+  const getAvailableStock = (item: CartItem) => {
+    const totalStock = item.itemId.stock || 0
+    const currentQuantity = item.quantity || 0
+    return Math.max(0, totalStock - currentQuantity)
   }
 
   if (loading) {
@@ -222,7 +228,7 @@ export default function CartPage() {
             <ShoppingCart className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold mb-2">Your cart is empty</h3>
             <p className="text-muted-foreground text-center mb-6">
-              Browse our supplement store and add items to your cart.
+              Browse our store and add items to your cart.
             </p>
             <Button onClick={() => router.push('/memberDashboard/store')}>
               <Package className="w-4 h-4 mr-2" />
@@ -246,18 +252,21 @@ export default function CartPage() {
                     {/* Item Details */}
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-lg mb-1 truncate">
-                        {item.itemId.itemName}
+                        {item.itemId.name}
                       </h3>
-                      {item.itemId.itemDescription && (
-                        <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                          {item.itemId.itemDescription}
-                        </p>
-                      )}
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="text-xs">
+                          {typeof item.itemId.categoryID === 'object' ? item.itemId.categoryID.name : 'No category'}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          Available: {getAvailableStock(item)} / Total: {item.itemId.stock || 0}
+                        </Badge>
+                      </div>
                       <div className="flex items-center gap-4">
                         <p className="text-lg font-bold text-primary">
-                          LKR {item.itemId.price.toFixed(2)}
+                          LKR {(item.itemId.price || 0).toFixed(2)}
                         </p>
-                        {item.itemId.supplierID && (
+                        {typeof item.itemId.supplierID === 'object' && item.itemId.supplierID && (
                           <Badge variant="secondary" className="text-xs">
                             {item.itemId.supplierID.supplierName}
                           </Badge>
@@ -277,17 +286,19 @@ export default function CartPage() {
                         size="sm"
                         onClick={() => updateItemQuantity(item.itemId._id, item.quantity - 1)}
                         disabled={updating === item.itemId._id || item.quantity <= 1}
+                        title="Decrease quantity"
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
                       <div className="w-12 text-center font-medium">
-                        {item.quantity}
+                        {updating === item.itemId._id ? '...' : item.quantity}
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => updateItemQuantity(item.itemId._id, item.quantity + 1)}
-                        disabled={updating === item.itemId._id || item.quantity >= getMaxQuantity(item)}
+                        disabled={updating === item.itemId._id || item.quantity >= getMaxQuantity(item) || isOutOfStock(item)}
+                        title={`Increase quantity (Max: ${getMaxQuantity(item)})`}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -296,7 +307,7 @@ export default function CartPage() {
                     {/* Item Total & Remove */}
                     <div className="text-right">
                       <p className="text-lg font-bold mb-2">
-                        LKR {(item.itemId.price * item.quantity).toFixed(2)}
+                        LKR {((item.itemId.price || 0) * item.quantity).toFixed(2)}
                       </p>
                       <Button
                         variant="ghost"
