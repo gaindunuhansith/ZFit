@@ -77,7 +77,7 @@ const apiRequest = async <T>(
       }
       error.status = response.status
       throw error
-``    }
+    }
 
     return data
   } catch (error: unknown) {
