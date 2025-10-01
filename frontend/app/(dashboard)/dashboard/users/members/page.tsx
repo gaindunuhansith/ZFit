@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -13,7 +14,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Plus, Edit, Trash2, User, Download, Search } from 'lucide-react'
+import { Plus, Edit, Trash2, User, Download, Search, Eye } from 'lucide-react'
 import { apiService } from '@/lib/api/userApi'
 import type { MemberData } from '@/lib/api/userApi'
 import { UserFormModal, UserFormData, UpdateUserFormData } from '@/components/UserFormModal'
@@ -41,6 +42,7 @@ export default function MembersPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const router = useRouter()
 
   useEffect(() => {
     fetchMembers()
@@ -79,6 +81,10 @@ export default function MembersPage() {
   const handleEditMember = (member: Member) => {
     setEditingMember(member)
     setModalOpen(true)
+  }
+
+  const handleViewMember = (member: Member) => {
+    router.push(`/dashboard/users/members/${member._id}`)
   }
 
   const handleAddMember = () => {
@@ -256,6 +262,13 @@ export default function MembersPage() {
                   <TableCell>{new Date(member.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewMember(member)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
