@@ -4,7 +4,6 @@ import mongoose from 'mongoose';
 import BankTransferPayment from '../models/bankTransfer.model.js';
 import type { IBankTransferPayment } from '../models/bankTransfer.model.js';
 import { uploadReceiptImage } from '../services/fileUpload.service.js';
- feature/payment-management-email
 import { sendBankTransferApprovalEmail, sendBankTransferDeclineEmail } from '../util/sendMail.util.js';
 
 import {

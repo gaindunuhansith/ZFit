@@ -16,15 +16,20 @@ import { Input } from '@/components/ui/input'
 import { Plus, Edit, Trash2, Package2, Search, FileText } from 'lucide-react'
 import { itemApiService } from '@/lib/api/itemApi'
 import { supplierApiService } from '@/lib/api/supplierApi'
+import { categoryApiService } from '@/lib/api/categoryApi'
 import { generateInvoicesReport } from '@/lib/api/reportApi'
 import type { ItemData } from '@/lib/api/itemApi'
+import type { Category } from '@/lib/api/categoryApi'
 import { ItemFormModal, ItemFormData, UpdateItemFormData } from '@/components/ItemFormModal'
 
 interface Item {
   _id: string
   itemName: string
   itemDescription: string
-  categoryID: string
+  categoryID: {
+    _id: string
+    name: string
+  } | string // Can be populated or just ID
   quantity: number
   price?: number
   supplierID: {
@@ -46,6 +51,7 @@ interface Supplier {
 export default function ItemsPage() {
   const [items, setItems] = useState<Item[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -55,7 +61,8 @@ export default function ItemsPage() {
   useEffect(() => {
     Promise.all([
       fetchItems(),
-      fetchSuppliers()
+      fetchSuppliers(),
+      fetchCategories()
     ])
   }, [])
 
@@ -90,10 +97,26 @@ export default function ItemsPage() {
     }
   }
 
+  const fetchCategories = async () => {
+    try {
+      console.log('Fetching categories...')
+      const response = await categoryApiService.getCategories()
+      console.log('Categories response:', response)
+      setCategories(response.data as Category[])
+      console.log('Categories set:', response.data)
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+    }
+  }
+
   const handleAddItem = () => {
-    console.log('Add item clicked. Suppliers available:', suppliers.length)
+    console.log('Add item clicked. Suppliers available:', suppliers.length, 'Categories available:', categories.length)
     if (suppliers.length === 0) {
       setError('Please create at least one supplier before adding items')
+      return
+    }
+    if (categories.length === 0) {
+      setError('Please create at least one category before adding items')
       return
     }
     setEditingItem(null)
@@ -182,11 +205,14 @@ export default function ItemsPage() {
   const filteredItems = items.filter(item => {
     const searchLower = searchTerm.toLowerCase()
     const supplierName = item.supplierID?.supplierName || ''
+    const categoryName = typeof item.categoryID === 'object' 
+      ? item.categoryID.name 
+      : item.categoryID || ''
     
     return (
       item.itemName.toLowerCase().includes(searchLower) ||
       item.itemDescription.toLowerCase().includes(searchLower) ||
-      item.categoryID.toLowerCase().includes(searchLower) ||
+      categoryName.toLowerCase().includes(searchLower) ||
       supplierName.toLowerCase().includes(searchLower) ||
       item.maintenanceStatus.toLowerCase().includes(searchLower)
     )
@@ -333,7 +359,9 @@ export default function ItemsPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {item.categoryID || 'No Category'}
+                    {typeof item.categoryID === 'object' 
+                      ? item.categoryID.name 
+                      : item.categoryID || 'No Category'}
                   </TableCell>
                   <TableCell>
                     {item.supplierID && typeof item.supplierID === 'object' 
@@ -403,10 +431,13 @@ export default function ItemsPage() {
         onClose={() => setModalOpen(false)}
         onSubmit={handleModalSubmit}
         suppliers={suppliers}
+        categories={categories}
         initialData={editingItem ? {
           itemName: editingItem.itemName,
           itemDescription: editingItem.itemDescription,
-          categoryID: editingItem.categoryID,
+          categoryID: typeof editingItem.categoryID === 'object' 
+            ? editingItem.categoryID._id 
+            : editingItem.categoryID || '',
           quantity: editingItem.quantity,
           price: editingItem.price,
           supplierID: editingItem.supplierID && typeof editingItem.supplierID === 'object' 

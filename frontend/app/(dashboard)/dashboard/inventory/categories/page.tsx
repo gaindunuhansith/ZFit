@@ -13,16 +13,8 @@ import {
 } from '@/components/ui/table'
 import { Plus, Edit, Trash2, Package } from 'lucide-react'
 import { categoryApiService } from '@/lib/api/categoryApi'
-import type { CategoryData } from '@/lib/api/categoryApi'
+import type { CategoryData, Category } from '@/lib/api/categoryApi'
 import { CategoryFormModal, CategoryFormData, UpdateCategoryFormData } from '@/components/CategoryFormModal'
-
-interface Category {
-  _id: string
-  categoryName: string
-  categoryDescription: string
-  createdAt: string
-  updatedAt?: string
-}
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([])
@@ -64,9 +56,22 @@ export default function CategoriesPage() {
     try {
       await categoryApiService.deleteCategory(categoryId)
       setCategories(categories.filter(category => category._id !== categoryId))
-    } catch (error) {
+      setError('') // Clear any previous errors on success
+    } catch (error: any) {
       console.error('Error deleting category:', error)
-      setError('Failed to delete category')
+      
+      // Try to extract the error message from the API response
+      let errorMessage = 'Failed to delete category'
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      setError(errorMessage)
     }
   }
 
@@ -151,8 +156,8 @@ export default function CategoriesPage() {
             <TableBody>
               {categories.map((category) => (
                 <TableRow key={category._id}>
-                  <TableCell className="font-medium">{category.categoryName}</TableCell>
-                  <TableCell>{category.categoryDescription}</TableCell>
+                  <TableCell className="font-medium">{category.name}</TableCell>
+                  <TableCell>{category.description || 'No description'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button
@@ -192,8 +197,8 @@ export default function CategoriesPage() {
         onClose={() => setModalOpen(false)}
         onSubmit={handleModalSubmit}
         initialData={editingCategory ? {
-          categoryName: editingCategory.categoryName,
-          categoryDescription: editingCategory.categoryDescription,
+          name: editingCategory.name,
+          description: editingCategory.description,
         } : undefined}
         mode={editingCategory ? 'edit' : 'add'}
         title={editingCategory ? 'Edit Category' : 'Add New Category'}

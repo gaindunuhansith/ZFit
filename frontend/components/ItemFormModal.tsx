@@ -32,8 +32,7 @@ const createItemFormSchema = z.object({
     .min(5, "Item description must be at least 5 characters long")
     .max(200, "Item description must be at most 200 characters long"),
   categoryID: z.string()
-    .min(1, "Category is required")
-    .max(50, "Category must be at most 50 characters long"),
+    .min(1, "Category is required"),
   quantity: z.number()
     .min(0, "Quantity must be 0 or greater"),
   price: z.number()
@@ -58,7 +57,6 @@ const updateItemFormSchema = z.object({
     .optional(),
   categoryID: z.string()
     .min(1, "Category is required")
-    .max(50, "Category must be at most 50 characters long")
     .optional(),
   quantity: z.number()
     .min(0, "Quantity must be 0 or greater")
@@ -89,6 +87,7 @@ interface ItemFormModalProps {
   mode: 'add' | 'edit'
   title: string
   suppliers: Array<{ _id: string; supplierName: string }>
+  categories: Array<{ _id: string; name: string }>
 }
 
 export function ItemFormModal({
@@ -99,6 +98,7 @@ export function ItemFormModal({
   mode,
   title,
   suppliers,
+  categories,
 }: ItemFormModalProps) {
   type FormDataType = ItemFormData | UpdateItemFormData
 
@@ -263,14 +263,21 @@ export function ItemFormModal({
                 Category *
               </Label>
               <div className="col-span-3">
-                <Input
-                  id="categoryID"
-                  type="text"
-                  placeholder="e.g. Supplements, Equipment, Nutrition, etc."
+                <Select
                   value={(formData as ItemFormData).categoryID || ''}
-                  onChange={(e) => handleInputChange('categoryID', e.target.value)}
-                  className={errors.categoryID ? 'border-red-500' : ''}
-                />
+                  onValueChange={(value: string) => handleInputChange('categoryID', value)}
+                >
+                  <SelectTrigger className={errors.categoryID ? 'border-red-500' : ''}>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category._id} value={category._id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {errors.categoryID && (
                   <p className="text-sm text-red-500 mt-1">{errors.categoryID}</p>
                 )}
