@@ -17,40 +17,30 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+  const [isValidLink, setIsValidLink] = useState<boolean | null>(null) // null = checking, true = valid, false = invalid
 
   const router = useRouter()
   const searchParams = useSearchParams()
   const code = searchParams.get('code')
-  const exp = searchParams.get('exp')
 
   useEffect(() => {
-    // Check if the link is valid (not expired)
-    if (exp) {
-      const expiryTime = parseInt(exp)
-      const now = Date.now()
-      if (now > expiryTime) {
-        setError("Invalid or expired password reset link. Please request a new one.")
-      }
-    }
-
-    if (!code) {
-      setError("Invalid or expired password reset link. Please request a new one.")
-    }
-
-    // Validate the reset code with the backend
+    // Validate the reset code with the backend first
     if (code) {
       const validateCode = async () => {
         try {
+          setIsValidLink(null) // checking
           await authApi.validateResetCode(code)
-          // If no error, the code is valid
-        } catch (error) {
-          console.error("Code validation error:", error)
-          setError("Invalid or expired password reset link. Please request a new one.")
+          setIsValidLink(true) // valid
+        } catch {
+          // Don't log to console, just mark as invalid
+          setIsValidLink(false) // invalid
         }
       }
       validateCode()
+    } else {
+      setIsValidLink(false)
     }
-  }, [code, exp])
+  }, [code])
 
   const validatePassword = (password: string) => {
     const minLength = password.length >= 8
@@ -123,6 +113,68 @@ export default function ResetPasswordPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (isValidLink === false) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <div className="flex-1 flex items-center justify-center bg-black px-4">
+          <div className="w-full max-w-sm mx-auto text-center">
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold text-white mb-2">Link Expired</h1>
+              <p className="text-gray-400">
+                This password reset link is no longer valid. Please request a new one.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <Button
+                onClick={() => router.push("/auth/forgot-password")}
+                className="w-full px-8 py-5 bg-white hover:bg-gray-100 text-black border border-gray-300"
+              >
+                Request New Reset Link
+              </Button>
+
+              <Button
+                onClick={() => router.push("/auth/login")}
+                variant="outline"
+                className="w-full px-8 py-5 border-gray-600 text-gray-300 hover:bg-gray-800"
+              >
+                Back to Login
+              </Button>
+            </div>
+          </div>
+        </div>
+        <div className="pb-8 text-center">
+          <div className="flex justify-center space-x-6 text-xs">
+            <Link href="/terms" className="text-gray-500 hover:text-gray-300 transition-colors">
+              Terms and Conditions
+            </Link>
+            <Link href="/privacy" className="text-gray-500 hover:text-gray-300 transition-colors">
+              Privacy Policy
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show loading while validating
+  if (isValidLink === null) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <div className="flex-1 flex items-center justify-center bg-black px-4">
+          <div className="w-full max-w-sm mx-auto text-center">
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold text-white mb-2">Validating Link...</h1>
+              <p className="text-gray-400">
+                Please wait while we validate your reset link.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (success) {

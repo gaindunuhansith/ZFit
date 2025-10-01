@@ -44,8 +44,27 @@ export const sendPasswordResetEmail = (email: string) =>
     body: JSON.stringify({ email }),
   })
 
-export const validateResetCode = (code: string) =>
-  apiRequest(`/api/v1/auth/password/validate/${code}`)
+export const validateResetCode = async (code: string) => {
+  const url = `${API_BASE_URL}/api/v1/auth/password/validate/${code}`
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`)
+    }
+
+    return data
+  } catch (error) {
+    // Don't log validation errors to console as invalid codes are expected
+    throw error
+  }
+}
 
 export const resetPassword = (password: string, verificationCode: string) =>
   apiRequest('/api/v1/auth/password/reset', {
