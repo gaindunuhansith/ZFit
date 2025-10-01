@@ -39,7 +39,7 @@ const apiRequest = async <T>(
 
 // Auth API functions
 export const sendPasswordResetEmail = (email: string) =>
-  apiRequest('/api/v1/auth/password/forget', {
+  apiRequest('/api/v1/auth/password/forgot', {
     method: 'POST',
     body: JSON.stringify({ email }),
   })
