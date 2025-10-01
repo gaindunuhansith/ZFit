@@ -3,6 +3,7 @@ import { z } from 'zod';
 import mongoose from 'mongoose';
 import BankTransferPayment from '../models/bankTransfer.model.js';
 import { uploadReceiptImage } from '../services/fileUpload.service.js';
+import { sendBankTransferApprovalEmail, sendBankTransferDeclineEmail } from '../util/sendMail.util.js';
 
 // Extend Request interface for multer
 declare global {
@@ -206,6 +207,12 @@ export const approveBankTransfer = async (req: Request, res: Response) => {
             });
         }
 
+        // Populate user and membership data for email
+        await payment.populate([
+            { path: 'userId', select: 'name email contactNo' },
+            { path: 'membershipId', select: 'name price' }
+        ]);
+
         // Update payment status
         payment.status = 'approved';
         if (adminNotes) {
@@ -215,6 +222,35 @@ export const approveBankTransfer = async (req: Request, res: Response) => {
         payment.processedAt = new Date();
 
         await payment.save();
+
+        // Send approval email notification
+        try {
+            const userData = payment.userId as any;
+            const membershipData = payment.membershipId as any;
+            
+            if (userData?.email) {
+                await sendBankTransferApprovalEmail(userData.email, {
+                    userName: userData.name || 'Customer',
+                    membershipName: membershipData?.name || 'Membership',
+                    amount: payment.amount,
+                    currency: payment.currency,
+                    transactionId: (payment._id as mongoose.Types.ObjectId).toString(),
+                    approvedDate: new Date().toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }),
+                    adminNotes: adminNotes || undefined
+                });
+                
+                console.log(`Approval email sent to ${userData.email} for bank transfer ${payment._id}`);
+            }
+        } catch (emailError) {
+            console.error('Failed to send approval email:', emailError);
+            // Don't fail the approval if email fails - log the error instead
+        }
 
         // TODO: Create actual payment record and activate membership
         // This would involve creating a Payment record and updating membership status
@@ -266,6 +302,12 @@ export const declineBankTransfer = async (req: Request, res: Response) => {
             });
         }
 
+        // Populate user and membership data for email
+        await payment.populate([
+            { path: 'userId', select: 'name email contactNo' },
+            { path: 'membershipId', select: 'name price' }
+        ]);
+
         // Update payment status
         payment.status = 'declined';
         if (adminNotes) {
@@ -275,6 +317,35 @@ export const declineBankTransfer = async (req: Request, res: Response) => {
         payment.processedAt = new Date();
 
         await payment.save();
+
+        // Send decline email notification
+        try {
+            const userData = payment.userId as any;
+            const membershipData = payment.membershipId as any;
+            
+            if (userData?.email) {
+                await sendBankTransferDeclineEmail(userData.email, {
+                    userName: userData.name || 'Customer',
+                    membershipName: membershipData?.name || 'Membership',
+                    amount: payment.amount,
+                    currency: payment.currency,
+                    transactionId: (payment._id as mongoose.Types.ObjectId).toString(),
+                    approvedDate: new Date().toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }),
+                    adminNotes: adminNotes || undefined
+                });
+                
+                console.log(`Decline email sent to ${userData.email} for bank transfer ${payment._id}`);
+            }
+        } catch (emailError) {
+            console.error('Failed to send decline email:', emailError);
+            // Don't fail the decline if email fails - log the error instead
+        }
 
         res.status(200).json({
             success: true,
