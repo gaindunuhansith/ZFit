@@ -138,6 +138,10 @@ const data = {
           title: "Progress Overview",
           url: "/dashboard/tracking/progress",
         },
+        {
+          title: "Reports",
+          url: "/dashboard/tracking/reports",
+        },
       ],
     },
     {

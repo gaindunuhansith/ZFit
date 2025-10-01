@@ -39,6 +39,7 @@ export default function NutritionTrackingPage() {
     notes: "",
     date: new Date().toISOString().split('T')[0]
   })
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (user?._id) {
@@ -60,8 +61,61 @@ export default function NutritionTrackingPage() {
     }
   }
 
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {}
+    
+    if (!formData.mealType) {
+      errors.mealType = "Meal type is required"
+    }
+    
+    if (formData.calories < 0) {
+      errors.calories = "Calories cannot be negative"
+    } else if (formData.calories > 10000) {
+      errors.calories = "Calories cannot exceed 10,000"
+    }
+    
+    if (formData.macros) {
+      if (formData.macros.protein && (formData.macros.protein < 0 || formData.macros.protein > 1000)) {
+        errors.protein = "Protein must be between 0 and 1000g"
+      }
+      if (formData.macros.carbs && (formData.macros.carbs < 0 || formData.macros.carbs > 1000)) {
+        errors.carbs = "Carbs must be between 0 and 1000g"
+      }
+      if (formData.macros.fats && (formData.macros.fats < 0 || formData.macros.fats > 1000)) {
+        errors.fats = "Fats must be between 0 and 1000g"
+      }
+    }
+    
+    if (formData.notes && formData.notes.length > 500) {
+      errors.notes = "Notes cannot exceed 500 characters"
+    }
+    
+    if (!formData.date) {
+      errors.date = "Date is required"
+    } else {
+      const selectedDate = new Date(formData.date)
+      const today = new Date()
+      const oneYearAgo = new Date()
+      oneYearAgo.setFullYear(today.getFullYear() - 1)
+      
+      if (selectedDate > today) {
+        errors.date = "Date cannot be in the future"
+      } else if (selectedDate < oneYearAgo) {
+        errors.date = "Date cannot be more than 1 year ago"
+      }
+    }
+    
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!validateForm()) {
+      return
+    }
+    
     try {
       if (editingNutrition) {
         await trackingApi.updateNutrition(editingNutrition._id, formData)
@@ -117,6 +171,8 @@ export default function NutritionTrackingPage() {
       notes: "",
       date: new Date().toISOString().split('T')[0]
     })
+    setFormErrors({})
+    setEditingNutrition(null)
   }
 
   const filteredNutrition = nutrition.filter(entry =>

@@ -196,6 +196,25 @@ export const getProgress = (memberId?: string) => {
   return apiRequest<Progress[]>(endpoint)
 }
 
+// Report API functions
+export const generateReport = (params: {
+  memberId?: string
+  type: 'daily' | 'weekly' | 'monthly' | 'yearly'
+  format: 'pdf' | 'excel'
+  startDate?: string
+  endDate?: string
+}) => {
+  const queryParams = new URLSearchParams()
+  if (params.memberId) queryParams.append('memberId', params.memberId)
+  queryParams.append('type', params.type)
+  queryParams.append('format', params.format)
+  if (params.startDate) queryParams.append('startDate', params.startDate)
+  if (params.endDate) queryParams.append('endDate', params.endDate)
+  
+  const endpoint = `/reports/tracking?${queryParams.toString()}`
+  return apiRequest<Blob>(endpoint, { responseType: 'blob' })
+}
+
 export const getProgressById = (id: string) => apiRequest<Progress>(`/progress/${id}`)
 
 export const createProgress = (progressData: ProgressData) =>

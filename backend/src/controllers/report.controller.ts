@@ -1,162 +1,118 @@
-import type { Request, Response, NextFunction } from 'express'
-import { generateMembershipsReport, generateMembershipPlansReport, generateMembersReport, generateStaffReport, generateManagersReport } from '../services/report.service.js'
+import type { Request, Response, NextFunction } from "express";
+import { z } from "zod";
+import mongoose from "mongoose";
+import * as WorkoutService from "../services/workout.service.js";
+import * as NutritionService from "../services/nutrition.service.js";
+import * as GoalService from "../services/goal.service.js";
+import * as ProgressService from "../services/progress.service.js";
 
-export const generateMembershipsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
+const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/);
+
+const reportQuerySchema = z.object({
+  memberId: objectId.optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  format: z.enum(['pdf', 'excel']).default('pdf'),
+  type: z.enum(['daily', 'weekly', 'monthly', 'yearly']).default('daily')
+});
+
+export const generateTrackingReport = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const pdfBuffer = await generateMembershipsReport()
+    const { memberId, startDate, endDate, format, type } = reportQuerySchema.parse(req.query);
+    
+    // Set date range based on type
+    const now = new Date();
+    let start: Date, end: Date;
+    
+    switch (type) {
+      case 'daily':
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
+        break;
+      case 'weekly':
+        const dayOfWeek = now.getDay();
+        start = new Date(now.getTime() - dayOfWeek * 24 * 60 * 60 * 1000);
+        start.setHours(0, 0, 0, 0);
+        end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+        break;
+      case 'monthly':
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        break;
+      case 'yearly':
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        break;
+      default:
+        start = new Date(startDate || now);
+        end = new Date(endDate || now);
+    }
 
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=memberships-report.pdf')
-    res.setHeader('Content-Length', pdfBuffer.length)
+    // Fetch data
+    const [workouts, nutrition, goals, progress] = await Promise.all([
+      memberId 
+        ? WorkoutService.getWorkoutsByMember(memberId)
+        : WorkoutService.getAllWorkouts(),
+      memberId 
+        ? NutritionService.getNutritionByMember(memberId)
+        : NutritionService.getAllNutrition(),
+      memberId 
+        ? GoalService.getGoalsByMember(memberId)
+        : GoalService.getAllGoals(),
+      memberId 
+        ? ProgressService.getProgressByMember(memberId)
+        : ProgressService.getAllProgress()
+    ]);
 
-    res.send(pdfBuffer)
-  } catch (error) {
-    next(error)
+    // Filter data by date range
+    const filteredWorkouts = workouts.filter(w => {
+      const workoutDate = new Date(w.date);
+      return workoutDate >= start && workoutDate <= end;
+    });
+
+    const filteredNutrition = nutrition.filter(n => {
+      const nutritionDate = new Date(n.date);
+      return nutritionDate >= start && nutritionDate <= end;
+    });
+
+    const filteredGoals = goals.filter(g => {
+      if (g.deadline) {
+        const goalDate = new Date(g.deadline);
+        return goalDate >= start && goalDate <= end;
+      }
+      return true;
+    });
+
+    const filteredProgress = progress.filter(p => {
+      const progressDate = new Date(p.date);
+      return progressDate >= start && progressDate <= end;
+    });
+
+    // Prepare report data
+    const reportData = {
+      type,
+      startDate: start,
+      endDate: end,
+      memberId,
+      summary: {
+        totalWorkouts: filteredWorkouts.length,
+        totalCalories: filteredNutrition.reduce((sum, n) => sum + n.calories, 0),
+        totalGoals: filteredGoals.length,
+        completedGoals: filteredGoals.filter(g => g.deadline && new Date(g.deadline) <= now).length,
+        averageWorkoutsPerDay: filteredWorkouts.length / Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)))
+      },
+      data: {
+        workouts: filteredWorkouts,
+        nutrition: filteredNutrition,
+        goals: filteredGoals,
+        progress: filteredProgress
+      }
+    };
+
+    // For now, return JSON data (PDF/Excel generation will be added later)
+    res.status(200).json({ success: true, data: reportData });
+
+  } catch (err) {
+    next(err);
   }
-}
-
-export const generateMembershipPlansReportHandler = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const pdfBuffer = await generateMembershipPlansReport()
-
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=membership-plans-report.pdf')
-    res.setHeader('Content-Length', pdfBuffer.length)
-
-    res.send(pdfBuffer)
-  } catch (error) {
-    next(error)
-  }
-}
-
-export const generateMembersReportHandler = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const pdfBuffer = await generateMembersReport()
-
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=members-report.pdf')
-    res.setHeader('Content-Length', pdfBuffer.length)
-
-    res.send(pdfBuffer)
-  } catch (error) {
-    next(error)
-  }
-}
-
-export const generateStaffReportHandler = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const pdfBuffer = await generateStaffReport()
-
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=staff-report.pdf')
-    res.setHeader('Content-Length', pdfBuffer.length)
-
-    res.send(pdfBuffer)
-  } catch (error) {
-    next(error)
-  }
-}
-
-export const generateManagersReportHandler = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const pdfBuffer = await generateManagersReport()
-
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=managers-report.pdf')
-    res.setHeader('Content-Length', pdfBuffer.length)
-
-    res.send(pdfBuffer)
-  } catch (error) {
-    next(error)
-  }
-}
-
-export const generateInventoryItemsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { generateInventoryItemsReport } = await import('../services/report.service.js')
-    const pdfBuffer = await generateInventoryItemsReport()
-
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=inventory-items-report.pdf')
-    res.setHeader('Content-Length', pdfBuffer.length)
-
-    res.send(pdfBuffer)
-  } catch (error) {
-    next(error)
-  }
-}
-
-export const generateStockLevelsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { generateStockLevelsReport } = await import('../services/report.service.js')
-    const pdfBuffer = await generateStockLevelsReport()
-
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=stock-levels-report.pdf')
-    res.setHeader('Content-Length', pdfBuffer.length)
-
-    res.send(pdfBuffer)
-  } catch (error) {
-    next(error)
-  }
-}
-
-export const generateSuppliersReportHandler = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { generateSuppliersReport } = await import('../services/report.service.js')
-    const pdfBuffer = await generateSuppliersReport()
-
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=suppliers-report.pdf')
-    res.setHeader('Content-Length', pdfBuffer.length)
-
-    res.send(pdfBuffer)
-  } catch (error) {
-    next(error)
-  }
-}
-
-export const generateInvoicesReportHandler = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { generateInvoicesReport } = await import('../services/report.service.js')
-    const pdfBuffer = await generateInvoicesReport()
-
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=invoices-report.pdf')
-    res.setHeader('Content-Length', pdfBuffer.length)
-
-    res.send(pdfBuffer)
-  } catch (error) {
-    next(error)
-  }
-}
-
-export const generatePaymentsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { generatePaymentsReport } = await import('../services/report.service.js')
-    const pdfBuffer = await generatePaymentsReport()
-
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=payments-report.pdf')
-    res.setHeader('Content-Length', pdfBuffer.length)
-
-    res.send(pdfBuffer)
-  } catch (error) {
-    next(error)
-  }
-}
-
-export const generateRefundsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { generateRefundsReport } = await import('../services/report.service.js')
-    const pdfBuffer = await generateRefundsReport()
-
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=refunds-report.pdf')
-    res.setHeader('Content-Length', pdfBuffer.length)
-
-    res.send(pdfBuffer)
-  } catch (error) {
-    next(error)
-  }
-}
+};
