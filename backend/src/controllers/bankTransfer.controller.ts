@@ -4,7 +4,6 @@ import mongoose from 'mongoose';
 import BankTransferPayment from '../models/bankTransfer.model.js';
 import type { IBankTransferPayment } from '../models/bankTransfer.model.js';
 import { uploadReceiptImage } from '../services/fileUpload.service.js';
- feature/payment-management-email
 import { sendBankTransferApprovalEmail, sendBankTransferDeclineEmail } from '../util/sendMail.util.js';
 
 import {
@@ -205,7 +204,7 @@ export const approveBankTransfer = async (req: Request, res: Response) => {
             });
         }
 
-feature/payment-management-email
+
         if (payment.status !== 'pending') {
             return res.status(400).json({
                 success: false,
@@ -304,7 +303,6 @@ export const declineBankTransfer = async (req: Request, res: Response) => {
             });
         }
 
- feature/payment-management-email
         if (payment.status !== 'pending') {
             return res.status(400).json({
                 success: false,
