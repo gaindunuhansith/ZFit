@@ -1,20 +1,37 @@
 import mongoose, { Document } from "mongoose";
 
 export interface ICategory extends Document {
-    categoryName: string;
-    categoryDescription: string;
+    name: string;
+    description?: string;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 const categorySchema = new mongoose.Schema<ICategory>({
-    categoryName: {
+    name: {
         type: String,
-        required: true
+        required: [true, 'Category name is required'],
+        unique: true,
+        trim: true,
+        maxlength: [50, 'Category name cannot exceed 50 characters']
     },
-    categoryDescription: {
+    description: {
         type: String,
-        required: true
+        trim: true,
+        maxlength: [200, 'Description cannot exceed 200 characters']
     },
+    isActive: {
+        type: Boolean,
+        default: true
+    }
+}, {
+    timestamps: true
 });
+
+// Add index for better performance
+categorySchema.index({ name: 1 });
+categorySchema.index({ isActive: 1 });
 
 const Category = mongoose.model<ICategory>("Category", categorySchema);
 

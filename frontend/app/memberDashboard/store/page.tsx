@@ -7,30 +7,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ShoppingCart, Search, Package, Store } from 'lucide-react'
-import { itemApiService } from '@/lib/api/itemApi'
+import { itemApiService, type Item } from '@/lib/api/itemApi'
 import { cartApi, type Cart } from '@/lib/api/cartApi'
 import { useAuth } from '@/lib/auth-context'
-import { SupplementCard } from '@/components/SupplementCard'
 
-interface SupplementItem {
-  _id: string
-  itemName: string
-  itemDescription: string
-  categoryID: string
-  quantity: number
-  price?: number
-  supplierID: {
-    _id: string
-    supplierName: string
-  } | null
-  lowStockThreshold: number
-  maintenanceStatus: "good" | "maintenance_required" | "under_repair"
-  lastMaintenanceDate?: string
-  createdAt: string
+interface StoreItem extends Item {
+  // Store-specific properties if needed
 }
 
 export default function MemberStorePage() {
-  const [supplements, setSupplements] = useState<SupplementItem[]>([])
+  const [items, setItems] = useState<StoreItem[]>([])
   const [cart, setCart] = useState<Cart | null>(null)
   const [loading, setLoading] = useState(true)
   const [cartLoading, setCartLoading] = useState(false)
@@ -40,21 +26,21 @@ export default function MemberStorePage() {
   const router = useRouter()
   const { user } = useAuth()
 
-  const fetchSupplements = async () => {
+  const fetchItems = async () => {
     try {
       setLoading(true)
       const response = await itemApiService.getItems()
       
-      // Filter only supplements (case-insensitive)
-      const allItems = response.data as SupplementItem[]
-      const supplementItems = allItems.filter(item => 
-        item.categoryID && item.categoryID.toLowerCase().includes('supplement')
+      // Filter only sellable items
+      const allItems = response.data as StoreItem[]
+      const sellableItems = allItems.filter(item => 
+        item.type === 'sellable' && item.isActive && item.stock && item.stock > 0
       )
       
-      setSupplements(supplementItems)
+      setItems(sellableItems)
     } catch (error) {
-      console.error('Error fetching supplements:', error)
-      setError('Failed to load supplements')
+      console.error('Error fetching items:', error)
+      setError('Failed to load store items')
     } finally {
       setLoading(false)
     }
@@ -73,7 +59,7 @@ export default function MemberStorePage() {
   }, [user?._id])
 
   useEffect(() => {
-    fetchSupplements()
+    fetchItems()
   }, [])
 
   useEffect(() => {
@@ -82,32 +68,32 @@ export default function MemberStorePage() {
     }
   }, [user?._id, fetchCart])
 
-  // Filter supplements based on search term
-  const filteredSupplements = supplements.filter(supplement => {
+  // Filter items based on search term
+  const filteredItems = items.filter(item => {
     const searchLower = searchTerm.toLowerCase()
-    const supplierName = supplement.supplierID?.supplierName || ''
-    const itemName = supplement.itemName || ''
-    const itemDescription = supplement.itemDescription || ''
+    const supplierName = typeof item.supplierID === 'object' ? item.supplierID?.supplierName || '' : ''
+    const categoryName = typeof item.categoryID === 'object' ? item.categoryID?.name || '' : ''
     
     return (
-      itemName.toLowerCase().includes(searchLower) ||
-      itemDescription.toLowerCase().includes(searchLower) ||
-      supplierName.toLowerCase().includes(searchLower)
+      item.name.toLowerCase().includes(searchLower) ||
+      supplierName.toLowerCase().includes(searchLower) ||
+      categoryName.toLowerCase().includes(searchLower)
     )
   })
 
-  const addToCart = async (supplement: SupplementItem) => {
+  const addToCart = async (item: StoreItem) => {
     if (!user?._id) return
     
     try {
       setCartLoading(true)
       await cartApi.addToCart({
         memberId: user._id,
-        itemId: supplement._id,
+        itemId: item._id,
         quantity: 1
       })
       // Refresh cart after adding
       await fetchCart()
+      console.log('Cart updated after adding item')
     } catch (error) {
       console.error('Error adding to cart:', error)
       setError('Failed to add item to cart')
@@ -116,26 +102,27 @@ export default function MemberStorePage() {
     }
   }
 
-  const removeFromCart = async (supplementId: string) => {
+  const removeFromCart = async (itemId: string) => {
     if (!user?._id || !cart) return
     
     try {
       setCartLoading(true)
       
       // Find the item in cart to determine current quantity
-      const cartItem = cart.items.find(item => item.itemId._id === supplementId)
+      const cartItem = cart.items.find(item => item.itemId._id === itemId)
       if (!cartItem) return
       
       if (cartItem.quantity > 1) {
         // Update quantity if more than 1
-        await cartApi.updateCartItem(user._id, supplementId, { quantity: cartItem.quantity - 1 })
+        await cartApi.updateCartItem(user._id, itemId, { quantity: cartItem.quantity - 1 })
       } else {
         // Remove item completely if quantity is 1
-        await cartApi.removeCartItem(user._id, supplementId)
+        await cartApi.removeCartItem(user._id, itemId)
       }
       
       // Refresh cart after removing/updating
       await fetchCart()
+      console.log('Cart updated after removing item')
     } catch (error) {
       console.error('Error removing from cart:', error)
       setError('Failed to remove item from cart')
@@ -144,9 +131,9 @@ export default function MemberStorePage() {
     }
   }
 
-  const getCartQuantity = (supplementId: string) => {
+  const getCartQuantity = (itemId: string) => {
     if (!cart?.items) return 0
-    const cartItem = cart.items.find(item => item.itemId._id === supplementId)
+    const cartItem = cart.items.find(item => item.itemId._id === itemId)
     return cartItem ? cartItem.quantity : 0
   }
 
@@ -160,9 +147,9 @@ export default function MemberStorePage() {
     return cart.items.reduce((total, item) => total + (item.itemId.price || 0) * item.quantity, 0)
   }
 
-  const getAvailableQuantity = (supplement: SupplementItem) => {
-    const cartQuantity = getCartQuantity(supplement._id)
-    return supplement.quantity - cartQuantity
+  const getAvailableQuantity = (item: StoreItem) => {
+    const cartQuantity = getCartQuantity(item._id)
+    return (item.stock || 0) - cartQuantity
   }
 
   if (loading) {
@@ -170,15 +157,15 @@ export default function MemberStorePage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">Supplement Store</h2>
-            <p className="text-muted-foreground">Browse and purchase supplements</p>
+            <h2 className="text-3xl font-bold tracking-tight">Store</h2>
+            <p className="text-muted-foreground">Browse and purchase sellable items</p>
           </div>
         </div>
         <Card>
           <CardContent className="flex items-center justify-center py-8">
             <div className="text-center">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p>Loading supplements...</p>
+              <p>Loading items...</p>
             </div>
           </CardContent>
         </Card>
@@ -191,8 +178,8 @@ export default function MemberStorePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Supplement Store</h2>
-          <p className="text-muted-foreground">Browse and purchase supplements</p>
+          <h2 className="text-3xl font-bold tracking-tight">Store</h2>
+          <p className="text-muted-foreground">Browse and purchase sellable items</p>
         </div>
         
         {/* Cart Button */}
@@ -232,7 +219,7 @@ export default function MemberStorePage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
-            placeholder="Search supplements..."
+            placeholder="Search items..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -240,33 +227,98 @@ export default function MemberStorePage() {
         </div>
       </div>
 
-      {/* Supplements Grid */}
+      {/* Items Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filteredSupplements.map((supplement) => (
-          <SupplementCard
-            key={supplement._id}
-            supplement={supplement}
-            cartQuantity={getCartQuantity(supplement._id)}
-            availableQuantity={getAvailableQuantity(supplement)}
-            onAddToCart={addToCart}
-            onRemoveFromCart={removeFromCart}
-          />
+        {filteredItems.map((item) => (
+          <Card key={item._id} className="overflow-hidden">
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                {/* Item Info */}
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">{item.name}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {typeof item.categoryID === 'object' ? item.categoryID.name : 'No category'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Available: {getAvailableQuantity(item)} / {item.stock || 0}
+                  </p>
+                </div>
+                
+                {/* Price */}
+                <div className="text-xl font-bold text-primary">
+                  LKR {item.price?.toFixed(2) || '0.00'}
+                </div>
+                
+                {/* Stock Status */}
+                <div className="flex items-center gap-2">
+                  {getAvailableQuantity(item) === 0 ? (
+                    <Badge variant="destructive">No More Available</Badge>
+                  ) : getAvailableQuantity(item) <= (item.lowStockAlert || 5) ? (
+                    <Badge variant="secondary">Low Available</Badge>
+                  ) : (
+                    <Badge variant="default">Available</Badge>
+                  )}
+                  {getCartQuantity(item._id) > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      {getCartQuantity(item._id)} in cart
+                    </Badge>
+                  )}
+                </div>
+                
+                {/* Cart Controls */}
+                <div className="flex items-center justify-between">
+                  {getCartQuantity(item._id) > 0 ? (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => removeFromCart(item._id)}
+                        disabled={cartLoading}
+                      >
+                        -
+                      </Button>
+                      <span className="text-sm font-medium px-2">
+                        {getCartQuantity(item._id)}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => addToCart(item)}
+                        disabled={cartLoading || getCartQuantity(item._id) >= (item.stock || 0)}
+                      >
+                        +
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      className="w-full"
+                      onClick={() => addToCart(item)}
+                      disabled={cartLoading || (item.stock || 0) === 0}
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Add to Cart
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
       {/* Empty State */}
-      {filteredSupplements.length === 0 && supplements.length > 0 && (
+      {filteredItems.length === 0 && items.length > 0 && (
         <div className="text-center py-12 text-muted-foreground">
           <Package className="h-16 w-16 mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-semibold mb-2">No supplements found</h3>
+          <h3 className="text-lg font-semibold mb-2">No items found</h3>
           <p>Try adjusting your search terms</p>
         </div>
       )}
 
-      {supplements.length === 0 && !loading && (
+      {items.length === 0 && !loading && (
         <div className="text-center py-12 text-muted-foreground">
           <Store className="h-16 w-16 mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-semibold mb-2">No supplements available</h3>
+          <h3 className="text-lg font-semibold mb-2">No sellable items available</h3>
           <p>Check back later for new products</p>
         </div>
       )}

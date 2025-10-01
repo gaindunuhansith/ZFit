@@ -16,24 +16,27 @@ import { Textarea } from '@/components/ui/textarea'
 import { z } from 'zod'
 import { ZodError } from 'zod'
 
-// Category form validation schemas - SAME PATTERN AS UserFormModal
+// Category form validation schemas - Updated for new API structure
 const createCategoryFormSchema = z.object({
-  categoryName: z.string()
-    .min(2, "Category name must be at least 2 characters long")
-    .max(50, "Category name must be at most 50 characters long"),
-  categoryDescription: z.string()
-    .min(5, "Category description must be at least 5 characters long")
-    .max(200, "Category description must be at most 200 characters long"),
+  name: z.string()
+    .min(1, "Category name is required")
+    .max(50, "Category name cannot exceed 50 characters")
+    .trim(),
+  description: z.string()
+    .max(200, "Description cannot exceed 200 characters")
+    .trim()
+    .optional(),
 })
 
 const updateCategoryFormSchema = z.object({
-  categoryName: z.string()
-    .min(2, "Category name must be at least 2 characters long")
-    .max(50, "Category name must be at most 50 characters long")
+  name: z.string()
+    .min(1, "Category name is required")
+    .max(50, "Category name cannot exceed 50 characters")
+    .trim()
     .optional(),
-  categoryDescription: z.string()
-    .min(5, "Category description must be at least 5 characters long")
-    .max(200, "Category description must be at most 200 characters long")
+  description: z.string()
+    .max(200, "Description cannot exceed 200 characters")
+    .trim()
     .optional(),
 })
 
@@ -59,11 +62,11 @@ export function CategoryFormModal({
   mode,
   title,
 }: CategoryFormModalProps) {
-  type FormDataType = CategoryFormData | UpdateCategoryFormData
+type FormDataType = CategoryFormData | UpdateCategoryFormData
 
   const [formData, setFormData] = useState<FormDataType>({
-    categoryName: '',
-    categoryDescription: '',
+    name: '',
+    description: '',
   })
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -71,13 +74,13 @@ export function CategoryFormModal({
   useEffect(() => {
     if (initialData && mode === 'edit') {
       setFormData({
-        categoryName: initialData.categoryName || '',
-        categoryDescription: initialData.categoryDescription || '',
+        name: initialData.name || '',
+        description: initialData.description || '',
       })
     } else {
       setFormData({
-        categoryName: '',
-        categoryDescription: '',
+        name: '',
+        description: '',
       })
     }
     setErrors({})
@@ -158,41 +161,41 @@ export function CategoryFormModal({
           <div className="grid gap-4 py-4">
             {/* Category Name - SAME PATTERN AS UserFormModal */}
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="categoryName" className="text-right">
+              <Label htmlFor="name" className="text-right">
                 Name *
               </Label>
               <div className="col-span-3">
                 <Input
-                  id="categoryName"
-                  value={(formData as CategoryFormData).categoryName || ''}
-                  onChange={(e) => handleInputChange('categoryName', e.target.value)}
+                  id="name"
+                  value={(formData as CategoryFormData).name || ''}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
                   placeholder="Enter category name"
-                  className={errors.categoryName ? 'border-red-500' : ''}
+                  className={errors.name ? 'border-red-500' : ''}
                 />
-                {errors.categoryName && (
-                  <p className="text-sm text-red-500 mt-1">{errors.categoryName}</p>
+                {errors.name && (
+                  <p className="text-sm text-red-500 mt-1">{errors.name}</p>
                 )}
               </div>
             </div>
 
             {/* Category Description */}
             <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="categoryDescription" className="text-right mt-2">
-                Description *
+              <Label htmlFor="description" className="text-right mt-2">
+                Description
               </Label>
               <div className="col-span-3">
                 <Textarea
-                  id="categoryDescription"
-                  value={(formData as CategoryFormData).categoryDescription || ''}
+                  id="description"
+                  value={(formData as CategoryFormData).description || ''}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => 
-                    handleInputChange('categoryDescription', e.target.value)
+                    handleInputChange('description', e.target.value)
                   }
-                  placeholder="Enter category description"
-                  className={errors.categoryDescription ? 'border-red-500' : ''}
+                  placeholder="Enter category description (optional)"
+                  className={errors.description ? 'border-red-500' : ''}
                   rows={3}
                 />
-                {errors.categoryDescription && (
-                  <p className="text-sm text-red-500 mt-1">{errors.categoryDescription}</p>
+                {errors.description && (
+                  <p className="text-sm text-red-500 mt-1">{errors.description}</p>
                 )}
               </div>
             </div>
