@@ -195,8 +195,33 @@ export const approveBankTransfer = async (req: Request, res: Response) => {
         // Temporarily use dummy adminId for testing since auth is disabled
         const adminId = (req as any).userId || '507f1f77bcf86cd799439011'; // Dummy admin ID
 
+
         try {
             const payment = await approveBankTransferPaymentService(id, adminId, adminNotes);
+
+        const payment = await approveBankTransferPaymentService(id, adminId, adminNotes);
+
+        if (!payment) {
+            return res.status(404).json({
+                success: false,
+                message: 'Bank transfer payment not found'
+            });
+        }
+
+
+        if (payment.status !== 'pending') {
+            return res.status(400).json({
+                success: false,
+                message: 'Payment is not in pending status'
+            });
+        }
+
+        // Populate user and membership data for email
+        await payment.populate([
+            { path: 'userId', select: 'name email contactNo' },
+            { path: 'membershipId', select: 'name price' }
+        ]);
+
 
             if (!payment) {
                 return res.status(404).json({
@@ -277,8 +302,32 @@ export const declineBankTransfer = async (req: Request, res: Response) => {
         // Temporarily use dummy adminId for testing since auth is disabled
         const adminId = (req as any).userId || '507f1f77bcf86cd799439011'; // Dummy admin ID
 
+
         try {
             const payment = await declineBankTransferPaymentService(id, adminId, adminNotes);
+
+        const payment = await declineBankTransferPaymentService(id, adminId, adminNotes);
+
+        if (!payment) {
+            return res.status(404).json({
+                success: false,
+                message: 'Bank transfer payment not found'
+            });
+        }
+
+        if (payment.status !== 'pending') {
+            return res.status(400).json({
+                success: false,
+                message: 'Payment is not in pending status'
+            });
+        }
+
+        // Populate user and membership data for email
+        await payment.populate([
+            { path: 'userId', select: 'name email contactNo' },
+            { path: 'membershipId', select: 'name price' }
+        ]);
+
 
             if (!payment) {
                 return res.status(404).json({

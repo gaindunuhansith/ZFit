@@ -12,8 +12,7 @@ import orderRoutes from "./order.routes.js";
 const router = Router();
 
 // Mount inventory-related routes under their respective sub-paths
-// Categories: /api/v1/inventory/categories/*
-router.use('/', categoryRoutes);
+// Categories: /api/v1/categories/* (moved to main app routes)
 
 // Suppliers: /api/v1/inventory/suppliers/*
 router.use('/suppliers', supplierRoutes);

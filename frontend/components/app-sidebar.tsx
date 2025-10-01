@@ -164,6 +164,10 @@ const data = {
       icon: Package,
       items: [
         {
+          title: "Categories",
+          url: "/dashboard/inventory/categories",
+        },
+        {
           title: "Items",
           url: "/dashboard/inventory/items",
         },

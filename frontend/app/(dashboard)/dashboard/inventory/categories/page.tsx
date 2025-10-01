@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -11,29 +12,27 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Plus, Edit, Trash2, Package } from 'lucide-react'
+import { Plus, Edit, Trash2, Package, Search, FileText } from 'lucide-react'
 import { categoryApiService } from '@/lib/api/categoryApi'
-import type { CategoryData } from '@/lib/api/categoryApi'
+import type { CategoryData, Category } from '@/lib/api/categoryApi'
 import { CategoryFormModal, CategoryFormData, UpdateCategoryFormData } from '@/components/CategoryFormModal'
-
-interface Category {
-  _id: string
-  categoryName: string
-  categoryDescription: string
-  createdAt: string
-  updatedAt?: string
-}
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([])
+  const [filteredCategories, setFilteredCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     fetchCategories()
   }, [])
+
+  useEffect(() => {
+    filterCategories()
+  }, [categories, searchTerm])
 
   const fetchCategories = async () => {
     try {
@@ -46,6 +45,20 @@ export default function CategoriesPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const filterCategories = () => {
+    let filtered = categories
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(category =>
+        category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        category.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    setFilteredCategories(filtered)
   }
 
   const handleAddCategory = () => {
@@ -64,9 +77,22 @@ export default function CategoriesPage() {
     try {
       await categoryApiService.deleteCategory(categoryId)
       setCategories(categories.filter(category => category._id !== categoryId))
-    } catch (error) {
+      setError('') // Clear any previous errors on success
+    } catch (error: any) {
       console.error('Error deleting category:', error)
-      setError('Failed to delete category')
+      
+      // Try to extract the error message from the API response
+      let errorMessage = 'Failed to delete category'
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      setError(errorMessage)
     }
   }
 
@@ -84,6 +110,34 @@ export default function CategoriesPage() {
       console.error('Error saving category:', error)
       setError('Failed to save category')
       throw error
+    }
+  }
+
+  const handleGenerateReport = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/v1/reports/categories/pdf', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate report')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `categories-report-${new Date().toISOString().split('T')[0]}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error generating report:', error)
+      setError('Failed to generate categories report')
     }
   }
 
@@ -116,11 +170,37 @@ export default function CategoriesPage() {
           <h2 className="text-3xl font-bold tracking-tight">Categories</h2>
           <p className="text-muted-foreground">Manage inventory categories</p>
         </div>
-        <Button onClick={handleAddCategory}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Category
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleGenerateReport}>
+            <FileText className="h-4 w-4 mr-2" />
+            Generate Report
+          </Button>
+          <Button onClick={handleAddCategory} className="bg-primary hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Category
+          </Button>
+        </div>
       </div>
+
+      {/* Search Bar */}
+      <div className="flex items-center space-x-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search categories..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
 
       {/* Categories Table */}
       <Card>
@@ -149,10 +229,10 @@ export default function CategoriesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {categories.map((category) => (
+              {filteredCategories.map((category) => (
                 <TableRow key={category._id}>
-                  <TableCell className="font-medium">{category.categoryName}</TableCell>
-                  <TableCell>{category.categoryDescription}</TableCell>
+                  <TableCell className="font-medium">{category.name}</TableCell>
+                  <TableCell>{category.description || 'No description'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button
@@ -177,6 +257,14 @@ export default function CategoriesPage() {
             </TableBody>
           </Table>
 
+          {filteredCategories.length === 0 && categories.length > 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No categories match your search</p>
+              <p className="text-sm">Try adjusting your search terms</p>
+            </div>
+          )}
+
           {categories.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -192,8 +280,8 @@ export default function CategoriesPage() {
         onClose={() => setModalOpen(false)}
         onSubmit={handleModalSubmit}
         initialData={editingCategory ? {
-          categoryName: editingCategory.categoryName,
-          categoryDescription: editingCategory.categoryDescription,
+          name: editingCategory.name,
+          description: editingCategory.description,
         } : undefined}
         mode={editingCategory ? 'edit' : 'add'}
         title={editingCategory ? 'Edit Category' : 'Add New Category'}

@@ -1,21 +1,35 @@
 import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
+import mongoose from "mongoose";
 import CategoryService from "../services/inventoryCategory.service.js";
-
+import { CREATED, OK, NOT_FOUND } from "../constants/http.js";
 
 // create an instance of the service
 const categoryService = new CategoryService();
 
 // zod validation schema for creating a category
 const createCategorySchema = z.object({
-    categoryName: z.string().min(2, "Category name must be at least 2 characters long").max(50, "Category name must be at most 50 characters long"),
-    categoryDescription: z.string().min(5, "Category description must be at least 5 characters long").max(200, "Category description must be at most 200 characters long"),
+    name: z.string()
+        .min(1, "Category name is required")
+        .max(50, "Category name cannot exceed 50 characters")
+        .trim(),
+    description: z.string()
+        .max(200, "Description cannot exceed 200 characters")
+        .trim()
+        .optional(),
 });
 
 // zod validation schema for updating a category
 const updateCategorySchema = z.object({
-    categoryName: z.string().min(2, "Category name must be at least 2 characters long").max(50, "Category name must be at most 50 characters long").optional(),
-    categoryDescription: z.string().min(5, "Category description must be at least 5 characters long").max(200, "Category description must be at most 200 characters long").optional(),
+    name: z.string()
+        .min(1, "Category name is required")
+        .max(50, "Category name cannot exceed 50 characters")
+        .trim()
+        .optional(),
+    description: z.string()
+        .max(200, "Description cannot exceed 200 characters")
+        .trim()
+        .optional(),
 });
 
 //zod validation schema for category ID
@@ -25,16 +39,16 @@ const categoryIdSchema = z.object({
 
 // Controller to create a new category
 export const createCategory = async (req: Request, res: Response, next: NextFunction) => {
-    try{
+    try {
         const validated = createCategorySchema.parse(req.body);
         const category = await categoryService.createCategory(validated);
 
-        res.status(201).json({
+        res.status(CREATED).json({
             success: true,
             message: "Category created successfully",
             data: category
         });
-    }catch(error){
+    } catch (error) {
         next(error);
     }
 };
@@ -42,8 +56,10 @@ export const createCategory = async (req: Request, res: Response, next: NextFunc
 // Controller to get all categories
 export const getAllCategories = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const categories = await categoryService.getAllCategories();
-    res.status(200).json({
+    const includeInactive = req.query.includeInactive === 'true';
+    const categories = await categoryService.getAllCategories(includeInactive);
+    
+    res.status(OK).json({
       success: true,
       message: "Categories retrieved successfully",
       data: categories,
@@ -60,13 +76,24 @@ export const getAllCategories = async (req: Request, res: Response, next: NextFu
 export const getCategoryById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = categoryIdSchema.parse({ id: req.params.id });
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid category ID format" 
+      });
+    }
+
     const category = await categoryService.getCategoryById(id);
 
     if (!category) {
-      return res.status(404).json({ success: false, message: "Category not found" });
+      return res.status(NOT_FOUND).json({ 
+        success: false, 
+        message: "Category not found" 
+      });
     }
 
-    res.status(200).json({
+    res.status(OK).json({
       success: true,
       message: "Category retrieved successfully",
       data: category,
@@ -77,18 +104,31 @@ export const getCategoryById = async (req: Request, res: Response, next: NextFun
 };
 
 // Controller to update a category
-
 export const updateCategory = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = categoryIdSchema.parse({ id: req.params.id });
-    const validated = updateCategorySchema.parse(req.body);
-
-    const category = await categoryService.updateCategory(id, validated);
-    if (!category) {
-      return res.status(404).json({ success: false, message: "Category not found" });
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid category ID format" 
+      });
     }
 
-    res.status(200).json({
+    const validated = updateCategorySchema.parse(req.body);
+    
+    // Check if category exists before updating
+    const existingCategory = await categoryService.getCategoryById(id);
+    if (!existingCategory) {
+      return res.status(NOT_FOUND).json({ 
+        success: false, 
+        message: "Category not found" 
+      });
+    }
+
+    const category = await categoryService.updateCategory(id, validated);
+
+    res.status(OK).json({
       success: true,
       message: "Category updated successfully",
       data: category,
@@ -102,13 +142,26 @@ export const updateCategory = async (req: Request, res: Response, next: NextFunc
 export const deleteCategory = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = categoryIdSchema.parse({ id: req.params.id });
-    const category = await categoryService.deleteCategory(id);
-
-    if (!category) {
-      return res.status(404).json({ success: false, message: "Category not found" });
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid category ID format" 
+      });
     }
 
-    res.status(200).json({
+    // Check if category exists before deleting
+    const existingCategory = await categoryService.getCategoryById(id);
+    if (!existingCategory) {
+      return res.status(NOT_FOUND).json({ 
+        success: false, 
+        message: "Category not found" 
+      });
+    }
+
+    const category = await categoryService.deleteCategory(id);
+
+    res.status(OK).json({
       success: true,
       message: "Category deleted successfully",
       data: category,

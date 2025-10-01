@@ -6,7 +6,7 @@ import type mongoose from "mongoose";
 
 export default class InventoryItemService {
     
-    async createItem(data: { itemName: string; itemDescription: string; categoryID: mongoose.Types.ObjectId; quantity: number; price: number; supplierID: mongoose.Types.ObjectId; lowStockThreshold: number; maintenanceStatus: "good" | "maintenance_required" | "under_repair"; lastMaintenanceDate?: Date; createdAt: Date; updatedAt: Date; }): Promise<IInventoryItem> {
+    async createItem(data: { itemName: string; itemDescription: string; categoryID: mongoose.Types.ObjectId; quantity: number; price?: number; supplierID: mongoose.Types.ObjectId; lowStockThreshold: number; maintenanceStatus: "good" | "maintenance_required" | "under_repair"; lastMaintenanceDate?: Date; createdAt: Date; updatedAt: Date; }): Promise<IInventoryItem> {
         const newItem = new Item(data);
         return await newItem.save();
     }

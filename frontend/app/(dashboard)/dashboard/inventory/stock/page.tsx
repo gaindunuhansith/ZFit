@@ -11,12 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-
-
-
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Activity, Search, FileText } from 'lucide-react'
+import { Search, Package, FileText, AlertTriangle } from 'lucide-react'
 import { itemApiService } from '@/lib/api/itemApi'
+import { format } from 'date-fns'
 
 const handleGenerateReport = async () => {
   try {
@@ -49,19 +48,34 @@ const handleGenerateReport = async () => {
 
 interface StockItem {
   _id: string
-  itemName: string
-  itemDescription: string
-  categoryID: string
-  quantity: number
-  price?: number
+  name: string
+  categoryID: {
+    _id: string
+    name: string
+    description?: string
+  } | string
   supplierID: {
     _id: string
     supplierName: string
-  } | null
-  lowStockThreshold: number
-  maintenanceStatus: "good" | "maintenance_required" | "under_repair"
-  lastMaintenanceDate?: string
+    supplierEmail: string
+    supplierPhone: string
+  } | string
+  type: "sellable" | "equipment"
+  isActive: boolean
+  
+  // Sellable fields
+  price?: number
+  stock?: number
+  expiryDate?: string
+  lowStockAlert?: number
+  
+  // Equipment fields
+  purchaseDate?: string
+  maintenanceSchedule?: string
+  warrantyPeriod?: string
+  
   createdAt: string
+  updatedAt: string
 }
 
 export default function StockManagementPage() {
@@ -88,36 +102,64 @@ export default function StockManagementPage() {
     }
   }
 
-  // Filter items based on search term
-  const filteredItems = items.filter(item => {
+  // Filter items based on search term - only sellable items have stock
+  const sellableItems = items.filter(item => item.type === 'sellable')
+  
+  const filteredItems = sellableItems.filter(item => {
     const searchLower = searchTerm.toLowerCase()
-    const supplierName = item.supplierID?.supplierName || ''
+    const categoryName = typeof item.categoryID === 'string' ? item.categoryID : item.categoryID.name
+    const supplierName = typeof item.supplierID === 'string' ? item.supplierID : item.supplierID?.supplierName || ''
     
     return (
-      item.itemName.toLowerCase().includes(searchLower) ||
-      item.itemDescription.toLowerCase().includes(searchLower) ||
-      item.categoryID.toLowerCase().includes(searchLower) ||
+      item.name.toLowerCase().includes(searchLower) ||
+      categoryName.toLowerCase().includes(searchLower) ||
       supplierName.toLowerCase().includes(searchLower)
     )
   })
 
+  // Helper functions
+  const getCategoryName = (categoryID: any) => {
+    if (typeof categoryID === 'string') return categoryID
+    return categoryID?.name || 'Unknown Category'
+  }
+
+  const getSupplierName = (supplierID: any) => {
+    if (typeof supplierID === 'string') return 'Supplier ID: ' + supplierID.slice(-4)
+    return supplierID?.supplierName || 'No Supplier'
+  }
+
+  const getStockStatus = (stock: number, lowStockAlert?: number) => {
+    if (stock === 0) return { status: 'out-of-stock', color: 'destructive', label: 'Out of Stock' }
+    if (lowStockAlert && stock <= lowStockAlert) return { status: 'low-stock', color: 'warning', label: 'Low Stock' }
+    return { status: 'in-stock', color: 'success', label: 'In Stock' }
+  }
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A'
+    try {
+      return format(new Date(dateString), 'MMM dd, yyyy')
+    } catch {
+      return 'Invalid Date'
+    }
+  }
+
   const handleGenerateReport = async () => {
     try {
-      const response = await fetch('/api/v1/reports/stock-levels/pdf')
+      const response = await fetch('http://localhost:5000/api/v1/reports/stock-levels/pdf')
       if (!response.ok) throw new Error('Failed to generate report')
       
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'stock-levels-report.pdf'
+      link.download = `stock-levels-report-${new Date().toISOString().split('T')[0]}.pdf`
       document.body.appendChild(link)
       link.click()
       link.remove()
       window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Error generating report:', error)
-      setError('Failed to generate report')
+      setError('Failed to generate stock levels report')
     }
   }
 
@@ -148,7 +190,7 @@ export default function StockManagementPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Stock Management</h2>
-          <p className="text-muted-foreground">Manage inventory stock levels and maintenance</p>
+          <p className="text-muted-foreground">Monitor and manage inventory stock levels</p>
         </div>
         <Button variant="outline" onClick={handleGenerateReport}>
           <FileText className="h-4 w-4 mr-2" />
@@ -156,36 +198,38 @@ export default function StockManagementPage() {
         </Button>
       </div>
 
+      {/* Search Bar */}
+      <div className="flex items-center space-x-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search stock items..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
+
       {/* Stock Management Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            All Stock Items
+            <Package className="h-5 w-5" />
+            Stock Levels
           </CardTitle>
           <CardDescription>
-            View and manage stock levels for all inventory items
+            Monitor stock levels, alerts, and inventory status for sellable items
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-4">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
-
-          {/* Search Bar */}
-          <div className="flex items-center space-x-2 mb-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search stock items..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
 
           <Table>
             <TableHeader>
@@ -194,48 +238,101 @@ export default function StockManagementPage() {
                 <TableHead>Category</TableHead>
                 <TableHead>Supplier</TableHead>
                 <TableHead>Current Stock</TableHead>
+                <TableHead>Low Stock Alert</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Expiry Date</TableHead>
+                <TableHead>Last Updated</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredItems.map((item) => (
-                <TableRow key={item._id}>
-                  <TableCell className="font-medium">
-                    <div>
-                      <div>{item.itemName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {item.itemDescription}
+              {filteredItems.map((item) => {
+                const stockStatus = getStockStatus(item.stock || 0, item.lowStockAlert)
+                return (
+                  <TableRow key={item._id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                        <span>{item.name}</span>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {item.categoryID || 'No Category'}
-                  </TableCell>
-                  <TableCell>
-                    {typeof item.supplierID === 'object' && item.supplierID !== null
-                      ? item.supplierID.supplierName 
-                      : item.supplierID || 'No Supplier'}
-                  </TableCell>
-                  <TableCell>
-                    {item.quantity}
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {getCategoryName(item.categoryID)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-muted-foreground">
+                        {getSupplierName(item.supplierID)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{item.stock || 0}</span>
+                        {stockStatus.status === 'low-stock' && (
+                          <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-muted-foreground">
+                        {item.lowStockAlert || 'Not set'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-medium">
+                        LKR {item.price?.toFixed(2) || '0.00'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={stockStatus.color === 'destructive' ? 'destructive' : 
+                               stockStatus.color === 'warning' ? 'secondary' : 'default'}
+                        className={
+                          stockStatus.color === 'success' ? 'bg-green-100 text-green-800 hover:bg-green-100' :
+                          stockStatus.color === 'warning' ? 'bg-amber-100 text-amber-800 hover:bg-amber-100' : ''
+                        }
+                      >
+                        {stockStatus.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-muted-foreground">
+                        {formatDate(item.expiryDate)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-muted-foreground">
+                        {formatDate(item.updatedAt)}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
 
-          {filteredItems.length === 0 && items.length > 0 && (
+          {filteredItems.length === 0 && sellableItems.length > 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No items found matching your search</p>
+              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No stock items found matching your search</p>
               <p className="text-sm">Try adjusting your search terms</p>
+            </div>
+          )}
+
+          {sellableItems.length === 0 && items.length > 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No sellable items found</p>
+              <p className="text-sm">Only sellable items are shown in stock management</p>
             </div>
           )}
 
           {items.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No stock items found</p>
-              <p className="text-sm">Items will appear here once created</p>
+              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No items found</p>
+              <p className="text-sm">Stock items will appear here once sellable items are created</p>
             </div>
           )}
         </CardContent>
