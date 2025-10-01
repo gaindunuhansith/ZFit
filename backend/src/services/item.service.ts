@@ -1,5 +1,6 @@
 import InventoryItem, { type IInventoryItem } from "../models/inventoryItem.schema.js";
 import Category from "../models/category.model.js";
+import Supplier from "../models/supplier.model.js";
 import AppError from "../util/AppError.js";
 import { BAD_REQUEST, NOT_FOUND, CONFLICT } from "../constants/http.js";
 import mongoose from "mongoose";
@@ -7,6 +8,7 @@ import mongoose from "mongoose";
 export interface CreateItemData {
   name: string;
   categoryID: string;
+  supplierID: string;
   type: "sellable" | "equipment";
   
   // Sellable fields
@@ -24,6 +26,7 @@ export interface CreateItemData {
 export interface UpdateItemData {
   name?: string | undefined;
   categoryID?: string | undefined;
+  supplierID?: string | undefined;
   type?: "sellable" | "equipment" | undefined;
   
   // Sellable fields
@@ -48,6 +51,12 @@ class ItemService {
         throw new AppError(BAD_REQUEST, "Category not found");
       }
 
+      // Validate supplier exists
+      const supplier = await Supplier.findById(data.supplierID);
+      if (!supplier) {
+        throw new AppError(BAD_REQUEST, "Supplier not found");
+      }
+
       // Check for duplicate name within the same category
       const existingItem = await InventoryItem.findOne({
         name: data.name.trim(),
@@ -63,6 +72,7 @@ class ItemService {
       const itemData: any = {
         name: data.name.trim(),
         categoryID: data.categoryID,
+        supplierID: data.supplierID,
         type: data.type,
         isActive: true
       };
@@ -102,6 +112,7 @@ class ItemService {
 
     return await InventoryItem.find(filter)
       .populate('categoryID', 'name description')
+      .populate('supplierID', 'supplierName supplierEmail supplierPhone')
       .sort({ createdAt: -1 });
   }
 
@@ -112,7 +123,8 @@ class ItemService {
     }
 
     return await InventoryItem.findOne({ _id: id, isActive: true })
-      .populate('categoryID', 'name description');
+      .populate('categoryID', 'name description')
+      .populate('supplierID', 'supplierName supplierEmail supplierPhone');
   }
 
   // UPDATE - Update existing item
@@ -133,6 +145,14 @@ class ItemService {
         const category = await Category.findById(data.categoryID);
         if (!category) {
           throw new AppError(BAD_REQUEST, "Category not found");
+        }
+      }
+
+      // If updating supplier, validate it exists
+      if (data.supplierID) {
+        const supplier = await Supplier.findById(data.supplierID);
+        if (!supplier) {
+          throw new AppError(BAD_REQUEST, "Supplier not found");
         }
       }
 
@@ -158,6 +178,7 @@ class ItemService {
       
       if (data.name) updateData.name = data.name.trim();
       if (data.categoryID) updateData.categoryID = data.categoryID;
+      if (data.supplierID) updateData.supplierID = data.supplierID;
       if (data.type) updateData.type = data.type;
 
       // Handle type-specific fields based on the type being set (new or existing)
@@ -195,7 +216,8 @@ class ItemService {
         id,
         updateData,
         { new: true, runValidators: true }
-      ).populate('categoryID', 'name description');
+      ).populate('categoryID', 'name description')
+       .populate('supplierID', 'supplierName supplierEmail supplierPhone');
     } catch (error: any) {
       if (error.code === 11000) {
         throw new AppError(CONFLICT, "An item with this name already exists in the selected category");

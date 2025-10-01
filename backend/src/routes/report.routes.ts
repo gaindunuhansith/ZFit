@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { generateMembershipsReportHandler, generateMembershipPlansReportHandler, generateMembersReportHandler, generateStaffReportHandler, generateManagersReportHandler, generateInventoryItemsReportHandler, generateStockLevelsReportHandler, generateSuppliersReportHandler, generateRefundsReportHandler, generateInvoicesReportHandler, generatePaymentsReportHandler } from '../controllers/report.controller.js'
+import { generateMembershipsReportHandler, generateMembershipPlansReportHandler, generateMembersReportHandler, generateStaffReportHandler, generateManagersReportHandler, generateInventoryItemsReportHandler, generateStockLevelsReportHandler, generateSuppliersReportHandler, generateCategoriesReportHandler, generateRefundsReportHandler, generateInvoicesReportHandler, generatePaymentsReportHandler } from '../controllers/report.controller.js'
 
 const router = Router()
 
@@ -15,6 +15,7 @@ router.get('/refunds/pdf', generateRefundsReportHandler)
 router.get('/inventory-items/pdf', generateInventoryItemsReportHandler)
 router.get('/stock-levels/pdf', generateStockLevelsReportHandler)
 router.get('/suppliers/pdf', generateSuppliersReportHandler)
+router.get('/categories/pdf', generateCategoriesReportHandler)
 
 // Invoice report route
 router.get('/invoices/pdf', generateInvoicesReportHandler)

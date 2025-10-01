@@ -24,12 +24,22 @@ import { Label } from '@/components/ui/label'
 import { ShoppingCart, Settings, Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { categoryApiService, type Category } from '@/lib/api/categoryApi'
+import { supplierApiService } from '@/lib/api/supplierApi'
 import type { ItemData } from '@/lib/api/itemApi'
+
+interface Supplier {
+  _id: string
+  supplierName: string
+  supplierEmail: string
+  supplierPhone: string
+  supplierAddress: string
+}
 
 // Validation schemas
 const itemFormSchema = z.object({
   name: z.string().min(1, 'Item name is required').max(100, 'Name cannot exceed 100 characters'),
   categoryID: z.string().min(1, 'Category is required'),
+  supplierID: z.string().min(1, 'Supplier is required'),
   type: z.enum(['sellable', 'equipment']),
   
   // Sellable fields
@@ -63,6 +73,7 @@ const itemFormSchema = z.object({
 export interface ItemFormData {
   name: string
   categoryID: string
+  supplierID: string
   type: "sellable" | "equipment"
   price?: number
   stock?: number
@@ -73,7 +84,9 @@ export interface ItemFormData {
   warrantyPeriod?: string
 }
 
-export interface UpdateItemFormData extends Partial<ItemFormData> {}
+export interface UpdateItemFormData extends Partial<ItemFormData> {
+  supplierID?: string
+}
 
 interface ItemFormModalProps {
   isOpen: boolean
@@ -97,11 +110,13 @@ export function ItemFormModal({
     initialData?.type || undefined
   )
   const [categories, setCategories] = useState<Category[]>([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [formData, setFormData] = useState<ItemFormData>(() => {
     if (mode === 'edit' && initialData) {
       return {
         name: initialData.name || '',
         categoryID: initialData.categoryID || '',
+        supplierID: initialData.supplierID || '',
         type: initialData.type || 'sellable',
         price: initialData.price,
         stock: initialData.stock,
@@ -115,6 +130,7 @@ export function ItemFormModal({
     return {
       name: '',
       categoryID: '',
+      supplierID: '',
       type: 'sellable',
       price: undefined,
       stock: undefined,
@@ -128,19 +144,23 @@ export function ItemFormModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Fetch categories on mount
+  // Fetch categories and suppliers on mount
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
-        const response = await categoryApiService.getCategories()
-        setCategories(response.data as Category[])
+        const [categoriesResponse, suppliersResponse] = await Promise.all([
+          categoryApiService.getCategories(),
+          supplierApiService.getSuppliers()
+        ])
+        setCategories(categoriesResponse.data as Category[])
+        setSuppliers(suppliersResponse.data as Supplier[])
       } catch (error) {
-        console.error('Error fetching categories:', error)
+        console.error('Error fetching data:', error)
       }
     }
 
     if (isOpen) {
-      fetchCategories()
+      fetchData()
     }
   }, [isOpen])
 
@@ -156,6 +176,7 @@ export function ItemFormModal({
         setFormData({
           name: '',
           categoryID: '',
+          supplierID: '',
           type: 'sellable',
           price: undefined,
           stock: undefined,
@@ -169,6 +190,7 @@ export function ItemFormModal({
         setFormData({
           name: initialData?.name || '',
           categoryID: initialData?.categoryID || '',
+          supplierID: initialData?.supplierID || '',
           type: initialData?.type || 'sellable',
           price: initialData?.price,
           stock: initialData?.stock,
@@ -187,6 +209,7 @@ export function ItemFormModal({
       setFormData({
         name: '',
         categoryID: '',
+        supplierID: '',
         type: 'sellable',
         price: undefined,
         stock: undefined,
@@ -392,6 +415,28 @@ export function ItemFormModal({
                   <p className="text-sm text-red-500 mt-1">{errors.categoryID}</p>
                 )}
               </div>
+
+              <div>
+                <Label htmlFor="supplierID">Supplier *</Label>
+                <Select
+                  value={formData.supplierID}
+                  onValueChange={(value) => handleInputChange('supplierID', value)}
+                >
+                  <SelectTrigger className={errors.supplierID ? 'border-red-500' : ''}>
+                    <SelectValue placeholder="Select supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier._id} value={supplier._id}>
+                        {supplier.supplierName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.supplierID && (
+                  <p className="text-sm text-red-500 mt-1">{errors.supplierID}</p>
+                )}
+              </div>
             </div>
 
             {/* Type-specific fields */}
@@ -399,7 +444,7 @@ export function ItemFormModal({
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="price">Price *</Label>
+                    <Label htmlFor="price">Price (LKR) *</Label>
                     <Input
                       id="price"
                       type="number"

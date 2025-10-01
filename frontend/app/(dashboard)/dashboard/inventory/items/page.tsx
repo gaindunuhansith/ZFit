@@ -158,6 +158,14 @@ export default function ItemsPage() {
     return categoryID.name || 'Unknown Category'
   }
 
+  const getSupplierName = (supplierID: any) => {
+    if (typeof supplierID === 'string') {
+      // For now, return the ID since we don't have suppliers loaded in this component
+      return 'Supplier ID: ' + supplierID.slice(-4)
+    }
+    return supplierID?.supplierName || 'Unknown Supplier'
+  }
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A'
     try {
@@ -208,10 +216,12 @@ export default function ItemsPage() {
           <h2 className="text-3xl font-bold tracking-tight">Items</h2>
           <p className="text-muted-foreground">Manage your gym inventory items</p>
         </div>
-        <Button onClick={handleAddItem} className="bg-primary hover:bg-primary/90">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Item
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleAddItem} className="bg-primary hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Item
+          </Button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -286,6 +296,7 @@ export default function ItemsPage() {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Category</TableHead>
+                      <TableHead>Supplier</TableHead>
                       
                       {/* Sellable Items specific columns */}
                       {activeTab === 'sellable' && (
@@ -334,11 +345,17 @@ export default function ItemsPage() {
                           </Badge>
                         </TableCell>
                         
+                        <TableCell>
+                          <span className="text-muted-foreground">
+                            {getSupplierName(item.supplierID)}
+                          </span>
+                        </TableCell>
+                        
                         {/* Sellable Items specific columns */}
                         {activeTab === 'sellable' && (
                           <>
                             <TableCell>
-                              <span className="font-medium">${item.price?.toFixed(2) || '0.00'}</span>
+                              <span className="font-medium">LKR {item.price?.toFixed(2) || '0.00'}</span>
                             </TableCell>
                             <TableCell>
                               <span className="font-medium">{item.stock || 0}</span>
@@ -387,7 +404,7 @@ export default function ItemsPage() {
                             <TableCell>
                               {item.type === 'sellable' ? (
                                 <div className="text-sm">
-                                  <div className="font-medium">${item.price?.toFixed(2) || '0.00'}</div>
+                                  <div className="font-medium">LKR {item.price?.toFixed(2) || '0.00'}</div>
                                   <div className="text-muted-foreground">Stock: {item.stock || 0}</div>
                                 </div>
                               ) : (
@@ -483,6 +500,9 @@ export default function ItemsPage() {
           categoryID: typeof editingItem.categoryID === 'string' 
             ? editingItem.categoryID 
             : editingItem.categoryID._id,
+          supplierID: typeof editingItem.supplierID === 'string' 
+            ? editingItem.supplierID 
+            : editingItem.supplierID._id,
           type: editingItem.type,
           price: editingItem.price,
           stock: editingItem.stock,

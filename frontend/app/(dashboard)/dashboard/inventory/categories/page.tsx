@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Plus, Edit, Trash2, Package, Search } from 'lucide-react'
+import { Plus, Edit, Trash2, Package, Search, FileText } from 'lucide-react'
 import { categoryApiService } from '@/lib/api/categoryApi'
 import type { CategoryData, Category } from '@/lib/api/categoryApi'
 import { CategoryFormModal, CategoryFormData, UpdateCategoryFormData } from '@/components/CategoryFormModal'
@@ -113,6 +113,34 @@ export default function CategoriesPage() {
     }
   }
 
+  const handleGenerateReport = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/v1/reports/categories/pdf', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate report')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `categories-report-${new Date().toISOString().split('T')[0]}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error generating report:', error)
+      setError('Failed to generate categories report')
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -142,10 +170,16 @@ export default function CategoriesPage() {
           <h2 className="text-3xl font-bold tracking-tight">Categories</h2>
           <p className="text-muted-foreground">Manage inventory categories</p>
         </div>
-        <Button onClick={handleAddCategory} className="bg-primary hover:bg-primary/90">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Category
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleGenerateReport}>
+            <FileText className="h-4 w-4 mr-2" />
+            Generate Report
+          </Button>
+          <Button onClick={handleAddCategory} className="bg-primary hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Category
+          </Button>
+        </div>
       </div>
 
       {/* Search Bar */}

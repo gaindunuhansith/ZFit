@@ -11,6 +11,7 @@ interface ApiResponse<T = unknown> {
 interface ItemData {
   name: string
   categoryID: string
+  supplierID: string
   type: "sellable" | "equipment"
   
   // Sellable fields
@@ -32,6 +33,12 @@ interface Item {
     _id: string
     name: string
     description?: string
+  } | string
+  supplierID: {
+    _id: string
+    supplierName: string
+    supplierEmail: string
+    supplierPhone: string
   } | string
   type: "sellable" | "equipment"
   isActive: boolean

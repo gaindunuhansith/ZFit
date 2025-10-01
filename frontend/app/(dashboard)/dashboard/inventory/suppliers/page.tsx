@@ -19,7 +19,7 @@ import { SupplierFormModal, SupplierFormData, UpdateSupplierFormData } from '@/c
 
 const handleGenerateReport = async () => {
   try {
-    const response = await fetch('/api/reports/suppliers', {
+    const response = await fetch('http://localhost:5000/api/v1/reports/suppliers/pdf', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -42,7 +42,7 @@ const handleGenerateReport = async () => {
     document.body.removeChild(a)
   } catch (error) {
     console.error('Error generating report:', error)
-    alert('Failed to generate report')
+    alert('Failed to generate suppliers report')
   }
 }
 
@@ -173,6 +173,26 @@ export default function SuppliersPage() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="flex items-center space-x-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search suppliers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
+
       {/* Suppliers Table */}
       <Card>
         <CardHeader>
@@ -185,24 +205,6 @@ export default function SuppliersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-4">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
-
-          {/* Search Bar */}
-          <div className="flex items-center space-x-2 mb-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search suppliers..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
 
           <Table>
             <TableHeader>

@@ -3,19 +3,20 @@ import mongoose, { Document } from "mongoose";
 export interface IInventoryItem extends Document {
     name: string;
     categoryID: mongoose.Types.ObjectId;
+    supplierID: mongoose.Types.ObjectId;
     type: "sellable" | "equipment";
     isActive: boolean;
     
     // Sellable item fields
-    price?: number;
-    stock?: number;
-    expiryDate?: Date;
-    lowStockAlert?: number;
+    price?: number | undefined;
+    stock?: number | undefined;
+    expiryDate?: Date | undefined;
+    lowStockAlert?: number | undefined;
     
     // Equipment fields
-    purchaseDate?: Date;
-    maintenanceSchedule?: string;
-    warrantyPeriod?: string;
+    purchaseDate?: Date | undefined;
+    maintenanceSchedule?: string | undefined;
+    warrantyPeriod?: string | undefined;
     
     createdAt: Date;
     updatedAt: Date;
@@ -32,6 +33,14 @@ const InventoryItemSchema = new mongoose.Schema<IInventoryItem>({
         type: mongoose.Schema.Types.ObjectId, 
         ref: "Category", 
         required: [true, 'Category is required']
+    },
+    supplierID: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: "Supplier", 
+        required: function(this: any) {
+            // Only require supplier for new items (items without _id are new)
+            return this.isNew;
+        }
     },
     type: {
         type: String,
@@ -86,6 +95,7 @@ InventoryItemSchema.index({ name: 1, categoryID: 1 }, { unique: true });
 
 // Index for performance
 InventoryItemSchema.index({ categoryID: 1 });
+InventoryItemSchema.index({ supplierID: 1 });
 InventoryItemSchema.index({ type: 1 });
 InventoryItemSchema.index({ isActive: 1 });
 

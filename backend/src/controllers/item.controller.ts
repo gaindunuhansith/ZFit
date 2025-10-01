@@ -14,6 +14,7 @@ const createItemSchema = z.object({
     .max(100, "Item name cannot exceed 100 characters")
     .trim(),
   categoryID: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid category ID format"),
+  supplierID: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid supplier ID format"),
   type: z.enum(["sellable", "equipment"]),
   
   // Sellable fields (conditional)
@@ -54,6 +55,7 @@ const updateItemSchema = z.object({
     .trim()
     .optional(),
   categoryID: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid category ID format").optional(),
+  supplierID: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid supplier ID format").optional(),
   type: z.enum(["sellable", "equipment"]).optional(),
   
   // Sellable fields

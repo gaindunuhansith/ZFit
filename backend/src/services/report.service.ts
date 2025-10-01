@@ -411,7 +411,7 @@ function generateGenericHTML(config: ReportConfig): string {
                     } else if (col.type === 'date' && value) {
                       displayValue = new Date(value as string).toLocaleDateString()
                     } else if (col.type === 'currency' && typeof value === 'number') {
-                      displayValue = '$' + value.toFixed(2)
+                      displayValue = 'LKR ' + value.toFixed(2)
                     } else if (col.type === 'boolean') {
                       displayValue = value ? 'Yes' : 'No'
                     } else {
@@ -474,7 +474,7 @@ export async function generateMembershipsReport(): Promise<Buffer> {
         formatter: (value, row) => `
           <div class="plan-info">
             <div class="plan-name">${(row as any)?.membershipPlanId?.name || 'N/A'}</div>
-            <div class="plan-price">${(row as any)?.membershipPlanId?.price ? '$' + (row as any).membershipPlanId.price : 'N/A'}</div>
+            <div class="plan-price">${(row as any)?.membershipPlanId?.price ? 'LKR ' + (row as any).membershipPlanId.price : 'N/A'}</div>
           </div>
         `
       },
@@ -834,6 +834,39 @@ export async function generateSuppliersReport(): Promise<Buffer> {
       }
     ],
     data: suppliers as any[]
+  }
+
+  return generateGenericReport(config)
+}
+
+/**
+ * Generate Categories Report
+ */
+export async function generateCategoriesReport(): Promise<Buffer> {
+  const Category = (await import('../models/category.model.js')).default
+  const categories = await Category.find().sort({ name: 1 })
+
+  const config: ReportConfig = {
+    title: 'Categories Report',
+    columns: [
+      {
+        key: 'name',
+        header: 'Category Name',
+        className: 'name-cell'
+      },
+      {
+        key: 'description',
+        header: 'Description',
+        className: 'description-cell'
+      },
+      {
+        key: 'createdAt',
+        header: 'Created Date',
+        type: 'date',
+        className: 'date-cell'
+      }
+    ],
+    data: categories as any[]
   }
 
   return generateGenericReport(config)
