@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
+import { z } from 'zod'
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -20,74 +17,71 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { z } from 'zod'
-import { ZodError } from 'zod'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
+import { ShoppingCart, Settings, Package } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { categoryApiService, type Category } from '@/lib/api/categoryApi'
+import type { ItemData } from '@/lib/api/itemApi'
 
-// Item form validation schemas - SAME PATTERN AS CategoryFormModal and SupplierFormModal
-const createItemFormSchema = z.object({
-  itemName: z.string()
-    .min(2, "Item name must be at least 2 characters long")
-    .max(100, "Item name must be at most 100 characters long"),
-  itemDescription: z.string()
-    .min(5, "Item description must be at least 5 characters long")
-    .max(200, "Item description must be at most 200 characters long"),
-  categoryID: z.string()
-    .min(1, "Category is required"),
-  quantity: z.number()
-    .min(0, "Quantity must be 0 or greater"),
-  price: z.number()
-    .min(0, "Price must be 0 or greater")
-    .optional(),
-  supplierID: z.string()
-    .min(1, "Please select a supplier"),
-  lowStockThreshold: z.number()
-    .min(0, "Low stock threshold must be 0 or greater"),
-  maintenanceStatus: z.enum(["good", "maintenance_required", "under_repair"]),
-  lastMaintenanceDate: z.string().optional(),
+// Validation schemas
+const itemFormSchema = z.object({
+  name: z.string().min(1, 'Item name is required').max(100, 'Name cannot exceed 100 characters'),
+  categoryID: z.string().min(1, 'Category is required'),
+  type: z.enum(['sellable', 'equipment']),
+  
+  // Sellable fields
+  price: z.number().min(0, 'Price cannot be negative').optional(),
+  stock: z.number().min(0, 'Stock cannot be negative').optional(),
+  expiryDate: z.string().optional(),
+  lowStockAlert: z.number().min(1, 'Low stock alert must be at least 1').optional(),
+  
+  // Equipment fields
+  purchaseDate: z.string().optional(),
+  maintenanceSchedule: z.string().max(200, 'Maintenance schedule cannot exceed 200 characters').optional(),
+  warrantyPeriod: z.string().max(100, 'Warranty period cannot exceed 100 characters').optional(),
+}).refine((data) => {
+  if (data.type === 'sellable') {
+    return typeof data.price === 'number' && typeof data.stock === 'number'
+  }
+  return true
+}, {
+  message: 'Price and stock are required for sellable items',
+  path: ['price']
+}).refine((data) => {
+  if (data.type === 'equipment') {
+    return !!data.purchaseDate
+  }
+  return true
+}, {
+  message: 'Purchase date is required for equipment',
+  path: ['purchaseDate']
 })
 
-const updateItemFormSchema = z.object({
-  itemName: z.string()
-    .min(2, "Item name must be at least 2 characters long")
-    .max(100, "Item name must be at most 100 characters long")
-    .optional(),
-  itemDescription: z.string()
-    .min(5, "Item description must be at least 5 characters long")
-    .max(200, "Item description must be at most 200 characters long")
-    .optional(),
-  categoryID: z.string()
-    .min(1, "Category is required")
-    .optional(),
-  quantity: z.number()
-    .min(0, "Quantity must be 0 or greater")
-    .optional(),
-  price: z.number()
-    .min(0, "Price must be 0 or greater")
-    .optional(),
-  supplierID: z.string()
-    .min(1, "Please select a supplier")
-    .optional(),
-  lowStockThreshold: z.number()
-    .min(0, "Low stock threshold must be 0 or greater")
-    .optional(),
-  maintenanceStatus: z.enum(["good", "maintenance_required", "under_repair"]).optional(),
-  lastMaintenanceDate: z.string().optional(),
-})
+export interface ItemFormData {
+  name: string
+  categoryID: string
+  type: "sellable" | "equipment"
+  price?: number
+  stock?: number
+  expiryDate?: string
+  lowStockAlert?: number
+  purchaseDate?: string
+  maintenanceSchedule?: string
+  warrantyPeriod?: string
+}
 
-type ItemFormData = z.infer<typeof createItemFormSchema>
-type UpdateItemFormData = z.infer<typeof updateItemFormSchema>
-
-export type { ItemFormData, UpdateItemFormData }
+export interface UpdateItemFormData extends Partial<ItemFormData> {}
 
 interface ItemFormModalProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (data: ItemFormData | UpdateItemFormData) => Promise<void>
-  initialData?: Partial<ItemFormData>
+  initialData?: UpdateItemFormData
   mode: 'add' | 'edit'
   title: string
-  suppliers: Array<{ _id: string; supplierName: string }>
-  categories: Array<{ _id: string; name: string }>
 }
 
 export function ItemFormModal({
@@ -96,70 +90,135 @@ export function ItemFormModal({
   onSubmit,
   initialData,
   mode,
-  title,
-  suppliers,
-  categories,
+  title
 }: ItemFormModalProps) {
-  type FormDataType = ItemFormData | UpdateItemFormData
-
-  const [formData, setFormData] = useState<FormDataType>({
-    itemName: '',
-    itemDescription: '',
-    categoryID: undefined,
-    quantity: 0,
-    price: 0,
-    supplierID: '',
-    lowStockThreshold: 5,
-    maintenanceStatus: 'good',
-    lastMaintenanceDate: '',
+  const [step, setStep] = useState<'type' | 'details'>(mode === 'edit' ? 'details' : 'type')
+  const [selectedType, setSelectedType] = useState<"sellable" | "equipment" | undefined>(
+    initialData?.type || undefined
+  )
+  const [categories, setCategories] = useState<Category[]>([])
+  const [formData, setFormData] = useState<ItemFormData>(() => {
+    if (mode === 'edit' && initialData) {
+      return {
+        name: initialData.name || '',
+        categoryID: initialData.categoryID || '',
+        type: initialData.type || 'sellable',
+        price: initialData.price,
+        stock: initialData.stock,
+        expiryDate: initialData.expiryDate || '',
+        lowStockAlert: initialData.lowStockAlert,
+        purchaseDate: initialData.purchaseDate || '',
+        maintenanceSchedule: initialData.maintenanceSchedule || '',
+        warrantyPeriod: initialData.warrantyPeriod || '',
+      }
+    }
+    return {
+      name: '',
+      categoryID: '',
+      type: 'sellable',
+      price: undefined,
+      stock: undefined,
+      expiryDate: '',
+      lowStockAlert: undefined,
+      purchaseDate: '',
+      maintenanceSchedule: '',
+      warrantyPeriod: '',
+    }
   })
-  const [loading, setLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  // Fetch categories on mount
   useEffect(() => {
-    if (initialData && mode === 'edit') {
-      setFormData({
-        itemName: initialData.itemName || '',
-        itemDescription: initialData.itemDescription || '',
-        categoryID: initialData.categoryID,
-        quantity: initialData.quantity || 0,
-        price: initialData.price || 0,
-        supplierID: initialData.supplierID || '',
-        lowStockThreshold: initialData.lowStockThreshold || 5,
-        maintenanceStatus: initialData.maintenanceStatus || 'good',
-        lastMaintenanceDate: initialData.lastMaintenanceDate || '',
-      })
+    const fetchCategories = async () => {
+      try {
+        const response = await categoryApiService.getCategories()
+        setCategories(response.data as Category[])
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+      }
+    }
+
+    if (isOpen) {
+      fetchCategories()
+    }
+  }, [isOpen])
+
+  // Reset form when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      console.log('Modal opened - Mode:', mode, 'InitialData:', initialData)
+      setStep(mode === 'edit' ? 'details' : 'type')
+      setSelectedType(initialData?.type || undefined)
+      setErrors({})
+      
+      if (mode === 'add') {
+        setFormData({
+          name: '',
+          categoryID: '',
+          type: 'sellable',
+          price: undefined,
+          stock: undefined,
+          expiryDate: '',
+          lowStockAlert: undefined,
+          purchaseDate: '',
+          maintenanceSchedule: '',
+          warrantyPeriod: '',
+        })
+      } else {
+        setFormData({
+          name: initialData?.name || '',
+          categoryID: initialData?.categoryID || '',
+          type: initialData?.type || 'sellable',
+          price: initialData?.price,
+          stock: initialData?.stock,
+          expiryDate: initialData?.expiryDate || '',
+          lowStockAlert: initialData?.lowStockAlert,
+          purchaseDate: initialData?.purchaseDate || '',
+          maintenanceSchedule: initialData?.maintenanceSchedule || '',
+          warrantyPeriod: initialData?.warrantyPeriod || '',
+        })
+      }
     } else {
+      // Reset when modal closes
+      setStep('type')
+      setSelectedType(undefined)
+      setErrors({})
       setFormData({
-        itemName: '',
-        itemDescription: '',
-        categoryID: undefined,
-        quantity: 0,
-        price: 0,
-        supplierID: '',
-        lowStockThreshold: 5,
-        maintenanceStatus: 'good',
-        lastMaintenanceDate: '',
+        name: '',
+        categoryID: '',
+        type: 'sellable',
+        price: undefined,
+        stock: undefined,
+        expiryDate: '',
+        lowStockAlert: undefined,
+        purchaseDate: '',
+        maintenanceSchedule: '',
+        warrantyPeriod: '',
       })
     }
-    setErrors({})
-  }, [initialData, mode, isOpen])
+  }, [isOpen, mode, initialData])
+
+  const handleTypeSelection = (type: "sellable" | "equipment") => {
+    setSelectedType(type)
+    setFormData(prev => ({ ...prev, type }))
+    setStep('details')
+  }
 
   const validateForm = () => {
     try {
-      const schema = mode === 'add' ? createItemFormSchema : updateItemFormSchema
-      schema.parse(formData)
+      itemFormSchema.parse(formData)
       setErrors({})
       return true
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const zodErrors: Record<string, string> = {}
-        error.issues.forEach((issue) => {
+    } catch (error: any) {
+      const zodErrors: Record<string, string> = {}
+      if (error.issues) {
+        error.issues.forEach((issue: any) => {
           const path = issue.path.join('.')
           zodErrors[path] = issue.message
         })
-        setErrors(zodErrors)
       }
+      setErrors(zodErrors)
       return false
     }
   }
@@ -171,32 +230,19 @@ export function ItemFormModal({
       return
     }
 
-    setLoading(true)
     try {
-      // For updates, only send fields that have values - SAME LOGIC AS CategoryFormModal
-      let dataToSend = formData
-
-      if (mode === 'edit') {
-        // Filter out empty/undefined values for updates
-        const filteredData: Record<string, any> = {}
-        Object.entries(formData).forEach(([key, value]) => {
-          if (value !== undefined && value !== '' && value !== null) {
-            filteredData[key] = value
-          }
-        })
-        dataToSend = filteredData as ItemFormData
-      }
-
-      await onSubmit(dataToSend)
+      setIsSubmitting(true)
+      await onSubmit(formData)
       onClose()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting form:', error)
+      setErrors({ general: error.message || 'Failed to save item' })
     } finally {
-      setLoading(false)
+      setIsSubmitting(false)
     }
   }
 
-  const handleInputChange = (field: keyof ItemFormData, value: string | number) => {
+  const handleInputChange = (field: keyof ItemFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     // Clear error for this field
     if (errors[field]) {
@@ -204,71 +250,135 @@ export function ItemFormModal({
     }
   }
 
+  const goBackToTypeSelection = () => {
+    setStep('type')
+    setSelectedType(undefined)
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            {title}
+          </DialogTitle>
           <DialogDescription>
-            {mode === 'add' 
-              ? 'Create a new inventory item. Fill in all required fields.' 
-              : 'Update the item information. Only fill in the fields you want to change.'}
+            {step === 'type' 
+              ? 'Choose the type of item you want to add'
+              : `Enter the details for your ${selectedType} item`
+            }
           </DialogDescription>
         </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid gap-4 py-4">
-            {/* Item Name */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="itemName" className="text-right">
-                Name *
-              </Label>
-              <div className="col-span-3">
+
+        {errors.general && (
+          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+            <p className="text-sm text-destructive">{errors.general}</p>
+          </div>
+        )}
+
+        {/* Step 1: Type Selection */}
+        {step === 'type' && (
+          <div className="space-y-6">
+            <div>
+              <Label className="text-base font-medium">Item Type</Label>
+              <div className="grid grid-cols-2 gap-4 mt-3">
+                <div
+                  className={cn(
+                    "relative cursor-pointer rounded-lg border-2 p-4 text-center transition-all hover:bg-accent",
+                    selectedType === 'sellable' 
+                      ? "border-primary bg-primary/5" 
+                      : "border-border"
+                  )}
+                  onClick={() => handleTypeSelection('sellable')}
+                >
+                  <ShoppingCart className="mx-auto h-8 w-8 mb-2 text-primary" />
+                  <h3 className="font-semibold">Sellable Item</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Products for sale with inventory tracking
+                  </p>
+                  <Badge variant="secondary" className="mt-2">
+                    Price, Stock, Expiry
+                  </Badge>
+                </div>
+                
+                <div
+                  className={cn(
+                    "relative cursor-pointer rounded-lg border-2 p-4 text-center transition-all hover:bg-accent",
+                    selectedType === 'equipment' 
+                      ? "border-primary bg-primary/5" 
+                      : "border-border"
+                  )}
+                  onClick={() => handleTypeSelection('equipment')}
+                >
+                  <Settings className="mx-auto h-8 w-8 mb-2 text-primary" />
+                  <h3 className="font-semibold">Equipment</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Gym equipment with maintenance tracking
+                  </p>
+                  <Badge variant="secondary" className="mt-2">
+                    Purchase, Maintenance
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
+        {/* Step 2: Item Details */}
+        {step === 'details' && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Show selected type */}
+            <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg">
+              {selectedType === 'sellable' ? (
+                <ShoppingCart className="h-4 w-4 text-primary" />
+              ) : (
+                <Settings className="h-4 w-4 text-primary" />
+              )}
+              <span className="font-medium capitalize">{selectedType} Item</span>
+              {mode === 'add' && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={goBackToTypeSelection}
+                  className="ml-auto"
+                >
+                  Change Type
+                </Button>
+              )}
+            </div>
+
+            {/* Common fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">Item Name *</Label>
                 <Input
-                  id="itemName"
-                  value={(formData as ItemFormData).itemName || ''}
-                  onChange={(e) => handleInputChange('itemName', e.target.value)}
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
                   placeholder="Enter item name"
-                  className={errors.itemName ? 'border-red-500' : ''}
+                  className={errors.name ? 'border-red-500' : ''}
                 />
-                {errors.itemName && (
-                  <p className="text-sm text-red-500 mt-1">{errors.itemName}</p>
+                {errors.name && (
+                  <p className="text-sm text-red-500 mt-1">{errors.name}</p>
                 )}
               </div>
-            </div>
 
-            {/* Item Description */}
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="itemDescription" className="text-right mt-2">
-                Description *
-              </Label>
-              <div className="col-span-3">
-                <Textarea
-                  id="itemDescription"
-                  value={(formData as ItemFormData).itemDescription || ''}
-                  onChange={(e) => handleInputChange('itemDescription', e.target.value)}
-                  placeholder="Enter item description"
-                  className={errors.itemDescription ? 'border-red-500' : ''}
-                  rows={3}
-                />
-                {errors.itemDescription && (
-                  <p className="text-sm text-red-500 mt-1">{errors.itemDescription}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Category */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="categoryID" className="text-right">
-                Category *
-              </Label>
-              <div className="col-span-3">
+              <div>
+                <Label htmlFor="categoryID">Category *</Label>
                 <Select
-                  value={(formData as ItemFormData).categoryID || ''}
-                  onValueChange={(value: string) => handleInputChange('categoryID', value)}
+                  value={formData.categoryID}
+                  onValueChange={(value) => handleInputChange('categoryID', value)}
                 >
                   <SelectTrigger className={errors.categoryID ? 'border-red-500' : ''}>
-                    <SelectValue placeholder="Select a category" />
+                    <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((category) => (
@@ -284,159 +394,122 @@ export function ItemFormModal({
               </div>
             </div>
 
-            {/* Supplier */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="supplierID" className="text-right">
-                Supplier *
-              </Label>
-              <div className="col-span-3">
-                <Select
-                  value={(formData as ItemFormData).supplierID || ''}
-                  onValueChange={(value) => handleInputChange('supplierID', value)}
-                >
-                  <SelectTrigger className={errors.supplierID ? 'border-red-500' : ''}>
-                    <SelectValue placeholder="Select a supplier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers.map((supplier) => (
-                      <SelectItem key={supplier._id} value={supplier._id}>
-                        {supplier.supplierName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.supplierID && (
-                  <p className="text-sm text-red-500 mt-1">{errors.supplierID}</p>
-                )}
-              </div>
-            </div>
+            {/* Type-specific fields */}
+            {selectedType === 'sellable' && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="price">Price *</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.price || ''}
+                      onChange={(e) => handleInputChange('price', e.target.value ? parseFloat(e.target.value) : undefined)}
+                      placeholder="0.00"
+                      className={errors.price ? 'border-red-500' : ''}
+                    />
+                    {errors.price && (
+                      <p className="text-sm text-red-500 mt-1">{errors.price}</p>
+                    )}
+                  </div>
 
-            {/* Quantity and Price Row */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Quantity */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="quantity" className="text-right">
-                  Quantity *
-                </Label>
-                <div className="col-span-3">
+                  <div>
+                    <Label htmlFor="stock">Stock Quantity *</Label>
+                    <Input
+                      id="stock"
+                      type="number"
+                      min="0"
+                      value={formData.stock || ''}
+                      onChange={(e) => handleInputChange('stock', e.target.value ? parseInt(e.target.value) : undefined)}
+                      placeholder="0"
+                      className={errors.stock ? 'border-red-500' : ''}
+                    />
+                    {errors.stock && (
+                      <p className="text-sm text-red-500 mt-1">{errors.stock}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="expiryDate">Expiry Date (Optional)</Label>
+                    <Input
+                      id="expiryDate"
+                      type="date"
+                      value={formData.expiryDate}
+                      onChange={(e) => handleInputChange('expiryDate', e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="lowStockAlert">Low Stock Alert</Label>
+                    <Input
+                      id="lowStockAlert"
+                      type="number"
+                      min="1"
+                      value={formData.lowStockAlert || ''}
+                      onChange={(e) => handleInputChange('lowStockAlert', e.target.value ? parseInt(e.target.value) : undefined)}
+                      placeholder="5"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {selectedType === 'equipment' && (
+              <>
+                <div>
+                  <Label htmlFor="purchaseDate">Purchase Date *</Label>
                   <Input
-                    id="quantity"
-                    type="number"
-                    min="0"
-                    value={(formData as ItemFormData).quantity || 0}
-                    onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 0)}
-                    placeholder="0"
-                    className={errors.quantity ? 'border-red-500' : ''}
+                    id="purchaseDate"
+                    type="date"
+                    value={formData.purchaseDate}
+                    onChange={(e) => handleInputChange('purchaseDate', e.target.value)}
+                    max={new Date().toISOString().split('T')[0]}
+                    className={errors.purchaseDate ? 'border-red-500' : ''}
                   />
-                  {errors.quantity && (
-                    <p className="text-sm text-red-500 mt-1">{errors.quantity}</p>
+                  {errors.purchaseDate && (
+                    <p className="text-sm text-red-500 mt-1">{errors.purchaseDate}</p>
                   )}
                 </div>
-              </div>
 
-              {/* Price */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="price" className="text-right">
-                  Price (Optional)
-                </Label>
-                <div className="col-span-3">
-                  <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={(formData as ItemFormData).price || 0}
-                    onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
-                    className={errors.price ? 'border-red-500' : ''}
-                  />
-                  {errors.price && (
-                    <p className="text-sm text-red-500 mt-1">{errors.price}</p>
-                  )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="maintenanceSchedule">Maintenance Schedule</Label>
+                    <Input
+                      id="maintenanceSchedule"
+                      value={formData.maintenanceSchedule}
+                      onChange={(e) => handleInputChange('maintenanceSchedule', e.target.value)}
+                      placeholder="e.g., Monthly, Quarterly"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="warrantyPeriod">Warranty Period</Label>
+                    <Input
+                      id="warrantyPeriod"
+                      value={formData.warrantyPeriod}
+                      onChange={(e) => handleInputChange('warrantyPeriod', e.target.value)}
+                      placeholder="e.g., 2 years, 6 months"
+                    />
+                  </div>
                 </div>
-              </div>
-            </div>
+              </>
+            )}
 
-            {/* Low Stock Threshold */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="lowStockThreshold" className="text-right">
-                Low Stock Alert
-              </Label>
-              <div className="col-span-3">
-                <Input
-                  id="lowStockThreshold"
-                  type="number"
-                  min="0"
-                  value={(formData as ItemFormData).lowStockThreshold || 5}
-                  onChange={(e) => handleInputChange('lowStockThreshold', parseInt(e.target.value) || 5)}
-                  placeholder="5"
-                  className={errors.lowStockThreshold ? 'border-red-500' : ''}
-                />
-                {errors.lowStockThreshold && (
-                  <p className="text-sm text-red-500 mt-1">{errors.lowStockThreshold}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Maintenance Status */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="maintenanceStatus" className="text-right">
-                Status
-              </Label>
-              <div className="col-span-3">
-                <Select
-                  value={(formData as ItemFormData).maintenanceStatus || 'good'}
-                  onValueChange={(value) => handleInputChange('maintenanceStatus', value)}
-                >
-                  <SelectTrigger className={errors.maintenanceStatus ? 'border-red-500' : ''}>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="good">Good</SelectItem>
-                    <SelectItem value="maintenance_required">Maintenance Required</SelectItem>
-                    <SelectItem value="under_repair">Under Repair</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.maintenanceStatus && (
-                  <p className="text-sm text-red-500 mt-1">{errors.maintenanceStatus}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Last Maintenance Date */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="lastMaintenanceDate" className="text-right">
-                Last Maintenance
-              </Label>
-              <div className="col-span-3">
-                <Input
-                  id="lastMaintenanceDate"
-                  type="date"
-                  value={(formData as ItemFormData).lastMaintenanceDate || ''}
-                  onChange={(e) => handleInputChange('lastMaintenanceDate', e.target.value)}
-                  className={errors.lastMaintenanceDate ? 'border-red-500' : ''}
-                />
-                {errors.lastMaintenanceDate && (
-                  <p className="text-sm text-red-500 mt-1">{errors.lastMaintenanceDate}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onClose}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : mode === 'add' ? 'Create Item' : 'Update Item'}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : mode === 'edit' ? 'Update Item' : 'Create Item'}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   )

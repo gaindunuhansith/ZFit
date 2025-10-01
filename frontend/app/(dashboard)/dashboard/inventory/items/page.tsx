@@ -13,119 +13,84 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Plus, Edit, Trash2, Package2, Search, FileText } from 'lucide-react'
-import { itemApiService } from '@/lib/api/itemApi'
-import { supplierApiService } from '@/lib/api/supplierApi'
-import { categoryApiService } from '@/lib/api/categoryApi'
-import { generateInvoicesReport } from '@/lib/api/reportApi'
-import type { ItemData } from '@/lib/api/itemApi'
-import type { Category } from '@/lib/api/categoryApi'
-import { ItemFormModal, ItemFormData, UpdateItemFormData } from '@/components/ItemFormModal'
-
-interface Item {
-  _id: string
-  itemName: string
-  itemDescription: string
-  categoryID: {
-    _id: string
-    name: string
-  } | string // Can be populated or just ID
-  quantity: number
-  price?: number
-  supplierID: {
-    _id: string
-    supplierName: string
-  } | null
-  lowStockThreshold: number
-  maintenanceStatus: "good" | "maintenance_required" | "under_repair"
-  lastMaintenanceDate?: string
-  createdAt: string
-  updatedAt?: string
-}
-
-interface Supplier {
-  _id: string
-  supplierName: string
-}
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Plus, Edit, Trash2, Package, Search, ShoppingCart, Settings, Calendar } from 'lucide-react'
+import { itemApiService, type Item } from '@/lib/api/itemApi'
+import { categoryApiService, type Category } from '@/lib/api/categoryApi'
+import { ItemFormModal, type ItemFormData, type UpdateItemFormData } from '@/components/ItemFormModal'
+import { format } from 'date-fns'
 
 export default function ItemsPage() {
-  const [items, setItems] = useState<Item[]>([])
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [items, setItems] = useState<Item[]>([])
+  const [filteredItems, setFilteredItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<Item | null>(null)
+  const [activeTab, setActiveTab] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
-    Promise.all([
-      fetchItems(),
-      fetchSuppliers(),
-      fetchCategories()
-    ])
+    fetchData()
   }, [])
 
-  const fetchItems = async () => {
+  useEffect(() => {
+    filterItems()
+  }, [items, activeTab, searchTerm])
+
+  const fetchData = async () => {
     try {
       setLoading(true)
-      const response = await itemApiService.getItems()
-      // Filter out items with invalid data to prevent errors
-      const validItems = (response.data as Item[]).filter(item => 
-        item && item._id && item.itemName
-      )
-      setItems(validItems)
+      setError('')
+      
+      // Fetch categories and items in parallel
+      const [categoriesResponse, itemsResponse] = await Promise.all([
+        categoryApiService.getCategories(),
+        itemApiService.getItems()
+      ])
+      
+      setCategories(categoriesResponse.data as Category[])
+      setItems(itemsResponse.data as Item[])
     } catch (error) {
-      console.error('Error fetching items:', error)
-      setError('Failed to load items')
+      console.error('Error fetching data:', error)
+      setError('Failed to load data')
     } finally {
       setLoading(false)
     }
   }
 
+  const filterItems = () => {
+    let filtered = items
 
-
-  const fetchSuppliers = async () => {
-    try {
-      console.log('Fetching suppliers...')
-      const response = await supplierApiService.getSuppliers()
-      console.log('Suppliers response:', response)
-      setSuppliers(response.data as Supplier[])
-      console.log('Suppliers set:', response.data)
-    } catch (error) {
-      console.error('Error fetching suppliers:', error)
+    // Filter by tab selection
+    if (activeTab === 'sellable') {
+      filtered = filtered.filter(item => item.type === 'sellable')
+    } else if (activeTab === 'equipment') {
+      filtered = filtered.filter(item => item.type === 'equipment')
+    } else if (activeTab !== 'all') {
+      // Filter by specific category
+      filtered = filtered.filter(item => {
+        const categoryId = typeof item.categoryID === 'string' 
+          ? item.categoryID 
+          : item.categoryID._id
+        return categoryId === activeTab
+      })
     }
-  }
 
-  const fetchCategories = async () => {
-    try {
-      console.log('Fetching categories...')
-      const response = await categoryApiService.getCategories()
-      console.log('Categories response:', response)
-      setCategories(response.data as Category[])
-      console.log('Categories set:', response.data)
-    } catch (error) {
-      console.error('Error fetching categories:', error)
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
     }
+
+    setFilteredItems(filtered)
   }
 
   const handleAddItem = () => {
-    console.log('Add item clicked. Suppliers available:', suppliers.length, 'Categories available:', categories.length)
-    if (suppliers.length === 0) {
-      setError('Please create at least one supplier before adding items')
-      return
-    }
-    if (categories.length === 0) {
-      setError('Please create at least one category before adding items')
-      return
-    }
     setEditingItem(null)
     setModalOpen(true)
-  }
-
-  const handleCreateInvoice = () => {
-    // TODO: Implement invoice creation functionality
-    alert('Invoice creation functionality will be implemented here')
   }
 
   const handleEditItem = (item: Item) => {
@@ -139,120 +104,79 @@ export default function ItemsPage() {
     try {
       await itemApiService.deleteItem(itemId)
       setItems(items.filter(item => item._id !== itemId))
-    } catch (error) {
+      setError('') // Clear any previous errors
+    } catch (error: any) {
       console.error('Error deleting item:', error)
-      setError('Failed to delete item')
+      
+      let errorMessage = 'Failed to delete item'
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      setError(errorMessage)
     }
   }
 
   const handleModalSubmit = async (formData: ItemFormData | UpdateItemFormData) => {
     try {
-      console.log('Submitting form data:', formData)
-      console.log('Form data JSON:', JSON.stringify(formData, null, 2))
-      console.log('Editing item:', editingItem)
-      
       if (editingItem) {
         // Update existing item
-        console.log('Updating item with ID:', editingItem._id)
         await itemApiService.updateItem(editingItem._id, formData)
       } else {
         // Create new item
-        console.log('Creating new item')
-        console.log('Sending to API:', JSON.stringify(formData, null, 2))
-        const response = await itemApiService.createItem(formData as ItemData)
-        console.log('Create item response:', response)
+        await itemApiService.createItem(formData as ItemFormData)
       }
-      fetchItems() // Refresh the list
-    } catch (error) {
+      fetchData() // Refresh the list
+      setModalOpen(false)
+      setError('') // Clear any previous errors
+    } catch (error: any) {
       console.error('Error saving item:', error)
-      console.error('Full error details:', error)
-      setError(`Failed to save item: ${error instanceof Error ? error.message : 'Unknown error'}`)
-      throw error
-    }
-  }
-
-  const getMaintenanceStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'good':
-        return 'default'
-      case 'maintenance_required':
-        return 'secondary'
-      case 'under_repair':
-        return 'destructive'
-      default:
-        return 'secondary'
-    }
-  }
-
-  const getMaintenanceStatusLabel = (status: string) => {
-    switch (status) {
-      case 'good':
-        return 'Good'
-      case 'maintenance_required':
-        return 'Maintenance Required'
-      case 'under_repair':
-        return 'Under Repair'
-      default:
-        return status
-    }
-  }
-
-  const isLowStock = (quantity: number, threshold: number) => {
-    return quantity <= threshold
-  }
-
-  // Filter items based on search term
-  const filteredItems = items.filter(item => {
-    const searchLower = searchTerm.toLowerCase()
-    const supplierName = item.supplierID?.supplierName || ''
-    const categoryName = typeof item.categoryID === 'object' 
-      ? item.categoryID.name 
-      : item.categoryID || ''
-    
-    return (
-      item.itemName.toLowerCase().includes(searchLower) ||
-      item.itemDescription.toLowerCase().includes(searchLower) ||
-      categoryName.toLowerCase().includes(searchLower) ||
-      supplierName.toLowerCase().includes(searchLower) ||
-      item.maintenanceStatus.toLowerCase().includes(searchLower)
-    )
-  })
-
-  const handleGenerateReport = async () => {
-    try {
-      const response = await fetch('/api/v1/reports/inventory-items/pdf')
-      if (!response.ok) throw new Error('Failed to generate report')
       
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = 'inventory-items-report.pdf'
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      window.URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('Error generating report:', error)
-      setError('Failed to generate report')
+      let errorMessage = 'Failed to save item'
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      setError(errorMessage)
+      throw new Error(errorMessage) // Re-throw to be handled by the modal
     }
   }
 
-  const handleGenerateInvoiceReport = async () => {
-    try {
-      const blob = await generateInvoicesReport()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = 'invoices-report.pdf'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('Error generating invoice report:', error)
-      setError('Failed to generate invoice report')
+  const getCategoryName = (categoryID: any) => {
+    if (typeof categoryID === 'string') {
+      const category = categories.find(cat => cat._id === categoryID)
+      return category?.name || 'Unknown Category'
     }
+    return categoryID.name || 'Unknown Category'
+  }
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A'
+    try {
+      return format(new Date(dateString), 'MMM dd, yyyy')
+    } catch {
+      return 'Invalid Date'
+    }
+  }
+
+  const getTypeIcon = (type: string) => {
+    return type === 'sellable' ? (
+      <ShoppingCart className="h-4 w-4" />
+    ) : (
+      <Settings className="h-4 w-4" />
+    )
+  }
+
+  const getTypeColor = (type: string) => {
+    return type === 'sellable' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
   }
 
   if (loading) {
@@ -261,7 +185,7 @@ export default function ItemsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Items</h2>
-            <p className="text-muted-foreground">Manage inventory items</p>
+            <p className="text-muted-foreground">Manage your inventory items</p>
           </div>
         </div>
         <Card>
@@ -282,170 +206,291 @@ export default function ItemsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Items</h2>
-          <p className="text-muted-foreground">Manage inventory items</p>
+          <p className="text-muted-foreground">Manage your gym inventory items</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleGenerateReport}>
-            <FileText className="h-4 w-4 mr-2" />
-            Generate Report
-          </Button>
-          <Button variant="outline" onClick={handleCreateInvoice}>
-            <FileText className="h-4 w-4 mr-2" />
-            Create Invoice
-          </Button>
-          <Button variant="outline" onClick={handleGenerateInvoiceReport}>
-            <FileText className="h-4 w-4 mr-2" />
-            Invoice Report
-          </Button>
-          <Button onClick={handleAddItem}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Item
-          </Button>
+        <Button onClick={handleAddItem} className="bg-primary hover:bg-primary/90">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Item
+        </Button>
+      </div>
+
+      {/* Search Bar */}
+      <div className="flex items-center space-x-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search items..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
         </div>
       </div>
 
-      {/* Items Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package2 className="h-5 w-5" />
-            All Items
-          </CardTitle>
-          <CardDescription>
-            View and manage all inventory items
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {error && (
-            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-4">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
+      {/* Error Display */}
+      {error && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
 
-          {/* Search Bar */}
-          <div className="flex items-center space-x-2 mb-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search items..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
+      {/* Filter Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground w-full overflow-x-auto gap-1">
+          <TabsTrigger value="all" className="flex items-center gap-2 whitespace-nowrap">
+            <Package className="h-4 w-4" />
+            All Items ({items.length})
+          </TabsTrigger>
+          <TabsTrigger value="sellable" className="flex items-center gap-2 whitespace-nowrap">
+            <ShoppingCart className="h-4 w-4" />
+            Sellable Items ({items.filter(item => item.type === 'sellable').length})
+          </TabsTrigger>
+          <TabsTrigger value="equipment" className="flex items-center gap-2 whitespace-nowrap">
+            <Settings className="h-4 w-4" />
+            Equipment ({items.filter(item => item.type === 'equipment').length})
+          </TabsTrigger>
+        </TabsList>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Supplier</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredItems.map((item) => (
-                <TableRow key={item._id}>
-                  <TableCell className="font-medium">
-                    <div>
-                      <div>{item.itemName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {item.itemDescription}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {typeof item.categoryID === 'object' 
-                      ? item.categoryID.name 
-                      : item.categoryID || 'No Category'}
-                  </TableCell>
-                  <TableCell>
-                    {item.supplierID && typeof item.supplierID === 'object' 
-                      ? item.supplierID.supplierName 
-                      : item.supplierID || 'No Supplier'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span>{item.quantity}</span>
-                      {isLowStock(item.quantity, item.lowStockThreshold) && (
-                        <Badge variant="destructive" className="text-xs">
-                          Low Stock
-                        </Badge>
+        <TabsContent value={activeTab} className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                {activeTab === 'all' && <Package className="h-5 w-5" />}
+                {activeTab === 'sellable' && <ShoppingCart className="h-5 w-5" />}
+                {activeTab === 'equipment' && <Settings className="h-5 w-5" />}
+                {activeTab !== 'all' && activeTab !== 'sellable' && activeTab !== 'equipment' && <Package className="h-5 w-5" />}
+                {activeTab === 'all' 
+                  ? 'All Items'
+                  : activeTab === 'sellable'
+                  ? 'Sellable Items'
+                  : activeTab === 'equipment'
+                  ? 'Equipment Items'
+                  : categories.find(cat => cat._id === activeTab)?.name + ' Items'
+                }
+              </CardTitle>
+              <CardDescription>
+                {activeTab === 'all' 
+                  ? 'View and manage all inventory items across all categories and types'
+                  : activeTab === 'sellable'
+                  ? 'Items that can be sold to customers (supplements, accessories, etc.)'
+                  : activeTab === 'equipment'
+                  ? 'Gym equipment and machines for facility use'
+                  : `Items in the ${categories.find(cat => cat._id === activeTab)?.name} category`
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      
+                      {/* Sellable Items specific columns */}
+                      {activeTab === 'sellable' && (
+                        <>
+                          <TableHead>Price</TableHead>
+                          <TableHead>Stock</TableHead>
+                          <TableHead>Low Stock Alert</TableHead>
+                          <TableHead>Expiry Date</TableHead>
+                        </>
                       )}
-                    </div>
-                  </TableCell>
-                  <TableCell>LKR {item.price ? item.price.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>
-                    <Badge variant={getMaintenanceStatusBadgeVariant(item.maintenanceStatus)}>
-                      {getMaintenanceStatusLabel(item.maintenanceStatus)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditItem(item)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteItem(item._id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                      
+                      {/* Equipment specific columns */}
+                      {activeTab === 'equipment' && (
+                        <>
+                          <TableHead>Purchase Date</TableHead>
+                          <TableHead>Maintenance</TableHead>
+                          <TableHead>Warranty</TableHead>
+                        </>
+                      )}
+                      
+                      {/* All items and category tabs - show type and general details */}
+                      {(activeTab === 'all' || categories.some(cat => cat._id === activeTab)) && (
+                        <>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Details</TableHead>
+                        </>
+                      )}
+                      
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredItems.map((item) => (
+                      <TableRow key={item._id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {getTypeIcon(item.type)}
+                            <span className="font-medium">{item.name}</span>
+                          </div>
+                        </TableCell>
+                        
+                        <TableCell>
+                          <Badge variant="outline">
+                            {getCategoryName(item.categoryID)}
+                          </Badge>
+                        </TableCell>
+                        
+                        {/* Sellable Items specific columns */}
+                        {activeTab === 'sellable' && (
+                          <>
+                            <TableCell>
+                              <span className="font-medium">${item.price?.toFixed(2) || '0.00'}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="font-medium">{item.stock || 0}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-muted-foreground">{item.lowStockAlert || 'Not set'}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-muted-foreground">
+                                {item.expiryDate ? formatDate(item.expiryDate) : 'No expiry'}
+                              </span>
+                            </TableCell>
+                          </>
+                        )}
+                        
+                        {/* Equipment specific columns */}
+                        {activeTab === 'equipment' && (
+                          <>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                <span className="font-medium">{formatDate(item.purchaseDate)}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-muted-foreground">
+                                {item.maintenanceSchedule || 'Not scheduled'}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-muted-foreground">
+                                {item.warrantyPeriod || 'No warranty'}
+                              </span>
+                            </TableCell>
+                          </>
+                        )}
+                        
+                        {/* All items and category tabs - show type and general details */}
+                        {(activeTab === 'all' || categories.some(cat => cat._id === activeTab)) && (
+                          <>
+                            <TableCell>
+                              <Badge className={getTypeColor(item.type)}>
+                                {item.type === 'sellable' ? 'Sellable' : 'Equipment'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {item.type === 'sellable' ? (
+                                <div className="text-sm">
+                                  <div className="font-medium">${item.price?.toFixed(2) || '0.00'}</div>
+                                  <div className="text-muted-foreground">Stock: {item.stock || 0}</div>
+                                </div>
+                              ) : (
+                                <div className="text-sm">
+                                  <div className="font-medium">
+                                    <Calendar className="inline h-3 w-3 mr-1" />
+                                    {formatDate(item.purchaseDate)}
+                                  </div>
+                                  <div className="text-muted-foreground">
+                                    {item.maintenanceSchedule || 'No maintenance'}
+                                  </div>
+                                </div>
+                              )}
+                            </TableCell>
+                          </>
+                        )}
+                        
+                        <TableCell>
+                          <span className="text-muted-foreground">
+                            {formatDate(item.createdAt)}
+                          </span>
+                        </TableCell>
+                        
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditItem(item)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteItem(item._id)}
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
 
-          {filteredItems.length === 0 && items.length > 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Package2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No items found matching your search</p>
-              <p className="text-sm">Try adjusting your search terms</p>
-            </div>
-          )}
+                {filteredItems.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    {searchTerm ? (
+                      <>
+                        <p>No items found matching "{searchTerm}"</p>
+                        <p className="text-sm">Try adjusting your search terms</p>
+                      </>
+                    ) : activeTab === 'all' ? (
+                      <>
+                        <p>No items found</p>
+                        <p className="text-sm">Add your first item to get started</p>
+                      </>
+                    ) : activeTab === 'sellable' ? (
+                      <>
+                        <p>No sellable items found</p>
+                        <p className="text-sm">Add sellable items like supplements or accessories</p>
+                      </>
+                    ) : activeTab === 'equipment' ? (
+                      <>
+                        <p>No equipment found</p>
+                        <p className="text-sm">Add gym equipment and machines</p>
+                      </>
+                    ) : (
+                      <>
+                        <p>No items in this category</p>
+                        <p className="text-sm">Add items to this category to see them here</p>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
-          {items.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Package2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No items found</p>
-              <p className="text-sm">Add your first item to get started</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
+      {/* Item Form Modal */}
       <ItemFormModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={handleModalSubmit}
-        suppliers={suppliers}
-        categories={categories}
         initialData={editingItem ? {
-          itemName: editingItem.itemName,
-          itemDescription: editingItem.itemDescription,
-          categoryID: typeof editingItem.categoryID === 'object' 
-            ? editingItem.categoryID._id 
-            : editingItem.categoryID || '',
-          quantity: editingItem.quantity,
+          name: editingItem.name,
+          categoryID: typeof editingItem.categoryID === 'string' 
+            ? editingItem.categoryID 
+            : editingItem.categoryID._id,
+          type: editingItem.type,
           price: editingItem.price,
-          supplierID: editingItem.supplierID && typeof editingItem.supplierID === 'object' 
-            ? editingItem.supplierID._id 
-            : editingItem.supplierID || '',
-          lowStockThreshold: editingItem.lowStockThreshold,
-          maintenanceStatus: editingItem.maintenanceStatus,
-          lastMaintenanceDate: editingItem.lastMaintenanceDate,
+          stock: editingItem.stock,
+          expiryDate: editingItem.expiryDate ? new Date(editingItem.expiryDate).toISOString().split('T')[0] : '',
+          lowStockAlert: editingItem.lowStockAlert,
+          purchaseDate: editingItem.purchaseDate ? new Date(editingItem.purchaseDate).toISOString().split('T')[0] : '',
+          maintenanceSchedule: editingItem.maintenanceSchedule,
+          warrantyPeriod: editingItem.warrantyPeriod,
         } : undefined}
         mode={editingItem ? 'edit' : 'add'}
         title={editingItem ? 'Edit Item' : 'Add New Item'}

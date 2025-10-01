@@ -10,6 +10,7 @@ import membershipPlanRouter from "./routes/membershipPlan.routes.js";
 import membershipRouter from "./routes/membership.routes.js";  
 import inventoryRoutes from "./routes/inventory.routes.js";  
 import categoryRoutes from "./routes/inventoryCategory.routes.js";
+import itemRoutes from "./routes/item.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";  
 import BookingRoutes from "./routes/Booking.routes.js";
 import progressRoutes from "./routes/progress.routes.js";
@@ -46,6 +47,7 @@ app.use("/api/v1/users", userRouter);
 app.use("/api/v1/membership-plans", membershipPlanRouter);  
 app.use("/api/v1/memberships", membershipRouter);  
 app.use('/api/v1', categoryRoutes);  // Categories at /api/v1/categories
+app.use('/api/v1', itemRoutes);  // Items at /api/v1/items
 app.use('/api/v1/inventory', inventoryRoutes);  
 app.use('/api/v1/payments', paymentRoutes);  
 app.use('/api/v1/bookings', BookingRoutes);
