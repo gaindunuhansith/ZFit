@@ -303,7 +303,6 @@ export const declineBankTransfer = async (req: Request, res: Response) => {
             });
         }
 
-
         if (payment.status !== 'pending') {
             return res.status(400).json({
                 success: false,
