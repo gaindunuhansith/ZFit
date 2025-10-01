@@ -199,14 +199,12 @@ export const approveBankTransfer = async (req: Request, res: Response) => {
         try {
             const payment = await approveBankTransferPaymentService(id, adminId, adminNotes);
 
-        const payment = await approveBankTransferPaymentService(id, adminId, adminNotes);
-
-        if (!payment) {
-            return res.status(404).json({
-                success: false,
-                message: 'Bank transfer payment not found'
-            });
-        }
+            if (!payment) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Bank transfer payment not found'
+                });
+            }
 
 
         if (payment.status !== 'pending') {
@@ -306,14 +304,12 @@ export const declineBankTransfer = async (req: Request, res: Response) => {
         try {
             const payment = await declineBankTransferPaymentService(id, adminId, adminNotes);
 
-        const payment = await declineBankTransferPaymentService(id, adminId, adminNotes);
-
-        if (!payment) {
-            return res.status(404).json({
-                success: false,
-                message: 'Bank transfer payment not found'
-            });
-        }
+            if (!payment) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Bank transfer payment not found'
+                });
+            }
 
         if (payment.status !== 'pending') {
             return res.status(400).json({
