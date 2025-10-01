@@ -89,7 +89,7 @@ export default function RefundRequestsManagementPage() {
       try {
         setLoading(true)
         const [requestsData, countData] = await Promise.all([
-          getRefundRequests(),
+          getRefundRequests(undefined, ['userId', 'paymentId']),
           getPendingRequestsCount()
         ])
         setRequests(requestsData)
@@ -256,12 +256,27 @@ export default function RefundRequestsManagementPage() {
                     <TableRow key={request._id}>
                       <TableCell className="font-medium">{request.requestId}</TableCell>
                       <TableCell>
-                        <div>
-                          <div className="font-medium">
-                            {typeof request.userId === 'object' ? request.userId?.name : 'Unknown User'}
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-medium text-primary">
+                              {typeof request.userId === 'object' && request.userId?.name
+                                ? request.userId.name.charAt(0).toUpperCase()
+                                : 'U'}
+                            </span>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            {typeof request.userId === 'object' ? request.userId?.email : request.userId}
+                          <div>
+                            <div className="font-medium text-sm">
+                              {typeof request.userId === 'object' && request.userId?.name
+                                ? request.userId.name
+                                : 'Unknown User'}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {typeof request.userId === 'object' && request.userId?.email
+                                ? request.userId.email
+                                : typeof request.userId === 'string'
+                                ? request.userId
+                                : 'N/A'}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -329,61 +344,203 @@ export default function RefundRequestsManagementPage() {
 
       {/* View Details Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Refund Request Details</DialogTitle>
-            <DialogDescription>
-              {selectedRequest && `Request ID: ${selectedRequest.requestId}`}
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Refund Request Details
+            </DialogTitle>
+            <DialogDescription className="text-base font-mono bg-muted px-3 py-2 rounded-md">
+              Request ID: {selectedRequest?.requestId}
             </DialogDescription>
           </DialogHeader>
 
           {selectedRequest && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">User Information</Label>
-                  <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                    <p className="font-medium">
-                      {typeof selectedRequest.userId === 'object' ? selectedRequest.userId?.name : 'Unknown User'}
+              {/* Status and Amount Header */}
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  {getStatusIcon(selectedRequest.status)}
+                  <div>
+                    <p className="font-semibold text-lg">LKR {selectedRequest.requestedAmount.toFixed(2)}</p>
+                    <p className="text-sm text-muted-foreground">Refund Amount Requested</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  {getStatusBadge(selectedRequest.status)}
+                  <div className="text-right">
+                    <p className="text-sm font-medium">Requested on</p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(selectedRequest.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
                     </p>
-                    <p className="text-sm text-gray-600">
-                      {typeof selectedRequest.userId === 'object' ? selectedRequest.userId?.email : selectedRequest.userId}
-                    </p>
-                    {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.contactNo && (
-                      <p className="text-sm text-gray-600">{selectedRequest.userId.contactNo}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Content - Row-based Structure */}
+              <div className="space-y-8">
+                {/* User Information Row */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">User Information</h3>
+                  <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                      <span className="text-base font-medium text-primary">
+                        {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.name
+                          ? selectedRequest.userId.name.charAt(0).toUpperCase()
+                          : 'U'}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-lg">
+                        {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.name
+                          ? selectedRequest.userId.name
+                          : 'Unknown User'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">ID: {selectedRequest._id.slice(-8)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm">
+                        <span className="font-medium">Email:</span><br />
+                        {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.email
+                          ? selectedRequest.userId.email
+                          : 'N/A'}
+                      </p>
+                      {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.contactNo && (
+                        <p className="text-sm mt-1">
+                          <span className="font-medium">Phone:</span> {selectedRequest.userId.contactNo}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Information Row */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">Payment Information</h3>
+                  {typeof selectedRequest.paymentId === 'object' && selectedRequest.paymentId ? (
+                    <div className="p-4 bg-muted/30 rounded-lg space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">Transaction ID</p>
+                          <p className="text-sm font-mono bg-background px-3 py-1 rounded border">
+                            {selectedRequest.paymentId.transactionId}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium">Original Amount</p>
+                          <p className="text-lg font-semibold">
+                            {selectedRequest.paymentId.currency || 'LKR'} {selectedRequest.paymentId.amount.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-6 text-sm">
+                        <div>
+                          <span className="font-medium">Type:</span> {selectedRequest.paymentId.type}
+                        </div>
+                        <div>
+                          <span className="font-medium">Method:</span> {selectedRequest.paymentId.method || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-muted/30 rounded-lg text-center text-muted-foreground">
+                      <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                      <p>Payment details not available</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Request Timeline Row */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">Request Timeline</h3>
+                  <div className="p-4 bg-muted/30 rounded-lg space-y-4">
+                    <div className="flex items-start gap-4">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full mt-1 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Request Created</p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(selectedRequest.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {selectedRequest.updatedAt && selectedRequest.updatedAt !== selectedRequest.createdAt && (
+                      <div className="flex items-start gap-4">
+                        <div className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${
+                          selectedRequest.status === 'approved' ? 'bg-green-500' :
+                          selectedRequest.status === 'declined' ? 'bg-red-500' : 'bg-yellow-500'
+                        }`}></div>
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">
+                            Request {selectedRequest.status.charAt(0).toUpperCase() + selectedRequest.status.slice(1)}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(selectedRequest.updatedAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                <div>
-                  <Label className="text-sm font-medium">Payment Information</Label>
-                  <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                    <p className="font-medium">LKR {selectedRequest.requestedAmount.toFixed(2)}</p>
-                    <p className="text-sm text-gray-600">
-                      Status: {getStatusBadge(selectedRequest.status)}
+                {/* Request Notes Row */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">Request Notes</h3>
+                  <div className="p-4 bg-muted/50 rounded-lg min-h-[100px]">
+                    <p className="text-sm whitespace-pre-wrap">
+                      {selectedRequest.notes || 'No notes provided'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Admin Notes Row */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">Admin Notes</h3>
+                  <div className="p-4 bg-muted/50 rounded-lg min-h-[100px]">
+                    <p className="text-sm whitespace-pre-wrap">
+                      {selectedRequest.adminNotes || 'No admin notes'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div>
-                <Label className="text-sm font-medium">Request Notes</Label>
-                <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                  <p className="text-sm">{selectedRequest.notes}</p>
-                </div>
-              </div>
-
-              {selectedRequest.adminNotes && (
-                <div>
-                  <Label className="text-sm font-medium">Admin Notes</Label>
-                  <div className="mt-1 p-3 bg-blue-50 rounded-md">
-                    <p className="text-sm">{selectedRequest.adminNotes}</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="text-sm text-gray-500">
-                Created: {new Date(selectedRequest.createdAt).toLocaleString()}
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsViewModalOpen(false)}
+                >
+                  Close
+                </Button>
+                {selectedRequest.status === 'pending' && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsViewModalOpen(false)
+                        handleProcessRequest(selectedRequest, 'decline')
+                      }}
+                      className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Decline
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setIsViewModalOpen(false)
+                        handleProcessRequest(selectedRequest, 'approve')
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Approve
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -425,12 +582,24 @@ export default function RefundRequestsManagementPage() {
                 Cancel
               </Button>
               <Button
-                variant="outline"
                 onClick={handleConfirmProcessing}
-                className={processingAction === 'approve' ? 'text-green-600 hover:text-green-700 border-green-600 hover:border-green-700' : 'text-red-600 hover:text-red-700 border-red-600 hover:border-red-700'}
+                className={processingAction === 'approve'
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-red-600 hover:bg-red-700 text-white'
+                }
               >
-                {processingAction === 'approve' && 'Approve Request'}
-                {processingAction === 'decline' && 'Decline Request'}
+                {processingAction === 'approve' && (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Approve Request
+                  </>
+                )}
+                {processingAction === 'decline' && (
+                  <>
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Decline Request
+                  </>
+                )}
               </Button>
             </div>
           </div>

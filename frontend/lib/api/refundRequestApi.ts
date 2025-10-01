@@ -7,6 +7,37 @@ interface ApiResponse<T = unknown> {
   error?: string
 }
 
+// Import types from paymentApi
+interface User {
+  _id: string
+  name: string
+  email: string
+  contactNo: string
+  role: string
+  status: string
+}
+
+interface Payment {
+  _id: string
+  userId: string | User
+  amount: number
+  currency: string
+  type: 'membership' | 'inventory' | 'booking' | 'other'
+  status: 'pending' | 'completed' | 'failed' | 'refunded'
+  method: 'card' | 'bank-transfer' | 'cash'
+  relatedId: string
+  transactionId: string
+  gatewayTransactionId?: string
+  gatewayPaymentId?: string
+  gatewayResponse?: Record<string, unknown>
+  failureReason?: string
+  refundedAmount: number
+  refundReason?: string
+  date: string
+  createdAt: string
+  updatedAt: string
+}
+
 // Base request function
 const apiRequest = async <T>(
   endpoint: string,
@@ -49,8 +80,8 @@ const apiRequest = async <T>(
 // Types
 export interface RefundRequest {
   _id: string
-  userId: string | any // Can be string or populated object
-  paymentId: string | any // Can be string or populated object
+  userId: string | User // Can be string or populated object
+  paymentId: string | Payment // Can be string or populated object
   requestedAmount: number
   notes: string
   status: 'pending' | 'approved' | 'declined'
@@ -93,10 +124,14 @@ export const createRefundRequest = async (data: CreateRefundRequestData): Promis
 }
 
 // Get all refund requests (for admin)
-export const getRefundRequests = async (status?: string): Promise<RefundRequest[]> => {
+export const getRefundRequests = async (status?: string, populate?: string[]): Promise<RefundRequest[]> => {
   try {
-    const query = status ? `?status=${status}` : ''
-    const response = await apiRequest<RefundRequest[]>(`/refund-requests${query}`)
+    let query = status ? `?status=${status}` : '?'
+    if (populate && populate.length > 0) {
+      query += (status ? '&' : '') + `populate=${populate.join(',')}`
+    }
+    const endpoint = query === '?' ? '/refund-requests' : `/refund-requests${query}`
+    const response = await apiRequest<RefundRequest[]>(endpoint)
     return response.data || []
   } catch (error) {
     console.error('Error fetching refund requests:', error)
@@ -121,7 +156,7 @@ export const getRefundRequestById = async (id: string): Promise<RefundRequest> =
 // Get refund requests by user (for user dashboard)
 export const getRefundRequestsByUser = async (userId: string): Promise<RefundRequest[]> => {
   try {
-    const response = await apiRequest<RefundRequest[]>(`/refund-requests/user/${userId}`)
+    const response = await apiRequest<RefundRequest[]>(`/refund-requests/user/${userId}?populate=paymentId`)
     return response.data || []
   } catch (error) {
     console.error('Error fetching user refund requests:', error)
