@@ -317,17 +317,9 @@ export default function PaymentMethodPage() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-4">
+          <div className="flex justify-center pt-4">
             <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => setSelectedMethod(null)}
-              disabled={!selectedMethod}
-            >
-              Change Selection
-            </Button>
-            <Button
-              className="flex-1"
+              className="w-full max-w-xs"
               onClick={handleProceed}
               disabled={!selectedMethod}
             >
