@@ -4,9 +4,26 @@ import InventoryItem from "../models/inventoryItem.schema.js";
 import mongoose from "mongoose";
 
 export default class CartService {
+  // Helper method to populate cart data
+  private async populateCart(cart: ICart): Promise<ICart> {
+    return await cart.populate({
+      path: "items.itemId",
+      populate: [
+        { path: "categoryID", select: "name" },
+        { path: "supplierID", select: "supplierName supplierEmail supplierPhone" }
+      ]
+    });
+  }
+
   // Get cart by memberId
   async getCart(memberId: string): Promise<ICart | null> {
-    return await Cart.findOne({ memberId }).populate("items.itemId");
+    return await Cart.findOne({ memberId }).populate({
+      path: "items.itemId",
+      populate: [
+        { path: "categoryID", select: "name" },
+        { path: "supplierID", select: "supplierName supplierEmail supplierPhone" }
+      ]
+    });
   }
 
   // Add item to cart
@@ -21,8 +38,8 @@ export default class CartService {
 
     if (!cart) {
       // Check stock for new cart
-      if (quantity > item.quantity) {
-        throw new Error(`Insufficient stock. Available: ${item.quantity}, Requested: ${quantity}`);
+      if (quantity > (item.stock || 0)) {
+        throw new Error(`Insufficient stock. Available: ${item.stock || 0}, Requested: ${quantity}`);
       }
       
       // If member has no cart yet, create one
@@ -41,16 +58,16 @@ export default class CartService {
         const currentQuantityInCart = cart.items[itemIndex]!.quantity;
         const totalQuantity = currentQuantityInCart + quantity;
         
-        if (totalQuantity > item.quantity) {
-          throw new Error(`Insufficient stock. Available: ${item.quantity}, Already in cart: ${currentQuantityInCart}, Requested: ${quantity}`);
+        if (totalQuantity > (item.stock || 0)) {
+          throw new Error(`Insufficient stock. Available: ${item.stock || 0}, Already in cart: ${currentQuantityInCart}, Requested: ${quantity}`);
         }
         
         // Increment quantity if stock is sufficient
         cart.items[itemIndex]!.quantity = totalQuantity;
       } else {
         // Check stock for new item
-        if (quantity > item.quantity) {
-          throw new Error(`Insufficient stock. Available: ${item.quantity}, Requested: ${quantity}`);
+        if (quantity > (item.stock || 0)) {
+          throw new Error(`Insufficient stock. Available: ${item.stock || 0}, Requested: ${quantity}`);
         }
         
         // Otherwise push new item
@@ -58,7 +75,8 @@ export default class CartService {
       }
     }
 
-    return await cart.save();
+    const savedCart = await cart.save();
+    return await this.populateCart(savedCart);
   }
 
   // Update item quantity in cart
@@ -70,8 +88,8 @@ export default class CartService {
     }
 
     // Check stock availability
-    if (quantity > item.quantity) {
-      throw new Error(`Insufficient stock. Available: ${item.quantity}, Requested: ${quantity}`);
+    if (quantity > (item.stock || 0)) {
+      throw new Error(`Insufficient stock. Available: ${item.stock || 0}, Requested: ${quantity}`);
     }
 
     const cart = await Cart.findOne({ memberId });
@@ -83,7 +101,8 @@ export default class CartService {
 
     if (itemIndex > -1) {
       cart.items[itemIndex]!.quantity = quantity;
-      return await cart.save();
+      const savedCart = await cart.save();
+      return await this.populateCart(savedCart);
     }
     return null;
   }
@@ -95,15 +114,18 @@ export default class CartService {
 
     cart.items = cart.items.filter((i) => i.itemId.toString() !== itemId);
 
-    return await cart.save();
+    const savedCart = await cart.save();
+    return await this.populateCart(savedCart);
   }
 
   // Clear entire cart
   async clearCart(memberId: string): Promise<ICart | null> {
-    return await Cart.findOneAndUpdate(
+    const cart = await Cart.findOneAndUpdate(
       { memberId },
       { items: [] },
       { new: true }
     );
+    if (!cart) return null;
+    return await this.populateCart(cart);
   }
 }

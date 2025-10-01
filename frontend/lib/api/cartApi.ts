@@ -117,15 +117,24 @@ const cartApiRequest = async <T>(
 export interface CartItem {
   itemId: {
     _id: string
-    itemName: string
-    itemDescription: string
-    price: number
-    quantity: number
-    categoryID: string
-    supplierID?: {
+    name: string
+    categoryID: {
+      _id: string
+      name: string
+    } | string
+    supplierID: {
       _id: string
       supplierName: string
-    }
+    } | string
+    type: "sellable" | "equipment"
+    isActive: boolean
+    price?: number
+    stock?: number
+    expiryDate?: string
+    lowStockAlert?: number
+    purchaseDate?: string
+    maintenanceSchedule?: string
+    warrantyPeriod?: string
     createdAt: string
     updatedAt: string
   }
