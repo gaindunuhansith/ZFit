@@ -1,17 +1,35 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { CheckCircle, XCircle, Eye, Loader2, AlertCircle } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { CheckCircle, XCircle, Eye, Loader2, AlertCircle, User, Mail, Phone, CreditCard, MoreHorizontal, Search, RefreshCw } from "lucide-react"
 import { getPendingBankTransfers, approveBankTransfer, declineBankTransfer, type BankTransferAdmin } from "@/lib/api/paymentApi"
 
 export default function BankTransfersPage() {
+  const router = useRouter()
   const [transfers, setTransfers] = useState<BankTransferAdmin[]>([])
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState<string | null>(null)
@@ -19,6 +37,12 @@ export default function BankTransfersPage() {
   const [adminNotes, setAdminNotes] = useState("")
   const [actionType, setActionType] = useState<'approve' | 'decline' | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [showUserModal, setShowUserModal] = useState(false)
+  
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [membershipFilter, setMembershipFilter] = useState("all")
 
   useEffect(() => {
     fetchPendingTransfers()
@@ -37,11 +61,48 @@ export default function BankTransfersPage() {
     }
   }
 
+  // Get unique membership names for filter
+  const membershipOptions = Array.from(
+    new Set(
+      transfers
+        .map(transfer => transfer.membershipId?.name)
+        .filter((name): name is string => name !== undefined)
+    )
+  ).sort()
+
+  // Filter transfers based on search and filters
+  const filteredTransfers = transfers.filter(transfer => {
+    const searchLower = searchTerm.toLowerCase()
+    const matchesSearch = 
+      transfer.userId?.name?.toLowerCase().includes(searchLower) ||
+      transfer.userId?.email?.toLowerCase().includes(searchLower) ||
+      transfer.membershipId?.name?.toLowerCase().includes(searchLower) ||
+      transfer._id?.toLowerCase().includes(searchLower)
+    
+    const matchesStatus = statusFilter === "all" || transfer.status === statusFilter
+    const matchesMembership = membershipFilter === "all" || transfer.membershipId?.name === membershipFilter
+    
+    return matchesSearch && matchesStatus && matchesMembership
+  })
+
   const handleAction = async (transfer: BankTransferAdmin, action: 'approve' | 'decline') => {
     setSelectedTransfer(transfer)
     setActionType(action)
     setAdminNotes("")
     setDialogOpen(true)
+  }
+
+  const handleViewUserDetails = (transfer: BankTransferAdmin) => {
+    setSelectedTransfer(transfer)
+    setShowUserModal(true)
+  }
+
+  const handleViewPaymentHistory = (transfer: BankTransferAdmin) => {
+    if (transfer.userId?._id) {
+      // Store userId in sessionStorage to avoid showing in URL
+      sessionStorage.setItem('paymentHistoryUserId', transfer.userId._id)
+      router.push('/dashboard/finance/overview/payment-history')
+    }
   }
 
   const confirmAction = async () => {
@@ -53,9 +114,16 @@ export default function BankTransfersPage() {
       const actionFunction = actionType === 'approve' ? approveBankTransfer : declineBankTransfer
       const result = await actionFunction(selectedTransfer._id, { adminNotes: adminNotes.trim() || undefined })
 
+      // Show success message
       alert(`Success: ${result.message}`)
 
-      // Remove the processed transfer from the list
+      if (actionType === 'approve') {
+        // Navigate to payment management table after approval
+        router.push('/dashboard/finance/overview')
+        return
+      }
+
+      // For decline, just remove from list
       setTransfers(prev => prev.filter(t => t._id !== selectedTransfer._id))
       setDialogOpen(false)
       setSelectedTransfer(null)
@@ -106,16 +174,65 @@ export default function BankTransfersPage() {
         <CardHeader>
           <CardTitle>Pending Bank Transfers</CardTitle>
           <CardDescription>
-            {transfers.length} pending transfer{transfers.length !== 1 ? 's' : ''} requiring approval
+            {filteredTransfers.length} pending transfer{filteredTransfers.length !== 1 ? 's' : ''} requiring approval
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {transfers.length === 0 ? (
+          {/* Search and Filters */}
+          <div className="flex items-center space-x-2 mb-6">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, email, or membership..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="declined">Declined</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={membershipFilter} onValueChange={setMembershipFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Membership" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Memberships</SelectItem>
+                {membershipOptions.map(membership => (
+                  <SelectItem key={membership} value={membership}>
+                    {membership}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchPendingTransfers}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
+
+          {filteredTransfers.length === 0 ? (
             <div className="text-center py-8">
               <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium">No pending transfers</h3>
+              <h3 className="text-lg font-medium">No transfers found</h3>
               <p className="text-muted-foreground">
-                All bank transfers have been processed
+                {transfers.length === 0 
+                  ? "All bank transfers have been processed"
+                  : "No transfers match your search criteria"
+                }
               </p>
             </div>
           ) : (
@@ -131,7 +248,7 @@ export default function BankTransfersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {transfers.map((transfer) => (
+                {filteredTransfers.map((transfer) => (
                   <TableRow key={transfer._id}>
                     <TableCell>
                       <div>
@@ -172,12 +289,12 @@ export default function BankTransfersPage() {
                       </Button>
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 justify-end">
                         <Button
                           size="sm"
                           onClick={() => handleAction(transfer, 'approve')}
                           disabled={processing === transfer._id}
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground"
                         >
                           {processing === transfer._id && actionType === 'approve' ? (
                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -199,6 +316,25 @@ export default function BankTransfersPage() {
                           )}
                           Decline
                         </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleViewUserDetails(transfer)}>
+                              <User className="h-4 w-4 mr-2" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleViewPaymentHistory(transfer)}>
+                              <CreditCard className="h-4 w-4 mr-2" />
+                              Payment History
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -290,6 +426,99 @@ export default function BankTransfersPage() {
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : null}
               {actionType === 'approve' ? 'Approve' : 'Decline'} Transfer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Details Modal */}
+      <Dialog open={showUserModal} onOpenChange={setShowUserModal}>
+        <DialogContent className="sm:max-w-[700px] h-[600px] flex flex-col">
+          <DialogHeader className="pb-4 flex-shrink-0">
+            <DialogTitle className="text-xl">User Details</DialogTitle>
+            <DialogDescription className="text-base">
+              Customer information for bank transfer payment
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedTransfer && selectedTransfer.userId && (
+            <div className="flex-1 min-h-0 space-y-6">
+              {/* User Information Section */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  User Information
+                </h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Full Name</label>
+                    <p className="text-sm font-medium">{selectedTransfer.userId.name}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Role</label>
+                    <div>
+                      <Badge variant="outline" className="text-xs">
+                        {selectedTransfer.userId.role}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Status</label>
+                    <div>
+                      <Badge variant={selectedTransfer.userId.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                        {selectedTransfer.userId.status}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Information Section */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  Contact Information
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Email</label>
+                      <p className="text-sm">{selectedTransfer.userId.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Contact Number</label>
+                      <p className="text-sm">{selectedTransfer.userId.contactNo}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Information Section */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  Payment Information
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Amount</label>
+                    <p className="text-lg font-semibold text-green-600">
+                      {formatCurrency(selectedTransfer.amount, selectedTransfer.currency)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Membership Plan</label>
+                    <p className="text-sm">{selectedTransfer.membershipId?.name || 'Unknown Plan'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="pt-4 border-t flex-shrink-0">
+            <Button variant="outline" onClick={() => setShowUserModal(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

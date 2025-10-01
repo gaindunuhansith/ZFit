@@ -2,8 +2,21 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import mongoose from 'mongoose';
 import BankTransferPayment from '../models/bankTransfer.model.js';
+import type { IBankTransferPayment } from '../models/bankTransfer.model.js';
 import { uploadReceiptImage } from '../services/fileUpload.service.js';
+ feature/payment-management-email
 import { sendBankTransferApprovalEmail, sendBankTransferDeclineEmail } from '../util/sendMail.util.js';
+
+import {
+    createBankTransferPaymentService,
+    getBankTransferPaymentsService,
+    getBankTransferPaymentByIdService,
+    getPendingBankTransferPaymentsService,
+    updateBankTransferPaymentService,
+    approveBankTransferPaymentService,
+    declineBankTransferPaymentService
+} from '../services/bankTransfer.service.js';
+
 
 // Extend Request interface for multer
 declare global {
@@ -73,16 +86,8 @@ export const uploadReceipt = async (req: Request, res: Response) => {
 export const createBankTransferPayment = async (req: Request, res: Response) => {
     try {
         const validated = createBankTransferSchema.parse(req.body);
-        // Temporarily use a default userId for testing without authentication
-        const userId = (req as any).userId || '507f1f77bcf86cd799439011'; // Default ObjectId for testing
-
-        // Skip authentication check for now
-        // if (!userId) {
-        //     return res.status(401).json({
-        //         success: false,
-        //         message: 'Authentication required'
-        //     });
-        // }
+        // Temporarily use dummy userId for testing since auth is disabled
+        const userId = (req as any).userId || '68d8a030e4a8bd489c11703e'; // Use Lehan Nawaratne's ID for testing
 
         // Check if user already has a pending bank transfer for this membership
         const existingPayment = await BankTransferPayment.findOne({
@@ -99,9 +104,9 @@ export const createBankTransferPayment = async (req: Request, res: Response) => 
         }
 
         // Create bank transfer payment record
-        const bankTransferPayment = new BankTransferPayment({
-            userId,
-            membershipId: validated.membershipId,
+        const bankTransferData: Partial<IBankTransferPayment> = {
+            userId: new mongoose.Types.ObjectId(userId),
+            membershipId: new mongoose.Types.ObjectId(validated.membershipId),
             amount: validated.amount,
             currency: validated.currency || 'LKR',
             receiptImageUrl: req.body.receiptImageUrl, // Should be provided after file upload
@@ -110,11 +115,14 @@ export const createBankTransferPayment = async (req: Request, res: Response) => 
                 accountNumber: '123456789012', // Should come from config
                 bankName: 'Bank of Ceylon',
                 accountHolder: 'ZFit Gym Management'
-            },
-            notes: validated.notes
-        });
+            }
+        };
 
-        await bankTransferPayment.save();
+        if (validated.notes) {
+            bankTransferData.notes = validated.notes;
+        }
+
+        const bankTransferPayment = await createBankTransferPaymentService(bankTransferData);
 
         res.status(201).json({
             success: true,
@@ -148,30 +156,25 @@ export const createBankTransferPayment = async (req: Request, res: Response) => 
  */
 export const getPendingBankTransfers = async (req: Request, res: Response) => {
     try {
+        // Temporarily skip admin check for testing
+        // const adminId = (req as any).userId;
+        // const adminRole = (req as any).role;
+
+        // if (!adminId || adminRole !== 'admin') {
+        //     return res.status(403).json({
+        //         success: false,
+        //         message: 'Admin access required'
+        //     });
+        // }
+
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
-        const skip = (page - 1) * limit;
 
-        const payments = await BankTransferPayment.find({ status: 'pending' })
-            .populate('userId', 'name email contactNo')
-            .populate('membershipId', 'name price')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        const total = await BankTransferPayment.countDocuments({ status: 'pending' });
+        const result = await getPendingBankTransferPaymentsService(page, limit);
 
         res.status(200).json({
             success: true,
-            data: {
-                payments,
-                pagination: {
-                    page,
-                    limit,
-                    total,
-                    pages: Math.ceil(total / limit)
-                }
-            }
+            data: result
         });
     } catch (error) {
         console.error('Error fetching pending bank transfers:', error);
@@ -190,9 +193,11 @@ export const approveBankTransfer = async (req: Request, res: Response) => {
     try {
         const { id } = bankTransferIdSchema.parse(req.params);
         const { adminNotes } = approveDeclineSchema.parse(req.body);
-        const adminId = req.user?.id;
+        // Temporarily use dummy adminId for testing since auth is disabled
+        const adminId = (req as any).userId || '507f1f77bcf86cd799439011'; // Dummy admin ID
 
-        const payment = await BankTransferPayment.findById(id);
+        const payment = await approveBankTransferPaymentService(id, adminId, adminNotes);
+
         if (!payment) {
             return res.status(404).json({
                 success: false,
@@ -200,6 +205,7 @@ export const approveBankTransfer = async (req: Request, res: Response) => {
             });
         }
 
+feature/payment-management-email
         if (payment.status !== 'pending') {
             return res.status(400).json({
                 success: false,
@@ -255,6 +261,7 @@ export const approveBankTransfer = async (req: Request, res: Response) => {
         // TODO: Create actual payment record and activate membership
         // This would involve creating a Payment record and updating membership status
 
+
         res.status(200).json({
             success: true,
             message: 'Bank transfer payment approved successfully',
@@ -285,9 +292,11 @@ export const declineBankTransfer = async (req: Request, res: Response) => {
     try {
         const { id } = bankTransferIdSchema.parse(req.params);
         const { adminNotes } = approveDeclineSchema.parse(req.body);
-        const adminId = req.user?.id;
+        // Temporarily use dummy adminId for testing since auth is disabled
+        const adminId = (req as any).userId || '507f1f77bcf86cd799439011'; // Dummy admin ID
 
-        const payment = await BankTransferPayment.findById(id);
+        const payment = await declineBankTransferPaymentService(id, adminId, adminNotes);
+
         if (!payment) {
             return res.status(404).json({
                 success: false,
@@ -295,6 +304,7 @@ export const declineBankTransfer = async (req: Request, res: Response) => {
             });
         }
 
+ feature/payment-management-email
         if (payment.status !== 'pending') {
             return res.status(400).json({
                 success: false,
@@ -347,6 +357,7 @@ export const declineBankTransfer = async (req: Request, res: Response) => {
             // Don't fail the decline if email fails - log the error instead
         }
 
+
         res.status(200).json({
             success: true,
             message: 'Bank transfer payment declined',
@@ -376,29 +387,19 @@ export const declineBankTransfer = async (req: Request, res: Response) => {
 export const getUserBankTransfers = async (req: Request, res: Response) => {
     try {
         const userId = (req as any).userId;
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
-        const skip = (page - 1) * limit;
 
-        const payments = await BankTransferPayment.find({ userId })
-            .populate('membershipId', 'name price')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+        }
 
-        const total = await BankTransferPayment.countDocuments({ userId });
+        const payments = await getBankTransferPaymentsService(userId);
 
         res.status(200).json({
             success: true,
-            data: {
-                payments,
-                pagination: {
-                    page,
-                    limit,
-                    total,
-                    pages: Math.ceil(total / limit)
-                }
-            }
+            data: payments
         });
     } catch (error) {
         console.error('Error fetching user bank transfers:', error);
