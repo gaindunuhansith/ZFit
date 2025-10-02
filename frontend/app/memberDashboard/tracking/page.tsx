@@ -338,7 +338,7 @@ export default function TrackingOverviewPage() {
             <div className="text-center py-6 text-muted-foreground">
               <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p>No goals set yet</p>
-              <Link href="/dashboard/tracking/goals">
+              <Link href="/memberDashboard/tracking/goals">
                 <Button variant="outline" size="sm" className="mt-2">
                   Set your first goal
                 </Button>

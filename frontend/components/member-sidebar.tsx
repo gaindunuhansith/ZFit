@@ -7,6 +7,9 @@ import {
   Users,
   ShoppingBag,
   Calendar,
+  Activity,
+  Target,
+  TrendingUp,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -71,6 +74,37 @@ const data = {
       title: "Attendance",
       url: "/memberDashboard/attendance",
       icon: Calendar,
+    },
+    {
+      title: "Tracking & Progress",
+      url: "/memberDashboard/tracking",
+      icon: Activity,
+      items: [
+        {
+          title: "Overview",
+          url: "/memberDashboard/tracking",
+        },
+        {
+          title: "Workouts",
+          url: "/memberDashboard/tracking/workouts",
+        },
+        {
+          title: "Nutrition",
+          url: "/memberDashboard/tracking/nutrition",
+        },
+        {
+          title: "Goals",
+          url: "/memberDashboard/tracking/goals",
+        },
+        {
+          title: "Progress",
+          url: "/memberDashboard/tracking/progress",
+        },
+        {
+          title: "Reports",
+          url: "/memberDashboard/tracking/reports",
+        },
+      ],
     },
   ],
 }

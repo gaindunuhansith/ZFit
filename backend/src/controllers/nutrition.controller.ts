@@ -1,31 +1,26 @@
 import type { Request, Response, NextFunction } from "express";
-import * as NutritionService from "../services/nutrition.service.js";
 import { z } from "zod";
-import mongoose from "mongoose";
+import * as NutritionService from "../services/nutrition.service.js";
 import type { INutrition } from "../models/nutrition.model.js";
 
-const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/);
-
 const nutritionSchema = z.object({
-  memberId: objectId.transform((v) => new mongoose.Types.ObjectId(v)),
-  mealType: z.string().min(1),
-  calories: z.number().min(0),
-  macros: z
-    .object({
-      protein: z.number().min(0).optional(),
-      carbs: z.number().min(0).optional(),
-      fats: z.number().min(0).optional()
-    })
-    .optional(),
-  notes: z.string().optional(),
+  memberId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid member ID"),
+  mealType: z.enum(["breakfast", "lunch", "dinner", "snack"], { required_error: "Meal type is required" }),
+  calories: z.number().int().min(0, "Calories cannot be negative").max(10000, "Calories cannot exceed 10,000"),
+  macros: z.object({
+    protein: z.number().min(0, "Protein cannot be negative").max(1000, "Protein cannot exceed 1000g").optional(),
+    carbs: z.number().min(0, "Carbs cannot be negative").max(1000, "Carbs cannot exceed 1000g").optional(),
+    fats: z.number().min(0, "Fats cannot be negative").max(1000, "Fats cannot exceed 1000g").optional()
+  }).optional(),
+  notes: z.string().max(500, "Notes cannot exceed 500 characters").optional(),
   date: z.coerce.date()
 });
 
 export const createNutrition = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const data = nutritionSchema.parse(req.body) as unknown as INutrition;
-    const created = await NutritionService.createNutrition(data);
-    res.status(201).json({ success: true, data: created });
+    const validatedData = nutritionSchema.parse(req.body);
+    const nutrition = await NutritionService.createNutrition(validatedData as INutrition);
+    res.status(201).json({ success: true, data: nutrition });
   } catch (err) {
     next(err);
   }
@@ -34,7 +29,7 @@ export const createNutrition = async (req: Request, res: Response, next: NextFun
 export const getAllNutrition = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { memberId } = req.query;
-    const list = memberId 
+    const list = memberId
       ? await NutritionService.getNutritionByMember(memberId as string)
       : await NutritionService.getAllNutrition();
     res.status(200).json({ success: true, data: list });
@@ -45,11 +40,9 @@ export const getAllNutrition = async (req: Request, res: Response, next: NextFun
 
 export const getNutritionById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = z.string().parse(req.params.id);
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: "Invalid Nutrition ID" });
-    const found = await NutritionService.getNutritionById(id);
-    if (!found) return res.status(404).json({ success: false, message: "Nutrition not found" });
-    res.status(200).json({ success: true, data: found });
+    const { id } = req.params;
+    const nutrition = await NutritionService.getNutritionById(id);
+    res.status(200).json({ success: true, data: nutrition });
   } catch (err) {
     next(err);
   }
@@ -57,12 +50,10 @@ export const getNutritionById = async (req: Request, res: Response, next: NextFu
 
 export const updateNutrition = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = z.string().parse(req.params.id);
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: "Invalid Nutrition ID" });
-    const data = nutritionSchema.partial().parse(req.body) as unknown as Partial<INutrition>;
-    const updated = await NutritionService.updateNutrition(id, data);
-    if (!updated) return res.status(404).json({ success: false, message: "Nutrition not found" });
-    res.status(200).json({ success: true, data: updated });
+    const { id } = req.params;
+    const validatedData = nutritionSchema.partial().parse(req.body);
+    const nutrition = await NutritionService.updateNutrition(id, validatedData);
+    res.status(200).json({ success: true, data: nutrition });
   } catch (err) {
     next(err);
   }
@@ -70,17 +61,10 @@ export const updateNutrition = async (req: Request, res: Response, next: NextFun
 
 export const deleteNutrition = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = z.string().parse(req.params.id);
-    if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: "Invalid Nutrition ID" });
-    const deleted = await NutritionService.deleteNutrition(id);
-    if (!deleted) return res.status(404).json({ success: false, message: "Nutrition not found" });
-    res.status(200).json({ success: true, data: deleted });
+    const { id } = req.params;
+    await NutritionService.deleteNutrition(id);
+    res.status(200).json({ success: true, message: "Nutrition entry deleted successfully" });
   } catch (err) {
     next(err);
   }
 };
-
-
-
-
-
