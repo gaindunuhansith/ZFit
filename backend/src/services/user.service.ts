@@ -3,6 +3,12 @@ import AppAssert from "../util/AppAssert.js";
 import { NOT_FOUND, CONFLICT } from "../constants/http.js";
 import { hashValue } from "../util/bcrypt.util.js";
 import { generateQR } from "../util/qrCode.util.js";
+import { sendMail } from "../util/sendMail.util.js";
+import { getWelcomeEmailTemplate } from "../util/emailTemplates.js";
+import VerificationCodeModel from "../models/verficationCode.model.js";
+import VerificationCodeType from "../constants/verificationCodeType.js";
+import env from "../config/env.js";
+import { oneHourFromNow } from "../util/date.util.js";
 
 
 
@@ -133,6 +139,27 @@ export const createUser = async (data: CreateUserParams) => {
     const qrToken = generateQR(String(user._id), data.role as 'member' | 'staff' | 'manager');
     user.qrCode = qrToken;
     await user.save();
+
+    // Create password reset verification code for welcome email
+    const verificationCode = await VerificationCodeModel.create({
+        userId: user._id,
+        type: VerificationCodeType.PasswordReset,
+        expiresAt: oneHourFromNow(),
+    });
+
+    // Generate password reset URL
+    const resetPasswordUrl = `${env.FRONTEND_APP_ORIGIN}/auth/reset-password/reset?code=${verificationCode._id}&exp=${verificationCode.expiresAt.getTime()}`;
+
+    // Send welcome email
+    const { error } = await sendMail({
+        to: user.email,
+        ...getWelcomeEmailTemplate(resetPasswordUrl, user.name),
+    });
+
+    if (error) {
+        console.error("Error sending welcome email:", error);
+        // Don't fail the user creation if email fails
+    }
 
     return await UserModel.findById(user._id).select('-password');
 };
