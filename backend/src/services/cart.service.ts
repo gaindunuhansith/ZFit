@@ -2,6 +2,7 @@ import Cart from "../models/cart.model.js";
 import type { ICart } from "../models/cart.model.js";
 import InventoryItem from "../models/inventoryItem.schema.js";
 import mongoose from "mongoose";
+import { inventoryTransactionService } from "./inventoryTransaction.service.js";
 
 export default class CartService {
   // Helper method to populate cart data
@@ -116,6 +117,78 @@ export default class CartService {
 
     const savedCart = await cart.save();
     return await this.populateCart(savedCart);
+  }
+
+  // Process checkout - reduce stock and log transactions
+  async processCheckout(memberId: string, referenceId?: string): Promise<{
+    success: boolean;
+    message: string;
+    transactionIds?: string[];
+  }> {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Get cart with populated items
+      const cart = await Cart.findOne({ memberId }).populate('items.itemId').session(session);
+      if (!cart || cart.items.length === 0) {
+        throw new Error('Cart is empty');
+      }
+
+      const transactionIds: string[] = [];
+
+      // Process each cart item
+      for (const cartItem of cart.items) {
+        const item = cartItem.itemId as any; // Type assertion for populated item
+        const quantity = cartItem.quantity;
+
+        // Check stock availability
+        if (item.stock < quantity) {
+          throw new Error(`Insufficient stock for ${item.name}. Available: ${item.stock}, Requested: ${quantity}`);
+        }
+
+        // Reduce stock
+        await InventoryItem.findByIdAndUpdate(
+          item._id,
+          { $inc: { stock: -quantity } },
+          { session }
+        );
+
+        // Log sale transaction
+        const transaction = await inventoryTransactionService.createTransaction({
+          itemId: item._id.toString(),
+          transactionType: 'OUT',
+          quantity: quantity,
+          reason: 'SALE',
+          referenceId: referenceId,
+          performedBy: memberId,
+          notes: `Sale to member - Cart checkout`
+        });
+
+        transactionIds.push((transaction as any)._id.toString());
+      }
+
+      // Clear the cart
+      await Cart.findOneAndUpdate(
+        { memberId },
+        { items: [] },
+        { session }
+      );
+
+      await session.commitTransaction();
+
+      return {
+        success: true,
+        message: 'Checkout processed successfully',
+        transactionIds
+      };
+
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   }
 
   // Clear entire cart

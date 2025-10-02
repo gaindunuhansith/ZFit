@@ -148,8 +148,9 @@ export const updateItem = async (req: Request, res: Response, next: NextFunction
   try {
     const { id } = itemIdSchema.parse({ id: req.params.id });
     const validated = updateItemSchema.parse(req.body);
+    const userId = (req as any).userId; // Get user ID from auth middleware
 
-    const item = await itemService.updateItem(id, validated);
+    const item = await itemService.updateItem(id, validated, userId);
 
     if (!item) {
       return res.status(NOT_FOUND).json({

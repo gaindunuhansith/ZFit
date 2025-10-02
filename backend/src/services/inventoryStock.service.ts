@@ -1,6 +1,8 @@
 import Item from "../models/inventoryItem.schema.js";
 import type{ IInventoryItem } from "../models/inventoryItem.schema.js";
-import InventoryTransaction from "../models/inventoryTransaction.model.js";
+import InventoryItem from "../models/inventoryItem.schema.js";
+import User from "../models/user.model.js";
+import { InventoryTransaction } from "../models/inventoryTransaction.schema.js";
 import mongoose from "mongoose";
 
 
@@ -12,12 +14,13 @@ export default class StockService {
         if (!item) throw new Error("Item not found");
 
         if (operation === "increment") {
-            item.quantity += quantity;
+            item.stock = (item.stock || 0) + quantity;
         } else if (operation === "decrement") {
-            if (item.quantity < quantity) {
+            const currentStock = item.stock || 0;
+            if (currentStock < quantity) {
                 throw new Error("Not enough stock");
             }
-            item.quantity -= quantity;
+            item.stock = currentStock - quantity;
         }
         
         item.updatedAt = new Date();
@@ -44,24 +47,8 @@ export default class StockService {
         }).populate("supplierID");
     } 
 
-        async updateMaintenance(
-        itemId: string,
-        maintenanceStatus: "good" | "maintenance_required" | "under_repair",
-        lastMaintenanceDate?: Date
-    ): Promise<IInventoryItem | null> {
-        const item = await Item.findById(itemId);
-        if (!item) throw new Error("Item not found");
-
-        item.maintenanceStatus = maintenanceStatus;
-        if (lastMaintenanceDate) {
-            item.lastMaintenanceDate = lastMaintenanceDate;
-        }
-        item.updatedAt = new Date();
-        await item.save();
-        
-        // Return populated item
-        return await Item.findById(itemId).populate("supplierID");
-    }
+        // Note: Maintenance features not supported by current schema
+    // Will be implemented when maintenance fields are added to InventoryItem schema
 
 
 }
