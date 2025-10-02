@@ -42,6 +42,7 @@ export default function GoalManagementPage() {
 
   useEffect(() => {
     if (user?._id) {
+      setFormData(prev => ({ ...prev, memberId: user._id, assignedBy: user._id }))
       fetchGoals()
     }
   }, [user?._id])
@@ -62,6 +63,15 @@ export default function GoalManagementPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Ensure memberId is set
+    if (!formData.memberId) {
+      console.error("Member ID is missing")
+      return
+    }
+    
+    console.log("Submitting goal data:", formData)
+    
     try {
       if (editingGoal) {
         await trackingApi.updateGoal(editingGoal._id, formData)
@@ -76,6 +86,7 @@ export default function GoalManagementPage() {
       fetchGoals()
     } catch (error) {
       console.error("Failed to save goal:", error)
+      alert("Failed to save goal. Please try again.")
     }
   }
 

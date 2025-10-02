@@ -35,6 +35,7 @@ export default function MemberNutritionPage() {
 
   useEffect(() => {
     if (user?._id) {
+      setFormData(prev => ({ ...prev, memberId: user._id }))
       fetchNutrition()
     }
   }, [user?._id])
@@ -55,6 +56,15 @@ export default function MemberNutritionPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Ensure memberId is set
+    if (!formData.memberId) {
+      console.error("Member ID is missing")
+      return
+    }
+    
+    console.log("Submitting nutrition data:", formData)
+    
     try {
       if (editingNutrition) {
         await trackingApi.updateNutrition(editingNutrition._id, formData)
@@ -69,6 +79,7 @@ export default function MemberNutritionPage() {
       fetchNutrition()
     } catch (error) {
       console.error("Failed to save nutrition:", error)
+      alert("Failed to save nutrition entry. Please try again.")
     }
   }
 

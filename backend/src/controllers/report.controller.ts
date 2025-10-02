@@ -5,6 +5,8 @@ import * as WorkoutService from "../services/workout.service.js";
 import * as NutritionService from "../services/nutrition.service.js";
 import * as GoalService from "../services/goal.service.js";
 import * as ProgressService from "../services/progress.service.js";
+import { generatePDFReport } from "../utils/pdfGenerator.js";
+import { generateExcelReport } from "../utils/excelGenerator.js";
 
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/);
 
@@ -109,8 +111,17 @@ export const generateTrackingReport = async (req: Request, res: Response, next: 
       }
     };
 
-    // For now, return JSON data (PDF/Excel generation will be added later)
-    res.status(200).json({ success: true, data: reportData });
+    if (format === 'pdf') {
+      const pdfBuffer = await generatePDFReport(reportData);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="tracking-report-${type}-${new Date().toISOString().split('T')[0]}.pdf"`);
+      res.send(pdfBuffer);
+    } else {
+      const excelBuffer = await generateExcelReport(reportData);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="tracking-report-${type}-${new Date().toISOString().split('T')[0]}.xlsx"`);
+      res.send(excelBuffer);
+    }
 
   } catch (err) {
     next(err);

@@ -32,6 +32,7 @@ export default function WorkoutTrackingPage() {
 
   useEffect(() => {
     if (user?._id) {
+      setFormData(prev => ({ ...prev, memberId: user._id }))
       fetchWorkouts()
     }
   }, [user?._id])
@@ -52,6 +53,15 @@ export default function WorkoutTrackingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Ensure memberId is set
+    if (!formData.memberId) {
+      console.error("Member ID is missing")
+      return
+    }
+    
+    console.log("Submitting workout data:", formData)
+    
     try {
       if (editingWorkout) {
         await trackingApi.updateWorkout(editingWorkout._id, formData)
@@ -66,6 +76,7 @@ export default function WorkoutTrackingPage() {
       fetchWorkouts()
     } catch (error) {
       console.error("Failed to save workout:", error)
+      alert("Failed to save workout. Please try again.")
     }
   }
 
