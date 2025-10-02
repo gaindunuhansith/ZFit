@@ -97,7 +97,7 @@ class ItemService {
       // Check for low stock and send email alerts if needed for sellable items
       if (savedItem && savedItem.type === 'sellable') {
         try {
-          await checkItemLowStock(savedItem._id.toString());
+          await checkItemLowStock((savedItem._id as any).toString());
         } catch (emailError) {
           console.error('Failed to check low stock for email alerts:', emailError);
           // Don't fail the item creation if email alerts fail
