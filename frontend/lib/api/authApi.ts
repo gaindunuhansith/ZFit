@@ -44,6 +44,12 @@ export const sendPasswordResetEmail = (email: string) =>
     body: JSON.stringify({ email }),
   })
 
+export const sendEmailVerification = (email: string) =>
+  apiRequest('/api/v1/auth/email/verification', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+
 export const validateResetCode = async (code: string) => {
   const url = `${API_BASE_URL}/api/v1/auth/password/validate/${code}`
 
@@ -75,6 +81,7 @@ export const resetPassword = (password: string, verificationCode: string) =>
 // Combined API service for backward compatibility
 export const authApi = {
   sendPasswordResetEmail,
+  sendEmailVerification,
   validateResetCode,
   resetPassword,
 }
