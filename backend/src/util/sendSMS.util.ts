@@ -22,7 +22,7 @@ type SMSResponse = {
 };
 
 const TEXTLK_API_URL = "https://app.text.lk/api/v3/sms/send";
-const TEXTLK_USER_ID = env.TEXTLK_USER_ID;
+const TEXTLK_SENDER_ID = env.TEXTLK_SENDER_ID;
 
 export const sendSMS = async ({ recipient, sender_id, message, schedule_time }: SMSParams): Promise<SMSResponse> => {
     try {
@@ -60,7 +60,7 @@ export const sendSMS = async ({ recipient, sender_id, message, schedule_time }: 
         }
 
         // Log SMS details for tracking
-        console.log(`SMS sent from user ${TEXTLK_USER_ID}:`, {
+        console.log(`SMS sent successfully:`, {
             uid: data.data?.uid,
             to: data.data?.to,
             status: data.data?.status,
@@ -83,7 +83,7 @@ export const sendWelcomeSMS = async (phoneNumber: string, userName: string) => {
 
         const result = await sendSMS({
             recipient: phoneNumber,
-            sender_id: "ZFit",
+            sender_id: TEXTLK_SENDER_ID,
             message,
         });
 
@@ -104,7 +104,7 @@ export const sendPasswordResetSMS = async (phoneNumber: string, resetUrl: string
 
         const result = await sendSMS({
             recipient: phoneNumber,
-            sender_id: "ZFit",
+            sender_id: TEXTLK_SENDER_ID,
             message,
         });
 
@@ -125,7 +125,7 @@ export const sendMembershipExpiryReminderSMS = async (phoneNumber: string, userN
 
         const result = await sendSMS({
             recipient: phoneNumber,
-            sender_id: "ZFit",
+            sender_id: TEXTLK_SENDER_ID,
             message,
         });
 
@@ -146,7 +146,7 @@ export const sendClassBookingConfirmationSMS = async (phoneNumber: string, userN
 
         const result = await sendSMS({
             recipient: phoneNumber,
-            sender_id: "ZFit",
+            sender_id: TEXTLK_SENDER_ID,
             message,
         });
 
@@ -167,7 +167,7 @@ export const sendPaymentReminderSMS = async (phoneNumber: string, userName: stri
 
         const result = await sendSMS({
             recipient: phoneNumber,
-            sender_id: "ZFit",
+            sender_id: TEXTLK_SENDER_ID,
             message,
         });
 

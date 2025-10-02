@@ -26,5 +26,5 @@ export default cleanEnv(process.env, {
     PAYHERE_NOTIFY_URL: str(),
     PAYHERE_ENV: str(),
     TEXTLK_API_KEY: str(),
-    TEXTLK_USER_ID: str(),
+    TEXTLK_SENDER_ID: str(),
 });
