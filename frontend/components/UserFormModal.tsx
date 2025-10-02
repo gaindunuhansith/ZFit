@@ -42,7 +42,10 @@ const createUserFormSchema = z.object({
   status: z.enum(['active', 'inactive', 'expired']),
   dob: z.string().optional(),
   address: z.string().optional(),
-  emergencyContact: z.string().optional(),
+  emergencyContact: z.union([
+    z.literal(''),
+    z.string().regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan Phone number")
+  ]).optional(),
 })
 
 const updateUserFormSchema = z.object({
@@ -56,7 +59,10 @@ const updateUserFormSchema = z.object({
   status: z.enum(['active', 'inactive', 'expired']).optional(),
   dob: z.string().optional(),
   address: z.string().optional(),
-  emergencyContact: z.string().optional(),
+  emergencyContact: z.union([
+    z.literal(''),
+    z.string().regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan Phone number")
+  ]).optional(),
 })
 
 type UserFormData = z.infer<typeof createUserFormSchema>
@@ -129,21 +135,18 @@ type FormDataType = UserFormData | UpdateUserFormData
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Simple validation - just check if required fields exist
-    if (!formData.name || !formData.email) {
-      setErrors({ name: 'Name is required', email: 'Email is required' })
-      return
-    }
-    
-    setLoading(true)
-    
     try {
-      let dataToSend = formData
+      const schema = mode === 'add' ? createUserFormSchema : updateUserFormSchema
+      const validatedData = schema.parse(formData)
+      
+      setLoading(true)
+      
+      let dataToSend = validatedData
       
       if (mode === 'edit') {
         // For edit mode, only send non-empty fields
         const filteredData: Record<string, string | number | boolean> = {}
-        Object.entries(formData).forEach(([key, value]) => {
+        Object.entries(validatedData).forEach(([key, value]) => {
           if (value !== undefined && value !== '' && value !== null) {
             filteredData[key] = value
           }
@@ -154,8 +157,17 @@ type FormDataType = UserFormData | UpdateUserFormData
       await onSubmit(dataToSend)
       onClose()
     } catch (error) {
-      console.error('Error submitting form:', error)
-      // Don't close modal on error
+      if (error instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {}
+        error.issues.forEach((err) => {
+          if (err.path.length > 0) {
+            fieldErrors[err.path[0] as string] = err.message
+          }
+        })
+        setErrors(fieldErrors)
+      } else {
+        console.error('Error submitting form:', error)
+      }
     } finally {
       setLoading(false)
     }
@@ -323,7 +335,12 @@ type FormDataType = UserFormData | UpdateUserFormData
                   value={formData.emergencyContact}
                   onChange={(e) => handleInputChange('emergencyContact', e.target.value.replace(/[^0-9+]/g, ''))}
                   placeholder="Emergency contact phone"
+                  maxLength={10}
+                  className={errors.emergencyContact ? 'border-red-500' : ''}
                 />
+                {errors.emergencyContact && (
+                  <p className="text-sm text-red-500 mt-1">{errors.emergencyContact}</p>
+                )}
               </div>
             </div>
 
