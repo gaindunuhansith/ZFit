@@ -42,20 +42,27 @@ const createUserFormSchema = z.object({
   status: z.enum(['active', 'inactive', 'expired']),
   dob: z.string().optional(),
   address: z.string().optional(),
-  emergencyContact: z.string().optional(),
+  emergencyContact: z.union([
+    z.literal(''),
+    z.string().regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan Phone number")
+  ]).optional(),
 })
 
 const updateUserFormSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
   email: z.email("Invalid email format").optional(),
-  contactNo: z.string()
-    .regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan Phone number")
-    .optional(),
+  contactNo: z.union([
+    z.literal(''),
+    z.string().regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan Phone number")
+  ]).optional(),
   role: z.enum(['member', 'staff', 'manager']).optional(),
   status: z.enum(['active', 'inactive', 'expired']).optional(),
   dob: z.string().optional(),
   address: z.string().optional(),
-  emergencyContact: z.string().optional(),
+  emergencyContact: z.union([
+    z.literal(''),
+    z.string().regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan Phone number")
+  ]).optional(),
 })
 
 type UserFormData = z.infer<typeof createUserFormSchema>
@@ -125,55 +132,64 @@ type FormDataType = UserFormData | UpdateUserFormData
     setErrors({})
   }, [initialData, mode, isOpen])
 
-  const validateForm = () => {
-    try {
-      const schema = mode === 'add' ? createUserFormSchema : updateUserFormSchema
-      schema.parse(formData)
-      setErrors({})
-      return true
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const zodErrors: Record<string, string> = {}
-        error.issues.forEach((issue) => {
-          const path = issue.path.join('.')
-          zodErrors[path] = issue.message
-        })
-        setErrors(zodErrors)
-      }
-      return false
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!validateForm()) {
-      return
-    }
-
-    setLoading(true)
+    
     try {
+      const schema = mode === 'add' ? createUserFormSchema : updateUserFormSchema
+      const validatedData = schema.parse(formData)
       
-      let dataToSend = formData
-
-      if (mode === 'edit') {
-        
-        const filteredData: Record<string, string> = {}
-        Object.entries(formData).forEach(([key, value]) => {
+      setLoading(true)
+      
+      let dataToSend: Record<string, unknown> = validatedData as Record<string, unknown>
+      
+      if (mode === 'add') {
+        // For add mode, structure the data correctly for the API
+        const { address, emergencyContact, ...restData } = validatedData as Record<string, unknown>
+        dataToSend = {
+          ...restData,
+          profile: {
+            address: address || undefined,
+            emergencyContact: emergencyContact || undefined,
+          },
+          consent: {
+            gdpr: true, // Default to true for admin-created users
+            marketing: false, // Default to false
+          },
+        }
+      } else if (mode === 'edit') {
+        // For edit mode, only send non-empty fields
+        const filteredData: Record<string, unknown> = {}
+        Object.entries(validatedData).forEach(([key, value]) => {
           if (value !== undefined && value !== '' && value !== null) {
-            filteredData[key] = value
+            if (key === 'address' || key === 'emergencyContact') {
+              // Nest address and emergencyContact under profile
+              if (!filteredData.profile) {
+                filteredData.profile = {}
+              }
+              ;(filteredData.profile as Record<string, unknown>)[key] = value
+            } else {
+              filteredData[key] = value
+            }
           }
         })
-        dataToSend = filteredData as UserFormData
-        console.log('UserFormModal sending filtered data for edit:', dataToSend)
+        dataToSend = filteredData
       }
-
-      console.log('UserFormModal submitting data:', { ...dataToSend, password: dataToSend && 'password' in dataToSend ? '***masked***' : 'no password field' })
-
+      
       await onSubmit(dataToSend)
       onClose()
     } catch (error) {
-      console.error('Error submitting form:', error)
+      if (error instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {}
+        error.issues.forEach((err) => {
+          if (err.path.length > 0) {
+            fieldErrors[err.path[0] as string] = err.message
+          }
+        })
+        setErrors(fieldErrors)
+      } else {
+        console.error('Error submitting form:', error)
+      }
     } finally {
       setLoading(false)
     }
@@ -246,6 +262,7 @@ type FormDataType = UserFormData | UpdateUserFormData
                   value={formData.contactNo}
                   onChange={(e) => handleInputChange('contactNo', e.target.value.replace(/[^0-9+]/g, ''))}
                   placeholder="+94712345678"
+                  maxLength={10}
                   className={errors.contactNo ? 'border-red-500' : ''}
                 />
                 {errors.contactNo && (
@@ -310,6 +327,8 @@ type FormDataType = UserFormData | UpdateUserFormData
                   type="date"
                   value={formData.dob}
                   onChange={(e) => handleInputChange('dob', e.target.value)}
+                  min="1950-01-01"
+                  max={new Date().toISOString().split('T')[0]}
                 />
               </div>
             </div>
@@ -339,7 +358,12 @@ type FormDataType = UserFormData | UpdateUserFormData
                   value={formData.emergencyContact}
                   onChange={(e) => handleInputChange('emergencyContact', e.target.value.replace(/[^0-9+]/g, ''))}
                   placeholder="Emergency contact phone"
+                  maxLength={10}
+                  className={errors.emergencyContact ? 'border-red-500' : ''}
                 />
+                {errors.emergencyContact && (
+                  <p className="text-sm text-red-500 mt-1">{errors.emergencyContact}</p>
+                )}
               </div>
             </div>
 

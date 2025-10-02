@@ -153,6 +153,8 @@ export function UserProfile({
   const [showQRModal, setShowQRModal] = useState(false)
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false)
   const [resetPasswordMessage, setResetPasswordMessage] = useState<string | null>(null)
+  const [verifyEmailLoading, setVerifyEmailLoading] = useState(false)
+  const [verifyEmailMessage, setVerifyEmailMessage] = useState<string | null>(null)
 
   // Fetch user profile data if not provided via props
   useEffect(() => {
@@ -183,7 +185,16 @@ export function UserProfile({
             role: userData.role,
             status: userData.status,
             verified: userData.verified,
-            dateOfBirth: userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : undefined,
+            dateOfBirth: (() => {
+              if (!userData.dob) return undefined;
+              try {
+                const date = new Date(userData.dob);
+                if (isNaN(date.getTime())) return undefined;
+                return date.toISOString().substring(0, 10);
+              } catch {
+                return undefined;
+              }
+            })(),
             address: userData.profile?.address,
             profile: {
               avatar: userData.profile?.avatar,
@@ -234,7 +245,16 @@ export function UserProfile({
         role: userData.role,
         status: userData.status,
         verified: userData.verified,
-        dateOfBirth: userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : undefined,
+        dateOfBirth: (() => {
+          if (!userData.dob) return undefined;
+          try {
+            const date = new Date(userData.dob);
+            if (isNaN(date.getTime())) return undefined;
+            return date.toISOString().substring(0, 10);
+          } catch {
+            return undefined;
+          }
+        })(),
         address: userData.profile?.address,
         profile: {
           avatar: userData.profile?.avatar,
@@ -276,6 +296,31 @@ export function UserProfile({
       setResetPasswordMessage("Failed to send password reset email. Please try again.")
     } finally {
       setResetPasswordLoading(false)
+    }
+  }
+
+  const handleSendEmailVerification = async () => {
+    if (!profileData?.email) {
+      setVerifyEmailMessage("Email address not found")
+      return
+    }
+
+    try {
+      setVerifyEmailLoading(true)
+      setVerifyEmailMessage(null)
+
+      const response = await authApi.sendEmailVerification(profileData.email)
+
+      if (response.message) {
+        setVerifyEmailMessage("Email verification sent successfully! Please check your inbox.")
+      } else {
+        setVerifyEmailMessage("Failed to send email verification")
+      }
+    } catch (error) {
+      console.error("Error sending email verification:", error)
+      setVerifyEmailMessage("Failed to send email verification. Please try again.")
+    } finally {
+      setVerifyEmailLoading(false)
     }
   }
 
@@ -406,7 +451,7 @@ export function UserProfile({
                   Date of Birth
                 </div>
                 <p className="font-medium">
-                  {profileData?.dateOfBirth ? new Date(profileData.dateOfBirth).toLocaleDateString() : 'N/A'}
+                  {profileData?.dateOfBirth ? new Date(profileData.dateOfBirth).toLocaleDateString() : 'Not set'}
                 </p>
               </div>
 
@@ -553,6 +598,26 @@ export function UserProfile({
                 <p className={`text-sm ${resetPasswordMessage.includes("successfully") ? "text-[#AAFF69]" : "text-red-600"}`}>
                   {resetPasswordMessage}
                 </p>
+              )}
+
+              {profileData?.verified === false && (
+                <>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={handleSendEmailVerification}
+                    disabled={verifyEmailLoading}
+                  >
+                    <Mail className="mr-2 h-4 w-4" />
+                    {verifyEmailLoading ? "Sending..." : "Verify Email"}
+                  </Button>
+
+                  {verifyEmailMessage && (
+                    <p className={`text-sm ${verifyEmailMessage.includes("successfully") ? "text-[#AAFF69]" : "text-red-600"}`}>
+                      {verifyEmailMessage}
+                    </p>
+                  )}
+                </>
               )}
 
               {profileData?.qrCode && (

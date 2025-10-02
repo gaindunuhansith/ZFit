@@ -2,7 +2,7 @@ import {type Request, type Response, type NextFunction } from "express";
 import { z } from "zod"
 
 import { CREATED, OK, UNAUTHORIZED, NOT_FOUND } from "../constants/http.js";
-import { createAccount, loginUser, logoutUser, refreshAccessToken, resetPassword, sendPasswordResetEmail, verifyEmail } from "../services/auth.service.js";
+import { createAccount, loginUser, logoutUser, refreshAccessToken, resetPassword, sendPasswordResetEmail, verifyEmail, sendEmailVerification } from "../services/auth.service.js";
 import { clearAuthcookies, getAccessTokenCookieOptions, getRefreshCookieOptions, setAuthCookies } from "../util/cookies.js"
 import AppAssert from "../util/AppAssert.js";
 import VerificationCodeModel from "../models/verficationCode.model.js";
@@ -141,6 +141,18 @@ export const sendPasswordResetHandler = async (req: Request, res: Response, next
         await sendPasswordResetEmail(email, next);
 
         return res.status(OK).json({ message: "Password reset email sent" });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const sendEmailVerificationHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const email = emailSchema.parse(req.body.email);
+
+        await sendEmailVerification(email, next);
+
+        return res.status(OK).json({ message: "Email verification sent" });
     } catch (error) {
         next(error);
     }

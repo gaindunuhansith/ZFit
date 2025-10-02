@@ -71,7 +71,8 @@ export const createPayment = async (req: Request, res: Response, next: NextFunct
 // Get all payments
 export const getPayments = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const payments = await getPaymentsService('');
+        const userId = req.query.userId as string;
+        const payments = await getPaymentsService(userId || '');
         res.json({ success: true, data: payments });
     } catch (error) {
         next(error);
