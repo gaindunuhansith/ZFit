@@ -73,7 +73,7 @@ export default function ItemsPage() {
       filtered = filtered.filter(item => {
         const categoryId = typeof item.categoryID === 'string' 
           ? item.categoryID 
-          : item.categoryID._id
+          : item.categoryID?._id || ''
         return categoryId === activeTab
       })
     }
@@ -183,6 +183,13 @@ export default function ItemsPage() {
     )
   }
 
+  const isLowStock = (item: Item) => {
+    if (item.type !== 'sellable') return false
+    const currentStock = item.stock || 0
+    const alertThreshold = item.lowStockAlert || 0
+    return currentStock <= alertThreshold && alertThreshold > 0
+  }
+
   const getTypeColor = (type: string) => {
     return type === 'sellable' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
   }
@@ -213,7 +220,17 @@ export default function ItemsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Items</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-3xl font-bold tracking-tight">Items</h2>
+            {(() => {
+              const lowStockCount = filteredItems.filter(item => isLowStock(item)).length;
+              return lowStockCount > 0 ? (
+                <Badge variant="destructive" className="text-xs">
+                  {lowStockCount} Low Stock
+                </Badge>
+              ) : null;
+            })()}
+          </div>
           <p className="text-muted-foreground">Manage your gym inventory items</p>
         </div>
         <div className="flex items-center gap-2">
@@ -290,6 +307,15 @@ export default function ItemsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Low Stock Legend */}
+              {filteredItems.some(item => isLowStock(item)) && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm text-red-700">
+                    <span className="font-medium">🔴 Low Stock Alert:</span>
+                    <span>Red highlighted items are at or below their stock alert threshold and need restocking.</span>
+                  </div>
+                </div>
+              )}
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -331,17 +357,21 @@ export default function ItemsPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredItems.map((item) => (
-                      <TableRow key={item._id}>
+                      <TableRow key={item._id} className={isLowStock(item) ? 'bg-red-50 border-red-200' : ''}>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {getTypeIcon(item.type)}
-                            <span className="font-medium">{item.name}</span>
+                            <span className={`font-medium ${isLowStock(item) ? 'text-red-700' : ''}`}>
+                              {item.name}
+                              {isLowStock(item) && <span className="ml-2 text-red-600">🔴</span>}
+                            </span>
                           </div>
                         </TableCell>
                         
                         <TableCell>
-                          <Badge variant="outline">
+                          <Badge variant={isLowStock(item) ? "destructive" : "outline"}>
                             {getCategoryName(item.categoryID)}
+                            {isLowStock(item) && <span className="ml-1">⚠️</span>}
                           </Badge>
                         </TableCell>
                         
@@ -358,7 +388,10 @@ export default function ItemsPage() {
                               <span className="font-medium">LKR {item.price?.toFixed(2) || '0.00'}</span>
                             </TableCell>
                             <TableCell>
-                              <span className="font-medium">{item.stock || 0}</span>
+                              <span className={`font-medium ${isLowStock(item) ? 'text-red-600 bg-red-50 px-2 py-1 rounded' : ''}`}>
+                                {item.stock || 0}
+                                {isLowStock(item) && <span className="ml-1 text-xs">⚠️ LOW</span>}
+                              </span>
                             </TableCell>
                             <TableCell>
                               <span className="text-muted-foreground">{item.lowStockAlert || 'Not set'}</span>
@@ -405,7 +438,10 @@ export default function ItemsPage() {
                               {item.type === 'sellable' ? (
                                 <div className="text-sm">
                                   <div className="font-medium">LKR {item.price?.toFixed(2) || '0.00'}</div>
-                                  <div className="text-muted-foreground">Stock: {item.stock || 0}</div>
+                                  <div className={`text-muted-foreground ${isLowStock(item) ? 'text-red-600 font-medium' : ''}`}>
+                                  Stock: {item.stock || 0}
+                                  {isLowStock(item) && <span className="ml-1 text-xs">⚠️ LOW</span>}
+                                </div>
                                 </div>
                               ) : (
                                 <div className="text-sm">
@@ -499,10 +535,10 @@ export default function ItemsPage() {
           name: editingItem.name,
           categoryID: typeof editingItem.categoryID === 'string' 
             ? editingItem.categoryID 
-            : editingItem.categoryID._id,
+            : editingItem.categoryID?._id || '',
           supplierID: typeof editingItem.supplierID === 'string' 
             ? editingItem.supplierID 
-            : editingItem.supplierID._id,
+            : editingItem.supplierID?._id || '',
           type: editingItem.type,
           price: editingItem.price,
           stock: editingItem.stock,

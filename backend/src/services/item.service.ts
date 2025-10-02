@@ -5,6 +5,7 @@ import AppError from "../util/AppError.js";
 import { BAD_REQUEST, NOT_FOUND, CONFLICT } from "../constants/http.js";
 import mongoose from "mongoose";
 import { inventoryTransactionService } from "./inventoryTransaction.service.js";
+import { checkItemLowStock } from "./lowStockAlert.service.js";
 
 export interface CreateItemData {
   name: string;
@@ -91,7 +92,19 @@ class ItemService {
       }
 
       const item = new InventoryItem(itemData);
-      return await item.save();
+      const savedItem = await item.save();
+
+      // Check for low stock and send email alerts if needed for sellable items
+      if (savedItem && savedItem.type === 'sellable') {
+        try {
+          await checkItemLowStock(savedItem._id.toString());
+        } catch (emailError) {
+          console.error('Failed to check low stock for email alerts:', emailError);
+          // Don't fail the item creation if email alerts fail
+        }
+      }
+
+      return savedItem;
     } catch (error: any) {
       if (error.code === 11000) {
         throw new AppError(CONFLICT, "An item with this name already exists in the selected category");
@@ -244,6 +257,16 @@ class ItemService {
         } catch (transactionError) {
           console.error('Failed to log stock change transaction:', transactionError);
           // Don't fail the item update if transaction logging fails
+        }
+      }
+
+      // Check for low stock and send email alerts if needed
+      if (updatedItem && updatedItem.type === 'sellable') {
+        try {
+          await checkItemLowStock(id);
+        } catch (emailError) {
+          console.error('Failed to check low stock for email alerts:', emailError);
+          // Don't fail the item update if email alerts fail
         }
       }
 
