@@ -4,6 +4,7 @@ import Supplier from "../models/supplier.model.js";
 import AppError from "../util/AppError.js";
 import { BAD_REQUEST, NOT_FOUND, CONFLICT } from "../constants/http.js";
 import mongoose from "mongoose";
+import { inventoryTransactionService } from "./inventoryTransaction.service.js";
 
 export interface CreateItemData {
   name: string;
@@ -128,7 +129,7 @@ class ItemService {
   }
 
   // UPDATE - Update existing item
-  async updateItem(id: string, data: UpdateItemData): Promise<IInventoryItem | null> {
+  async updateItem(id: string, data: UpdateItemData, userId?: string): Promise<IInventoryItem | null> {
     try {
       if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new AppError(BAD_REQUEST, "Invalid item ID format");
@@ -184,10 +185,19 @@ class ItemService {
       // Handle type-specific fields based on the type being set (new or existing)
       const itemType = data.type || existingItem.type;
 
+      // Track stock changes for transaction logging
+      let stockChange: number | null = null;
+      let userId: string | null = null;
+
       if (itemType === 'sellable') {
         // Update sellable fields
         if (data.price !== undefined) updateData.price = data.price;
-        if (data.stock !== undefined) updateData.stock = data.stock;
+        if (data.stock !== undefined) {
+          const previousStock = existingItem.stock || 0;
+          const newStock = data.stock;
+          stockChange = newStock - previousStock;
+          updateData.stock = data.stock;
+        }
         if (data.expiryDate) updateData.expiryDate = new Date(data.expiryDate);
         if (data.lowStockAlert !== undefined) updateData.lowStockAlert = data.lowStockAlert;
 
@@ -212,12 +222,32 @@ class ItemService {
         }
       }
 
-      return await InventoryItem.findByIdAndUpdate(
+      // Update the item
+      const updatedItem = await InventoryItem.findByIdAndUpdate(
         id,
         updateData,
         { new: true, runValidators: true }
       ).populate('categoryID', 'name description')
        .populate('supplierID', 'supplierName supplierEmail supplierPhone');
+
+      // Log stock change transaction if stock was modified and userId is provided
+      if (stockChange !== null && stockChange !== 0 && userId && updatedItem) {
+        try {
+          await inventoryTransactionService.logStockChange(
+            id,
+            stockChange,
+            'ADJUSTMENT', // Stock adjustments through item updates
+            userId,
+            undefined,
+            `Stock adjusted from ${existingItem.stock || 0} to ${updatedItem.stock || 0}`
+          );
+        } catch (transactionError) {
+          console.error('Failed to log stock change transaction:', transactionError);
+          // Don't fail the item update if transaction logging fails
+        }
+      }
+
+      return updatedItem;
     } catch (error: any) {
       if (error.code === 11000) {
         throw new AppError(CONFLICT, "An item with this name already exists in the selected category");

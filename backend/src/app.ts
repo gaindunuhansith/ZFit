@@ -22,6 +22,7 @@ import attendanceRouter from "./routes/attendance.routes.js";
 import refundRequestRouter from "./routes/refundRequest.routes.js";
 import bankTransferRouter, { adminRouter as bankTransferAdminRouter } from "./routes/bankTransfer.routes.js";
 import cartRoutes from "./routes/cart.routes.js";
+import inventoryTransactionRoutes from "./routes/inventoryTransaction.routes.js";
 import errorMiddleware from "./middleware/error.middleware.js";
 import { rateLimitMiddleware } from "./middleware/rateLimit.middleware.js";
 
@@ -63,6 +64,7 @@ app.use('/api/v1/refund-requests', refundRequestRouter);
 app.use('/api/v1/payments/bank-transfer', bankTransferRouter);
 app.use('/api/v1/admin/payments/bank-transfer', bankTransferAdminRouter);
 app.use('/api/v1/cart', cartRoutes);
+app.use('/api/v1/transactions', inventoryTransactionRoutes);
 
 app.use(errorMiddleware);
 

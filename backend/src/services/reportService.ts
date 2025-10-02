@@ -1,5 +1,5 @@
 import InventoryItem from "../models/inventoryItem.schema.js";
-import InventoryTransaction from "../models/inventoryTransaction.model.js";
+import { InventoryTransaction } from "../models/inventoryTransaction.schema.js";
 
 export default class ReportService {
 
@@ -9,11 +9,11 @@ export default class ReportService {
       .populate("supplierID", "supplierName");
 
     return items.map(item => ({
-      name: item.itemName,
+      name: item.name,
       category: item.categoryID,
       supplier: item.supplierID,
-      quantity: item.quantity,
-      lowStock: item.quantity < item.lowStockThreshold
+      quantity: item.stock || 0,
+      lowStock: (item.stock || 0) < (item.lowStockAlert || 10)
     }));
   }
 

@@ -112,6 +112,26 @@ export const removeCartItem = async (req: Request, res: Response, next: NextFunc
   }
 };
 
+// Process checkout - reduce stock and log transactions
+export const processCheckout = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { memberId } = z.object({ memberId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid member ID format") }).parse(req.params);
+    const { referenceId } = z.object({ referenceId: z.string().optional() }).parse(req.body);
+    
+    const result = await cartService.processCheckout(memberId, referenceId);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        transactionIds: result.transactionIds
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Clear cart for a member
 export const clearCart = async (req: Request, res: Response, next: NextFunction) => {
   try {
