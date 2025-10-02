@@ -20,6 +20,10 @@ import {
   XCircle,
   MapPin,
   AlertTriangle,
+  Building,
+  Briefcase,
+  Users,
+  TrendingUp,
   Edit,
   Trash2
 } from 'lucide-react'
@@ -28,9 +32,8 @@ import { QRCodeModal } from '@/components/QRCodeModal'
 import { UserFormModal } from '@/components/UserFormModal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { UserAttendanceTable } from '@/components/UserAttendanceTable'
-import { UserPaymentTable } from '@/components/UserPaymentTable'
 
-interface MemberDetails {
+interface ManagerDetails {
   _id: string
   name: string
   email: string
@@ -42,6 +45,14 @@ interface MemberDetails {
   createdAt: string
   updatedAt: string
   dob?: string
+  department?: string
+  position?: string
+  employeeId?: string
+  hireDate?: string
+  salary?: number
+  manager?: string
+  teamSize?: number
+  performanceRating?: number
   profile?: {
     address?: string
     emergencyContact?: string
@@ -52,44 +63,43 @@ interface MemberDetails {
     marketing?: boolean
     date?: string
   }
-  fitnessGoals?: string[]
 }
 
-export default function MemberDetailsPage() {
+export default function ManagerDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const memberId = params.id as string
+  const managerId = params.id as string
 
-  const [member, setMember] = useState<MemberDetails | null>(null)
+  const [manager, setManager] = useState<ManagerDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const [showQRModal, setShowQRModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
-  const fetchMemberDetails = useCallback(async () => {
+  const fetchManagerDetails = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await getUserById(memberId)
+      const response = await getUserById(managerId)
 
       if (response.success && response.data) {
-        setMember(response.data as MemberDetails)
+        setManager(response.data as ManagerDetails)
       } else {
-        setError(response.message || 'Failed to fetch member details')
+        setError(response.message || 'Failed to fetch manager details')
       }
     } catch (err) {
-      console.error('Error fetching member details:', err)
-      setError('Failed to load member details')
+      console.error('Error fetching manager details:', err)
+      setError('Failed to load manager details')
     } finally {
       setLoading(false)
     }
-  }, [memberId])
+  }, [managerId])
 
   useEffect(() => {
-    if (memberId) {
-      fetchMemberDetails()
+    if (managerId) {
+      fetchManagerDetails()
     }
-  }, [memberId, fetchMemberDetails])
+  }, [managerId, fetchManagerDetails])
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -104,51 +114,38 @@ export default function MemberDetailsPage() {
     }
   }
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case 'member':
-        return 'default'
-      case 'staff':
-        return 'secondary'
-      case 'manager':
-        return 'destructive'
-      default:
-        return 'secondary'
-    }
-  }
-
-  const handleEditMember = () => {
+  const handleEditManager = () => {
     setShowEditModal(true)
   }
 
-  const handleDeleteMember = () => {
+  const handleDeleteManager = () => {
     setShowDeleteDialog(true)
   }
 
   const handleConfirmDelete = async () => {
     try {
-      const response = await deleteUser(memberId)
+      const response = await deleteUser(managerId)
       if (response.success) {
-        // After successful deletion, redirect back to members list
-        router.push('/dashboard/users/members')
+        // After successful deletion, redirect back to managers list
+        router.push('/dashboard/users/managers')
       } else {
-        setError(response.message || 'Failed to delete member')
+        setError(response.message || 'Failed to delete manager')
       }
     } catch (error) {
-      console.error('Error deleting member:', error)
-      setError('Failed to delete member')
+      console.error('Error deleting manager:', error)
+      setError('Failed to delete manager')
     }
   }
 
-  const handleUpdateMember = async (data: any) => {
+  const handleUpdateManager = async (data: any) => {
     try {
       // TODO: Implement update API call
-      console.log('Updating member:', memberId, data)
+      console.log('Updating manager:', managerId, data)
       // After successful update, refresh the data
-      await fetchMemberDetails()
+      await fetchManagerDetails()
     } catch (error) {
-      console.error('Error updating member:', error)
-      setError('Failed to update member')
+      console.error('Error updating manager:', error)
+      setError('Failed to update manager')
     }
   }
 
@@ -162,14 +159,14 @@ export default function MemberDetailsPage() {
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Members
+            Back to Managers
           </Button>
         </div>
         <Card>
           <CardContent className="flex items-center justify-center py-8">
             <div className="text-center">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p>Loading member details...</p>
+              <p>Loading manager details...</p>
             </div>
           </CardContent>
         </Card>
@@ -177,7 +174,7 @@ export default function MemberDetailsPage() {
     )
   }
 
-  if (error || !member) {
+  if (error || !manager) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -187,19 +184,19 @@ export default function MemberDetailsPage() {
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Members
+            Back to Managers
           </Button>
         </div>
         <Card>
           <CardContent className="flex items-center justify-center py-8">
             <div className="text-center">
               <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Error Loading Member</h3>
+              <h3 className="text-lg font-semibold mb-2">Error Loading Manager</h3>
               <p className="text-muted-foreground mb-4">
-                {error || 'Member not found'}
+                {error || 'Manager not found'}
               </p>
               <Button onClick={() => router.back()}>
-                Back to Members
+                Back to Managers
               </Button>
             </div>
           </CardContent>
@@ -219,43 +216,42 @@ export default function MemberDetailsPage() {
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Members
+            Back to Managers
           </Button>
-          <h2 className="text-3xl font-bold tracking-tight">Member Details</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Manager Details</h2>
           <p className="text-muted-foreground">
-            Complete information for {member.name}
+            Complete information for {manager.name}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={handleEditMember}
+            onClick={handleEditManager}
           >
             <Edit className="h-4 w-4 mr-2" />
             Edit Information
           </Button>
-          {member.qrCode && (
+          {manager.qrCode && (
             <Button variant="outline" onClick={() => setShowQRModal(true)}>
               View QR Code
             </Button>
           )}
           <Button
             variant="outline"
-            onClick={handleDeleteMember}
+            onClick={handleDeleteManager}
             className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            Delete Member
+            Delete Manager
           </Button>
         </div>
       </div>
 
-      {/* Member Overview */}
+      {/* Manager Overview */}
       <Tabs defaultValue="personal" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="personal">Personal Info</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          <TabsTrigger value="payments">Payments</TabsTrigger>
         </TabsList>
 
         <TabsContent value="personal" className="space-y-6">
@@ -274,23 +270,23 @@ export default function MemberDetailsPage() {
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-4">
                   <Avatar className="h-20 w-20">
-                    <AvatarImage src={member.profile?.avatar || "/avatars/user.jpg"} alt={member.name} />
+                    <AvatarImage src={manager.profile?.avatar || "/avatars/user.jpg"} alt={manager.name} />
                     <AvatarFallback className="text-lg">
-                      {member.name.split(' ').map(n => n[0]).join('')}
+                      {manager.name.split(' ').map(n => n[0]).join('')}
                     </AvatarFallback>
                   </Avatar>
                   <div className="space-y-1">
-                    <h3 className="text-2xl font-semibold">{member.name}</h3>
+                    <h3 className="text-2xl font-semibold">{manager.name}</h3>
                     <div className="flex items-center gap-2">
-                      <Badge variant={getRoleBadgeVariant(member.role)}>
-                        {member.role}
+                      <Badge variant="secondary">
+                        Manager
                       </Badge>
-                      <Badge variant={getStatusBadgeVariant(member.status)}>
-                        {member.status}
+                      <Badge variant={getStatusBadgeVariant(manager.status)}>
+                        {manager.status}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Member since {new Date(member.createdAt).toLocaleDateString()}
+                      Manager since {new Date(manager.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -303,7 +299,7 @@ export default function MemberDetailsPage() {
                       <Mail className="h-4 w-4" />
                       Email Address
                     </div>
-                    <p className="font-medium">{member.email}</p>
+                    <p className="font-medium">{manager.email}</p>
                   </div>
 
                   <div className="space-y-2">
@@ -311,17 +307,17 @@ export default function MemberDetailsPage() {
                       <Phone className="h-4 w-4" />
                       Phone Number
                     </div>
-                    <p className="font-medium">{member.contactNo}</p>
+                    <p className="font-medium">{manager.contactNo}</p>
                   </div>
 
-                  {member.dob && (
+                  {manager.dob && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4" />
                         Date of Birth
                       </div>
                       <p className="font-medium">
-                        {new Date(member.dob).toLocaleDateString()}
+                        {new Date(manager.dob).toLocaleDateString()}
                       </p>
                     </div>
                   )}
@@ -332,7 +328,7 @@ export default function MemberDetailsPage() {
                       Verification Status
                     </div>
                     <p className="font-medium">
-                      {member.verified ? (
+                      {manager.verified ? (
                         <span className="text-green-600 flex items-center gap-1">
                           <CheckCircle className="h-4 w-4" />
                           Verified
@@ -352,7 +348,7 @@ export default function MemberDetailsPage() {
                       Last Updated
                     </div>
                     <p className="font-medium">
-                      {new Date(member.updatedAt).toLocaleDateString()}
+                      {new Date(manager.updatedAt).toLocaleDateString()}
                     </p>
                   </div>
 
@@ -362,13 +358,92 @@ export default function MemberDetailsPage() {
                       Account Created
                     </div>
                     <p className="font-medium">
-                      {new Date(member.createdAt).toLocaleDateString()}
+                      {new Date(manager.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
 
+                {/* Employment Information */}
+                <Separator />
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-muted-foreground">Employment Information</h4>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {manager.employeeId && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Briefcase className="h-4 w-4" />
+                          Employee ID
+                        </div>
+                        <p className="font-medium">{manager.employeeId}</p>
+                      </div>
+                    )}
+
+                    {manager.department && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Building className="h-4 w-4" />
+                          Department
+                        </div>
+                        <p className="font-medium">{manager.department}</p>
+                      </div>
+                    )}
+
+                    {manager.position && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Briefcase className="h-4 w-4" />
+                          Position
+                        </div>
+                        <p className="font-medium">{manager.position}</p>
+                      </div>
+                    )}
+
+                    {manager.hireDate && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          Hire Date
+                        </div>
+                        <p className="font-medium">
+                          {new Date(manager.hireDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                    )}
+
+                    {manager.teamSize && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Users className="h-4 w-4" />
+                          Team Size
+                        </div>
+                        <p className="font-medium">{manager.teamSize} members</p>
+                      </div>
+                    )}
+
+                    {manager.performanceRating && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <TrendingUp className="h-4 w-4" />
+                          Performance Rating
+                        </div>
+                        <p className="font-medium">{manager.performanceRating}/5</p>
+                      </div>
+                    )}
+
+                    {manager.salary && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Shield className="h-4 w-4" />
+                          Salary
+                        </div>
+                        <p className="font-medium">LKR {manager.salary.toLocaleString()}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Address */}
-                {member.profile?.address && (
+                {manager.profile?.address && (
                   <>
                     <Separator />
                     <div className="space-y-2">
@@ -376,53 +451,38 @@ export default function MemberDetailsPage() {
                         <MapPin className="h-4 w-4" />
                         Address
                       </div>
-                      <p className="font-medium">{member.profile.address}</p>
-                    </div>
-                  </>
-                )}
-
-                {/* Fitness Goals */}
-                {member.fitnessGoals && member.fitnessGoals.length > 0 && (
-                  <>
-                    <Separator />
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm text-muted-foreground">Fitness Goals</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {member.fitnessGoals.map((goal, index) => (
-                          <Badge key={index} variant="secondary">{goal}</Badge>
-                        ))}
-                      </div>
+                      <p className="font-medium">{manager.profile.address}</p>
                     </div>
                   </>
                 )}
 
                 {/* Emergency Contact */}
-                {member.profile?.emergencyContact && (
+                {manager.profile?.emergencyContact && (
                   <>
                     <Separator />
                     <div className="space-y-2">
                       <h4 className="font-medium text-sm text-muted-foreground">Emergency Contact</h4>
-                      <p className="text-sm">{member.profile.emergencyContact}</p>
+                      <p className="text-sm">{manager.profile.emergencyContact}</p>
                     </div>
                   </>
                 )}
 
                 {/* Consent Information */}
-                {member.consent && (
+                {manager.consent && (
                   <>
                     <Separator />
                     <div className="space-y-2">
                       <h4 className="font-medium text-sm text-muted-foreground">Privacy & Consent</h4>
                       <div className="grid gap-2 md:grid-cols-2">
                         <p className="text-sm">
-                          <span className="font-medium">GDPR Consent:</span> {member.consent.gdpr ? 'Granted' : 'Not Granted'}
+                          <span className="font-medium">GDPR Consent:</span> {manager.consent.gdpr ? 'Granted' : 'Not Granted'}
                         </p>
                         <p className="text-sm">
-                          <span className="font-medium">Marketing Consent:</span> {member.consent.marketing ? 'Opted In' : 'Opted Out'}
+                          <span className="font-medium">Marketing Consent:</span> {manager.consent.marketing ? 'Opted In' : 'Opted Out'}
                         </p>
-                        {member.consent.date && (
+                        {manager.consent.date && (
                           <p className="text-sm md:col-span-2">
-                            <span className="font-medium">Consent Date:</span> {new Date(member.consent.date).toLocaleDateString()}
+                            <span className="font-medium">Consent Date:</span> {new Date(manager.consent.date).toLocaleDateString()}
                           </p>
                         )}
                       </div>
@@ -447,21 +507,21 @@ export default function MemberDetailsPage() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Status</span>
-                    <Badge variant={getStatusBadgeVariant(member.status)}>
-                      {member.status}
+                    <Badge variant={getStatusBadgeVariant(manager.status)}>
+                      {manager.status}
                     </Badge>
                   </div>
 
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Role</span>
-                    <Badge variant={getRoleBadgeVariant(member.role)}>
-                      {member.role}
+                    <Badge variant="secondary">
+                      Manager
                     </Badge>
                   </div>
 
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Verified</span>
-                    {member.verified ? (
+                    {manager.verified ? (
                       <CheckCircle className="h-4 w-4 text-green-500" />
                     ) : (
                       <XCircle className="h-4 w-4 text-yellow-500" />
@@ -469,8 +529,8 @@ export default function MemberDetailsPage() {
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Member ID</span>
-                    <span className="text-sm font-mono">{member._id.slice(-8)}</span>
+                    <span className="text-sm text-muted-foreground">Manager ID</span>
+                    <span className="text-sm font-mono">{manager._id.slice(-8)}</span>
                   </div>
                 </div>
 
@@ -479,10 +539,26 @@ export default function MemberDetailsPage() {
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm">Account Timeline</h4>
                   <div className="space-y-1 text-sm">
-                    <p><span className="text-muted-foreground">Created:</span> {new Date(member.createdAt).toLocaleDateString()}</p>
-                    <p><span className="text-muted-foreground">Updated:</span> {new Date(member.updatedAt).toLocaleDateString()}</p>
+                    <p><span className="text-muted-foreground">Created:</span> {new Date(manager.createdAt).toLocaleDateString()}</p>
+                    <p><span className="text-muted-foreground">Updated:</span> {new Date(manager.updatedAt).toLocaleDateString()}</p>
                   </div>
                 </div>
+
+                {/* Manager-specific metrics */}
+                {manager.teamSize && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Management Metrics</h4>
+                      <div className="space-y-1 text-sm">
+                        <p><span className="text-muted-foreground">Team Size:</span> {manager.teamSize} members</p>
+                        {manager.performanceRating && (
+                          <p><span className="text-muted-foreground">Performance:</span> {manager.performanceRating}/5</p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -490,42 +566,37 @@ export default function MemberDetailsPage() {
 
         <TabsContent value="attendance" className="space-y-6">
           {/* Attendance History */}
-          <UserAttendanceTable userId={memberId} userName={member.name} />
-        </TabsContent>
-
-        <TabsContent value="payments" className="space-y-6">
-          {/* Payment History */}
-          <UserPaymentTable userId={memberId} userName={member.name} />
+          <UserAttendanceTable userId={managerId} userName={manager.name} />
         </TabsContent>
       </Tabs>
 
       {/* QR Code Modal */}
-      {member.qrCode && (
+      {manager.qrCode && (
         <QRCodeModal
           isOpen={showQRModal}
           onClose={() => setShowQRModal(false)}
-          qrCodeData={member.qrCode}
-          userName={member.name}
+          qrCodeData={manager.qrCode}
+          userName={manager.name}
         />
       )}
 
-      {/* Edit Member Modal */}
+      {/* Edit Manager Modal */}
       <UserFormModal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-        onSubmit={handleUpdateMember}
+        onSubmit={handleUpdateManager}
         initialData={{
-          name: member.name,
-          email: member.email,
-          contactNo: member.contactNo,
-          role: member.role as 'member' | 'staff' | 'manager',
-          status: member.status as 'active' | 'inactive' | 'expired',
-          dob: member.dob,
-          address: member.profile?.address,
-          emergencyContact: member.profile?.emergencyContact,
+          name: manager.name,
+          email: manager.email,
+          contactNo: manager.contactNo,
+          role: manager.role as 'member' | 'staff' | 'manager',
+          status: manager.status as 'active' | 'inactive' | 'expired',
+          dob: manager.dob,
+          address: manager.profile?.address,
+          emergencyContact: manager.profile?.emergencyContact,
         }}
         mode="edit"
-        title="Edit Member Information"
+        title="Edit Manager Information"
       />
 
       {/* Delete Confirmation Dialog */}
@@ -533,9 +604,9 @@ export default function MemberDetailsPage() {
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleConfirmDelete}
-        title="Delete Member"
-        description="Are you sure you want to delete this member? This action cannot be undone."
-        confirmText="Delete Member"
+        title="Delete Manager"
+        description="Are you sure you want to delete this manager? This action cannot be undone."
+        confirmText="Delete Manager"
         cancelText="Cancel"
       />
     </div>

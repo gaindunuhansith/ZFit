@@ -20,6 +20,8 @@ import {
   XCircle,
   MapPin,
   AlertTriangle,
+  Building,
+  Briefcase,
   Edit,
   Trash2
 } from 'lucide-react'
@@ -28,9 +30,8 @@ import { QRCodeModal } from '@/components/QRCodeModal'
 import { UserFormModal } from '@/components/UserFormModal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { UserAttendanceTable } from '@/components/UserAttendanceTable'
-import { UserPaymentTable } from '@/components/UserPaymentTable'
 
-interface MemberDetails {
+interface StaffDetails {
   _id: string
   name: string
   email: string
@@ -42,6 +43,12 @@ interface MemberDetails {
   createdAt: string
   updatedAt: string
   dob?: string
+  department?: string
+  position?: string
+  employeeId?: string
+  hireDate?: string
+  salary?: number
+  manager?: string
   profile?: {
     address?: string
     emergencyContact?: string
@@ -52,44 +59,43 @@ interface MemberDetails {
     marketing?: boolean
     date?: string
   }
-  fitnessGoals?: string[]
 }
 
-export default function MemberDetailsPage() {
+export default function StaffDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const memberId = params.id as string
+  const staffId = params.id as string
 
-  const [member, setMember] = useState<MemberDetails | null>(null)
+  const [staff, setStaff] = useState<StaffDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const [showQRModal, setShowQRModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
-  const fetchMemberDetails = useCallback(async () => {
+  const fetchStaffDetails = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await getUserById(memberId)
+      const response = await getUserById(staffId)
 
       if (response.success && response.data) {
-        setMember(response.data as MemberDetails)
+        setStaff(response.data as StaffDetails)
       } else {
-        setError(response.message || 'Failed to fetch member details')
+        setError(response.message || 'Failed to fetch staff details')
       }
     } catch (err) {
-      console.error('Error fetching member details:', err)
-      setError('Failed to load member details')
+      console.error('Error fetching staff details:', err)
+      setError('Failed to load staff details')
     } finally {
       setLoading(false)
     }
-  }, [memberId])
+  }, [staffId])
 
   useEffect(() => {
-    if (memberId) {
-      fetchMemberDetails()
+    if (staffId) {
+      fetchStaffDetails()
     }
-  }, [memberId, fetchMemberDetails])
+  }, [staffId, fetchStaffDetails])
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -104,51 +110,38 @@ export default function MemberDetailsPage() {
     }
   }
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case 'member':
-        return 'default'
-      case 'staff':
-        return 'secondary'
-      case 'manager':
-        return 'destructive'
-      default:
-        return 'secondary'
-    }
-  }
-
-  const handleEditMember = () => {
+  const handleEditStaff = () => {
     setShowEditModal(true)
   }
 
-  const handleDeleteMember = () => {
+  const handleDeleteStaff = () => {
     setShowDeleteDialog(true)
   }
 
   const handleConfirmDelete = async () => {
     try {
-      const response = await deleteUser(memberId)
+      const response = await deleteUser(staffId)
       if (response.success) {
-        // After successful deletion, redirect back to members list
-        router.push('/dashboard/users/members')
+        // After successful deletion, redirect back to staff list
+        router.push('/dashboard/users/staff')
       } else {
-        setError(response.message || 'Failed to delete member')
+        setError(response.message || 'Failed to delete staff member')
       }
     } catch (error) {
-      console.error('Error deleting member:', error)
-      setError('Failed to delete member')
+      console.error('Error deleting staff:', error)
+      setError('Failed to delete staff member')
     }
   }
 
-  const handleUpdateMember = async (data: any) => {
+  const handleUpdateStaff = async (data: any) => {
     try {
       // TODO: Implement update API call
-      console.log('Updating member:', memberId, data)
+      console.log('Updating staff:', staffId, data)
       // After successful update, refresh the data
-      await fetchMemberDetails()
+      await fetchStaffDetails()
     } catch (error) {
-      console.error('Error updating member:', error)
-      setError('Failed to update member')
+      console.error('Error updating staff:', error)
+      setError('Failed to update staff member')
     }
   }
 
@@ -162,14 +155,14 @@ export default function MemberDetailsPage() {
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Members
+            Back to Staff
           </Button>
         </div>
         <Card>
           <CardContent className="flex items-center justify-center py-8">
             <div className="text-center">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p>Loading member details...</p>
+              <p>Loading staff details...</p>
             </div>
           </CardContent>
         </Card>
@@ -177,7 +170,7 @@ export default function MemberDetailsPage() {
     )
   }
 
-  if (error || !member) {
+  if (error || !staff) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -187,19 +180,19 @@ export default function MemberDetailsPage() {
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Members
+            Back to Staff
           </Button>
         </div>
         <Card>
           <CardContent className="flex items-center justify-center py-8">
             <div className="text-center">
               <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Error Loading Member</h3>
+              <h3 className="text-lg font-semibold mb-2">Error Loading Staff</h3>
               <p className="text-muted-foreground mb-4">
-                {error || 'Member not found'}
+                {error || 'Staff member not found'}
               </p>
               <Button onClick={() => router.back()}>
-                Back to Members
+                Back to Staff
               </Button>
             </div>
           </CardContent>
@@ -219,43 +212,42 @@ export default function MemberDetailsPage() {
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Members
+            Back to Staff
           </Button>
-          <h2 className="text-3xl font-bold tracking-tight">Member Details</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Staff Details</h2>
           <p className="text-muted-foreground">
-            Complete information for {member.name}
+            Complete information for {staff.name}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={handleEditMember}
+            onClick={handleEditStaff}
           >
             <Edit className="h-4 w-4 mr-2" />
             Edit Information
           </Button>
-          {member.qrCode && (
+          {staff.qrCode && (
             <Button variant="outline" onClick={() => setShowQRModal(true)}>
               View QR Code
             </Button>
           )}
           <Button
             variant="outline"
-            onClick={handleDeleteMember}
+            onClick={handleDeleteStaff}
             className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            Delete Member
+            Delete Staff
           </Button>
         </div>
       </div>
 
-      {/* Member Overview */}
+      {/* Staff Overview */}
       <Tabs defaultValue="personal" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="personal">Personal Info</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          <TabsTrigger value="payments">Payments</TabsTrigger>
         </TabsList>
 
         <TabsContent value="personal" className="space-y-6">
@@ -274,23 +266,23 @@ export default function MemberDetailsPage() {
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-4">
                   <Avatar className="h-20 w-20">
-                    <AvatarImage src={member.profile?.avatar || "/avatars/user.jpg"} alt={member.name} />
+                    <AvatarImage src={staff.profile?.avatar || "/avatars/user.jpg"} alt={staff.name} />
                     <AvatarFallback className="text-lg">
-                      {member.name.split(' ').map(n => n[0]).join('')}
+                      {staff.name.split(' ').map(n => n[0]).join('')}
                     </AvatarFallback>
                   </Avatar>
                   <div className="space-y-1">
-                    <h3 className="text-2xl font-semibold">{member.name}</h3>
+                    <h3 className="text-2xl font-semibold">{staff.name}</h3>
                     <div className="flex items-center gap-2">
-                      <Badge variant={getRoleBadgeVariant(member.role)}>
-                        {member.role}
+                      <Badge variant="secondary">
+                        Staff
                       </Badge>
-                      <Badge variant={getStatusBadgeVariant(member.status)}>
-                        {member.status}
+                      <Badge variant={getStatusBadgeVariant(staff.status)}>
+                        {staff.status}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Member since {new Date(member.createdAt).toLocaleDateString()}
+                      Staff since {new Date(staff.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -303,7 +295,7 @@ export default function MemberDetailsPage() {
                       <Mail className="h-4 w-4" />
                       Email Address
                     </div>
-                    <p className="font-medium">{member.email}</p>
+                    <p className="font-medium">{staff.email}</p>
                   </div>
 
                   <div className="space-y-2">
@@ -311,17 +303,17 @@ export default function MemberDetailsPage() {
                       <Phone className="h-4 w-4" />
                       Phone Number
                     </div>
-                    <p className="font-medium">{member.contactNo}</p>
+                    <p className="font-medium">{staff.contactNo}</p>
                   </div>
 
-                  {member.dob && (
+                  {staff.dob && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4" />
                         Date of Birth
                       </div>
                       <p className="font-medium">
-                        {new Date(member.dob).toLocaleDateString()}
+                        {new Date(staff.dob).toLocaleDateString()}
                       </p>
                     </div>
                   )}
@@ -332,7 +324,7 @@ export default function MemberDetailsPage() {
                       Verification Status
                     </div>
                     <p className="font-medium">
-                      {member.verified ? (
+                      {staff.verified ? (
                         <span className="text-green-600 flex items-center gap-1">
                           <CheckCircle className="h-4 w-4" />
                           Verified
@@ -352,7 +344,7 @@ export default function MemberDetailsPage() {
                       Last Updated
                     </div>
                     <p className="font-medium">
-                      {new Date(member.updatedAt).toLocaleDateString()}
+                      {new Date(staff.updatedAt).toLocaleDateString()}
                     </p>
                   </div>
 
@@ -362,13 +354,82 @@ export default function MemberDetailsPage() {
                       Account Created
                     </div>
                     <p className="font-medium">
-                      {new Date(member.createdAt).toLocaleDateString()}
+                      {new Date(staff.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
 
+                {/* Employment Information */}
+                <Separator />
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-muted-foreground">Employment Information</h4>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {staff.employeeId && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Briefcase className="h-4 w-4" />
+                          Employee ID
+                        </div>
+                        <p className="font-medium">{staff.employeeId}</p>
+                      </div>
+                    )}
+
+                    {staff.department && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Building className="h-4 w-4" />
+                          Department
+                        </div>
+                        <p className="font-medium">{staff.department}</p>
+                      </div>
+                    )}
+
+                    {staff.position && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Briefcase className="h-4 w-4" />
+                          Position
+                        </div>
+                        <p className="font-medium">{staff.position}</p>
+                      </div>
+                    )}
+
+                    {staff.hireDate && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          Hire Date
+                        </div>
+                        <p className="font-medium">
+                          {new Date(staff.hireDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                    )}
+
+                    {staff.manager && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <User className="h-4 w-4" />
+                          Manager
+                        </div>
+                        <p className="font-medium">{staff.manager}</p>
+                      </div>
+                    )}
+
+                    {staff.salary && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Shield className="h-4 w-4" />
+                          Salary
+                        </div>
+                        <p className="font-medium">LKR {staff.salary.toLocaleString()}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Address */}
-                {member.profile?.address && (
+                {staff.profile?.address && (
                   <>
                     <Separator />
                     <div className="space-y-2">
@@ -376,53 +437,38 @@ export default function MemberDetailsPage() {
                         <MapPin className="h-4 w-4" />
                         Address
                       </div>
-                      <p className="font-medium">{member.profile.address}</p>
-                    </div>
-                  </>
-                )}
-
-                {/* Fitness Goals */}
-                {member.fitnessGoals && member.fitnessGoals.length > 0 && (
-                  <>
-                    <Separator />
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm text-muted-foreground">Fitness Goals</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {member.fitnessGoals.map((goal, index) => (
-                          <Badge key={index} variant="secondary">{goal}</Badge>
-                        ))}
-                      </div>
+                      <p className="font-medium">{staff.profile.address}</p>
                     </div>
                   </>
                 )}
 
                 {/* Emergency Contact */}
-                {member.profile?.emergencyContact && (
+                {staff.profile?.emergencyContact && (
                   <>
                     <Separator />
                     <div className="space-y-2">
                       <h4 className="font-medium text-sm text-muted-foreground">Emergency Contact</h4>
-                      <p className="text-sm">{member.profile.emergencyContact}</p>
+                      <p className="text-sm">{staff.profile.emergencyContact}</p>
                     </div>
                   </>
                 )}
 
                 {/* Consent Information */}
-                {member.consent && (
+                {staff.consent && (
                   <>
                     <Separator />
                     <div className="space-y-2">
                       <h4 className="font-medium text-sm text-muted-foreground">Privacy & Consent</h4>
                       <div className="grid gap-2 md:grid-cols-2">
                         <p className="text-sm">
-                          <span className="font-medium">GDPR Consent:</span> {member.consent.gdpr ? 'Granted' : 'Not Granted'}
+                          <span className="font-medium">GDPR Consent:</span> {staff.consent.gdpr ? 'Granted' : 'Not Granted'}
                         </p>
                         <p className="text-sm">
-                          <span className="font-medium">Marketing Consent:</span> {member.consent.marketing ? 'Opted In' : 'Opted Out'}
+                          <span className="font-medium">Marketing Consent:</span> {staff.consent.marketing ? 'Opted In' : 'Opted Out'}
                         </p>
-                        {member.consent.date && (
+                        {staff.consent.date && (
                           <p className="text-sm md:col-span-2">
-                            <span className="font-medium">Consent Date:</span> {new Date(member.consent.date).toLocaleDateString()}
+                            <span className="font-medium">Consent Date:</span> {new Date(staff.consent.date).toLocaleDateString()}
                           </p>
                         )}
                       </div>
@@ -447,21 +493,21 @@ export default function MemberDetailsPage() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Status</span>
-                    <Badge variant={getStatusBadgeVariant(member.status)}>
-                      {member.status}
+                    <Badge variant={getStatusBadgeVariant(staff.status)}>
+                      {staff.status}
                     </Badge>
                   </div>
 
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Role</span>
-                    <Badge variant={getRoleBadgeVariant(member.role)}>
-                      {member.role}
+                    <Badge variant="secondary">
+                      Staff
                     </Badge>
                   </div>
 
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Verified</span>
-                    {member.verified ? (
+                    {staff.verified ? (
                       <CheckCircle className="h-4 w-4 text-green-500" />
                     ) : (
                       <XCircle className="h-4 w-4 text-yellow-500" />
@@ -469,8 +515,8 @@ export default function MemberDetailsPage() {
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Member ID</span>
-                    <span className="text-sm font-mono">{member._id.slice(-8)}</span>
+                    <span className="text-sm text-muted-foreground">Staff ID</span>
+                    <span className="text-sm font-mono">{staff._id.slice(-8)}</span>
                   </div>
                 </div>
 
@@ -479,8 +525,8 @@ export default function MemberDetailsPage() {
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm">Account Timeline</h4>
                   <div className="space-y-1 text-sm">
-                    <p><span className="text-muted-foreground">Created:</span> {new Date(member.createdAt).toLocaleDateString()}</p>
-                    <p><span className="text-muted-foreground">Updated:</span> {new Date(member.updatedAt).toLocaleDateString()}</p>
+                    <p><span className="text-muted-foreground">Created:</span> {new Date(staff.createdAt).toLocaleDateString()}</p>
+                    <p><span className="text-muted-foreground">Updated:</span> {new Date(staff.updatedAt).toLocaleDateString()}</p>
                   </div>
                 </div>
               </CardContent>
@@ -490,42 +536,37 @@ export default function MemberDetailsPage() {
 
         <TabsContent value="attendance" className="space-y-6">
           {/* Attendance History */}
-          <UserAttendanceTable userId={memberId} userName={member.name} />
-        </TabsContent>
-
-        <TabsContent value="payments" className="space-y-6">
-          {/* Payment History */}
-          <UserPaymentTable userId={memberId} userName={member.name} />
+          <UserAttendanceTable userId={staffId} userName={staff.name} />
         </TabsContent>
       </Tabs>
 
       {/* QR Code Modal */}
-      {member.qrCode && (
+      {staff.qrCode && (
         <QRCodeModal
           isOpen={showQRModal}
           onClose={() => setShowQRModal(false)}
-          qrCodeData={member.qrCode}
-          userName={member.name}
+          qrCodeData={staff.qrCode}
+          userName={staff.name}
         />
       )}
 
-      {/* Edit Member Modal */}
+      {/* Edit Staff Modal */}
       <UserFormModal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-        onSubmit={handleUpdateMember}
+        onSubmit={handleUpdateStaff}
         initialData={{
-          name: member.name,
-          email: member.email,
-          contactNo: member.contactNo,
-          role: member.role as 'member' | 'staff' | 'manager',
-          status: member.status as 'active' | 'inactive' | 'expired',
-          dob: member.dob,
-          address: member.profile?.address,
-          emergencyContact: member.profile?.emergencyContact,
+          name: staff.name,
+          email: staff.email,
+          contactNo: staff.contactNo,
+          role: staff.role as 'member' | 'staff' | 'manager',
+          status: staff.status as 'active' | 'inactive' | 'expired',
+          dob: staff.dob,
+          address: staff.profile?.address,
+          emergencyContact: staff.profile?.emergencyContact,
         }}
         mode="edit"
-        title="Edit Member Information"
+        title="Edit Staff Information"
       />
 
       {/* Delete Confirmation Dialog */}
@@ -533,9 +574,9 @@ export default function MemberDetailsPage() {
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleConfirmDelete}
-        title="Delete Member"
-        description="Are you sure you want to delete this member? This action cannot be undone."
-        confirmText="Delete Member"
+        title="Delete Staff Member"
+        description="Are you sure you want to delete this staff member? This action cannot be undone."
+        confirmText="Delete Staff"
         cancelText="Cancel"
       />
     </div>
