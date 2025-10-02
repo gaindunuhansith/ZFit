@@ -48,9 +48,10 @@ const createUserFormSchema = z.object({
 const updateUserFormSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
   email: z.email("Invalid email format").optional(),
-  contactNo: z.string()
-    .regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan Phone number")
-    .optional(),
+  contactNo: z.union([
+    z.literal(''),
+    z.string().regex(/^(?:\+94|0)[1-9]\d{8}$/, "Enter a valid Sri Lankan Phone number")
+  ]).optional(),
   role: z.enum(['member', 'staff', 'manager']).optional(),
   status: z.enum(['active', 'inactive', 'expired']).optional(),
   dob: z.string().optional(),
@@ -125,55 +126,36 @@ type FormDataType = UserFormData | UpdateUserFormData
     setErrors({})
   }, [initialData, mode, isOpen])
 
-  const validateForm = () => {
-    try {
-      const schema = mode === 'add' ? createUserFormSchema : updateUserFormSchema
-      schema.parse(formData)
-      setErrors({})
-      return true
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const zodErrors: Record<string, string> = {}
-        error.issues.forEach((issue) => {
-          const path = issue.path.join('.')
-          zodErrors[path] = issue.message
-        })
-        setErrors(zodErrors)
-      }
-      return false
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!validateForm()) {
+    
+    // Simple validation - just check if required fields exist
+    if (!formData.name || !formData.email) {
+      setErrors({ name: 'Name is required', email: 'Email is required' })
       return
     }
-
+    
     setLoading(true)
+    
     try {
-      
       let dataToSend = formData
-
+      
       if (mode === 'edit') {
-        
-        const filteredData: Record<string, string> = {}
+        // For edit mode, only send non-empty fields
+        const filteredData: Record<string, string | number | boolean> = {}
         Object.entries(formData).forEach(([key, value]) => {
           if (value !== undefined && value !== '' && value !== null) {
             filteredData[key] = value
           }
         })
-        dataToSend = filteredData as UserFormData
-        console.log('UserFormModal sending filtered data for edit:', dataToSend)
+        dataToSend = filteredData
       }
-
-      console.log('UserFormModal submitting data:', { ...dataToSend, password: dataToSend && 'password' in dataToSend ? '***masked***' : 'no password field' })
-
+      
       await onSubmit(dataToSend)
       onClose()
     } catch (error) {
       console.error('Error submitting form:', error)
+      // Don't close modal on error
     } finally {
       setLoading(false)
     }
@@ -310,6 +292,8 @@ type FormDataType = UserFormData | UpdateUserFormData
                   type="date"
                   value={formData.dob}
                   onChange={(e) => handleInputChange('dob', e.target.value)}
+                  min="1950-01-01"
+                  max={new Date().toISOString().split('T')[0]}
                 />
               </div>
             </div>

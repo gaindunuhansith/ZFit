@@ -25,7 +25,7 @@ import {
   Edit,
   Trash2
 } from 'lucide-react'
-import { getUserById, deleteUser } from '@/lib/api/userApi'
+import { getUserById, deleteUser, updateUser } from '@/lib/api/userApi'
 import { QRCodeModal } from '@/components/QRCodeModal'
 import { UserFormModal } from '@/components/UserFormModal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -135,10 +135,13 @@ export default function StaffDetailsPage() {
 
   const handleUpdateStaff = async (data: any) => {
     try {
-      // TODO: Implement update API call
-      console.log('Updating staff:', staffId, data)
-      // After successful update, refresh the data
-      await fetchStaffDetails()
+      const response = await updateUser(staffId, data)
+      if (response.success) {
+        // After successful update, refresh the data
+        await fetchStaffDetails()
+      } else {
+        setError(response.message || 'Failed to update staff member')
+      }
     } catch (error) {
       console.error('Error updating staff:', error)
       setError('Failed to update staff member')

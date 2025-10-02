@@ -23,7 +23,7 @@ import {
   Edit,
   Trash2
 } from 'lucide-react'
-import { getUserById, deleteUser } from '@/lib/api/userApi'
+import { getUserById, deleteUser, updateUser } from '@/lib/api/userApi'
 import { QRCodeModal } from '@/components/QRCodeModal'
 import { UserFormModal } from '@/components/UserFormModal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -142,10 +142,13 @@ export default function MemberDetailsPage() {
 
   const handleUpdateMember = async (data: any) => {
     try {
-      // TODO: Implement update API call
-      console.log('Updating member:', memberId, data)
-      // After successful update, refresh the data
-      await fetchMemberDetails()
+      const response = await updateUser(memberId, data)
+      if (response.success) {
+        // After successful update, refresh the data
+        await fetchMemberDetails()
+      } else {
+        setError(response.message || 'Failed to update member')
+      }
     } catch (error) {
       console.error('Error updating member:', error)
       setError('Failed to update member')

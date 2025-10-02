@@ -183,7 +183,16 @@ export function UserProfile({
             role: userData.role,
             status: userData.status,
             verified: userData.verified,
-            dateOfBirth: userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : undefined,
+            dateOfBirth: (() => {
+              if (!userData.dob) return undefined;
+              try {
+                const date = new Date(userData.dob);
+                if (isNaN(date.getTime())) return undefined;
+                return date.toISOString().substring(0, 10);
+              } catch {
+                return undefined;
+              }
+            })(),
             address: userData.profile?.address,
             profile: {
               avatar: userData.profile?.avatar,
@@ -234,7 +243,16 @@ export function UserProfile({
         role: userData.role,
         status: userData.status,
         verified: userData.verified,
-        dateOfBirth: userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : undefined,
+        dateOfBirth: (() => {
+          if (!userData.dob) return undefined;
+          try {
+            const date = new Date(userData.dob);
+            if (isNaN(date.getTime())) return undefined;
+            return date.toISOString().substring(0, 10);
+          } catch {
+            return undefined;
+          }
+        })(),
         address: userData.profile?.address,
         profile: {
           avatar: userData.profile?.avatar,
@@ -406,7 +424,7 @@ export function UserProfile({
                   Date of Birth
                 </div>
                 <p className="font-medium">
-                  {profileData?.dateOfBirth ? new Date(profileData.dateOfBirth).toLocaleDateString() : 'N/A'}
+                  {profileData?.dateOfBirth ? new Date(profileData.dateOfBirth).toLocaleDateString() : 'Not set'}
                 </p>
               </div>
 

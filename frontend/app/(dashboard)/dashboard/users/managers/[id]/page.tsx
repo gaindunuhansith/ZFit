@@ -27,7 +27,7 @@ import {
   Edit,
   Trash2
 } from 'lucide-react'
-import { getUserById, deleteUser } from '@/lib/api/userApi'
+import { getUserById, deleteUser, updateUser } from '@/lib/api/userApi'
 import { QRCodeModal } from '@/components/QRCodeModal'
 import { UserFormModal } from '@/components/UserFormModal'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -139,10 +139,13 @@ export default function ManagerDetailsPage() {
 
   const handleUpdateManager = async (data: any) => {
     try {
-      // TODO: Implement update API call
-      console.log('Updating manager:', managerId, data)
-      // After successful update, refresh the data
-      await fetchManagerDetails()
+      const response = await updateUser(managerId, data)
+      if (response.success) {
+        // After successful update, refresh the data
+        await fetchManagerDetails()
+      } else {
+        setError(response.message || 'Failed to update manager')
+      }
     } catch (error) {
       console.error('Error updating manager:', error)
       setError('Failed to update manager')
