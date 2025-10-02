@@ -141,14 +141,36 @@ type FormDataType = UserFormData | UpdateUserFormData
       
       setLoading(true)
       
-      let dataToSend = validatedData
+      let dataToSend: Record<string, unknown> = validatedData as Record<string, unknown>
       
-      if (mode === 'edit') {
+      if (mode === 'add') {
+        // For add mode, structure the data correctly for the API
+        const { address, emergencyContact, ...restData } = validatedData as Record<string, unknown>
+        dataToSend = {
+          ...restData,
+          profile: {
+            address: address || undefined,
+            emergencyContact: emergencyContact || undefined,
+          },
+          consent: {
+            gdpr: true, // Default to true for admin-created users
+            marketing: false, // Default to false
+          },
+        }
+      } else if (mode === 'edit') {
         // For edit mode, only send non-empty fields
-        const filteredData: Record<string, string | number | boolean> = {}
+        const filteredData: Record<string, unknown> = {}
         Object.entries(validatedData).forEach(([key, value]) => {
           if (value !== undefined && value !== '' && value !== null) {
-            filteredData[key] = value
+            if (key === 'address' || key === 'emergencyContact') {
+              // Nest address and emergencyContact under profile
+              if (!filteredData.profile) {
+                filteredData.profile = {}
+              }
+              ;(filteredData.profile as Record<string, unknown>)[key] = value
+            } else {
+              filteredData[key] = value
+            }
           }
         })
         dataToSend = filteredData

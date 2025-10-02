@@ -14,8 +14,9 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { UserCheck, Download, Search } from 'lucide-react'
+import { UserCheck, Download, Search, Plus } from 'lucide-react'
 import { apiService } from '@/lib/api/userApi'
+import { UserFormModal } from '@/components/UserFormModal'
 
 interface Staff {
   _id: string
@@ -40,6 +41,7 @@ export default function StaffPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [showAddModal, setShowAddModal] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -66,6 +68,16 @@ export default function StaffPage() {
 
   const handleViewStaff = (staffMember: Staff) => {
     router.push(`/dashboard/users/staff/${staffMember._id}`)
+  }
+
+  const handleAddStaff = async (staffData: any) => {
+    try {
+      await apiService.createUser({ ...staffData, role: 'staff' })
+      fetchStaff() // Refresh the list
+    } catch (error) {
+      console.error('Error adding staff:', error)
+      throw error
+    }
   }
 
   const getStatusBadgeVariant = (status: string) => {
@@ -136,6 +148,10 @@ export default function StaffPage() {
           <p className="text-muted-foreground">Manage gym staff members</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button onClick={() => setShowAddModal(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Staff
+          </Button>
           <Button variant="outline" onClick={handleDownloadReport}>
             <Download className="h-4 w-4 mr-2" />
             Download Report
@@ -221,6 +237,14 @@ export default function StaffPage() {
           )}
         </CardContent>
       </Card>
+
+      <UserFormModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={handleAddStaff}
+        mode="add"
+        title="Add New Staff"
+      />
     </div>
   )
 }

@@ -14,8 +14,9 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Shield, Download, Search } from 'lucide-react'
+import { Shield, Download, Search, Plus } from 'lucide-react'
 import { apiService } from '@/lib/api/userApi'
+import { UserFormModal } from '@/components/UserFormModal'
 
 interface Manager {
   _id: string
@@ -40,6 +41,7 @@ export default function ManagersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [showAddModal, setShowAddModal] = useState(false)
   const router = useRouter()
 
   const filteredManagers = managers.filter(manager =>
@@ -66,6 +68,16 @@ export default function ManagersPage() {
 
   const handleViewManager = (manager: Manager) => {
     router.push(`/dashboard/users/managers/${manager._id}`)
+  }
+
+  const handleAddManager = async (managerData: any) => {
+    try {
+      await apiService.createUser({ ...managerData, role: 'manager' })
+      fetchManagers() // Refresh the list
+    } catch (error) {
+      console.error('Error adding manager:', error)
+      throw error
+    }
   }
 
   const getStatusBadgeVariant = (status: string) => {
@@ -136,6 +148,10 @@ export default function ManagersPage() {
           <p className="text-muted-foreground">Manage gym managers</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button onClick={() => setShowAddModal(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Manager
+          </Button>
           <Button variant="outline" onClick={handleDownloadReport}>
             <Download className="h-4 w-4 mr-2" />
             Download Report
@@ -221,6 +237,14 @@ export default function ManagersPage() {
           )}
         </CardContent>
       </Card>
+
+      <UserFormModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={handleAddManager}
+        mode="add"
+        title="Add New Manager"
+      />
     </div>
   )
 }
