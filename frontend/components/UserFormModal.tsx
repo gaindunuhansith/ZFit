@@ -240,6 +240,7 @@ type FormDataType = UserFormData | UpdateUserFormData
                   value={formData.contactNo}
                   onChange={(e) => handleInputChange('contactNo', e.target.value.replace(/[^0-9+]/g, ''))}
                   placeholder="+94712345678"
+                  maxLength={10}
                   className={errors.contactNo ? 'border-red-500' : ''}
                 />
                 {errors.contactNo && (
