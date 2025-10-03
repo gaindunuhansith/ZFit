@@ -8,11 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, AlertCircle, CheckCircle, XCircle, Clock, RefreshCw, CreditCard, FileText, Search, Calendar } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ArrowLeft, AlertCircle, CheckCircle, XCircle, Clock, RefreshCw, CreditCard, FileText, Search, Calendar, MessageSquare } from "lucide-react"
 import { toast } from "sonner"
 
 interface User {
@@ -80,11 +80,11 @@ export default function RefundRequestsPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Pending</Badge>
+        return <Badge className="bg-secondary text-secondary-foreground border-secondary-foreground/20"><Clock className="w-3 h-3 mr-1" />Pending</Badge>
       case 'approved':
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>
+        return <Badge className="bg-primary text-primary-foreground"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>
       case 'declined':
-        return <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />Declined</Badge>
+        return <Badge className="bg-destructive text-destructive-foreground"><XCircle className="w-3 h-3 mr-1" />Declined</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -362,25 +362,42 @@ export default function RefundRequestsPage() {
                           </div>
                         </TableCell>
                         <TableCell className="max-w-xs">
-                          <div className="space-y-2">
-                            {request.notes && (
-                              <div className="text-sm">
-                                <div className="font-medium text-xs text-muted-foreground mb-1">YOUR NOTES:</div>
-                                <div className="bg-muted/50 p-2 rounded text-xs leading-relaxed">
-                                  {request.notes}
-                                </div>
-                              </div>
-                            )}
-                            {request.adminNotes && (
-                              <Alert className="border-l-4 border-l-primary">
-                                <AlertCircle className="h-4 w-4" />
-                                <AlertDescription className="text-xs">
-                                  <div className="font-medium text-xs mb-1">ADMIN RESPONSE:</div>
-                                  {request.adminNotes}
-                                </AlertDescription>
-                              </Alert>
-                            )}
-                          </div>
+                          {(request.notes || request.adminNotes) ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 px-2">
+                                  <MessageSquare className="h-4 w-4 mr-1" />
+                                  View
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-80">
+                                <DropdownMenuLabel>Notes & Responses</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {request.notes && (
+                                  <div className="px-2 py-1.5">
+                                    <div className="font-medium text-xs text-muted-foreground mb-2">YOUR NOTES:</div>
+                                    <div className="bg-muted/50 p-3 rounded-md text-sm leading-relaxed">
+                                      {request.notes}
+                                    </div>
+                                  </div>
+                                )}
+                                {request.notes && request.adminNotes && <DropdownMenuSeparator />}
+                                {request.adminNotes && (
+                                  <div className="px-2 py-1.5">
+                                    <div className="font-medium text-xs text-primary mb-2 flex items-center gap-1">
+                                      <AlertCircle className="h-3 w-3" />
+                                      ADMIN RESPONSE:
+                                    </div>
+                                    <div className="text-sm leading-relaxed">
+                                      {request.adminNotes}
+                                    </div>
+                                  </div>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">No notes</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     )
