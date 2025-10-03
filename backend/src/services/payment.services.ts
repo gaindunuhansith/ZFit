@@ -65,7 +65,6 @@ export const processPaymentService = async (id: string, response: Record<string,
         try {
             // Create invoice automatically for completed payment
             await createInvoiceForPayment(updatedPayment!);
-            console.log(`Invoice created automatically for payment ${updatedPayment!.transactionId}`);
         } catch (invoiceError) {
             console.error('Failed to create invoice for payment:', invoiceError);
             // Don't throw error for invoice creation failure - payment is still completed
@@ -92,7 +91,6 @@ export const cleanupPendingPaymentsService = async (daysOld: number = 30): Promi
             createdAt: { $lt: cutoffDate }
         });
 
-        console.log(`Cleaned up ${result.deletedCount} pending payments older than ${daysOld} days`);
         return { deletedCount: result.deletedCount };
     } catch (error) {
         console.error('Error cleaning up pending payments:', error);

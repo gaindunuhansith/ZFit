@@ -11,7 +11,7 @@ const startServer = async () => {
 
         // Start invoice automation scheduler
         invoiceScheduler.start();
-        console.log("Invoice automation scheduler started");
+        
     })
 };
 
