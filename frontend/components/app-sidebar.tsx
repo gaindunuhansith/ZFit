@@ -148,12 +148,16 @@ const data = {
           url: "/dashboard/finance/overview",
         },
         {
-          title: "Invoices",
-          url: "/dashboard/finance/invoice",
+          title: "Bank Transfers",
+          url: "/dashboard/finance/bank-transfers",
         },
         {
           title: "Refunds",
-          url: "/dashboard/finance/refund",
+          url: "/dashboard/finance/refund/requests",
+        },
+        {
+          title: "Invoices",
+          url: "/dashboard/finance/invoice",
         },
       ],
     },

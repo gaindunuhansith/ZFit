@@ -13,7 +13,8 @@ import {
     getPendingBankTransferPaymentsService,
     updateBankTransferPaymentService,
     approveBankTransferPaymentService,
-    declineBankTransferPaymentService
+    declineBankTransferPaymentService,
+    deleteBankTransferPaymentService
 } from '../services/bankTransfer.service.js';
 
 
@@ -396,6 +397,44 @@ export const getUserBankTransfers = async (req: Request, res: Response) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch bank transfer payments'
+        });
+    }
+};
+
+/**
+ * Delete bank transfer payment (Admin only)
+ * DELETE /api/v1/admin/payments/bank-transfer/:id
+ */
+export const deleteBankTransfer = async (req: Request, res: Response) => {
+    try {
+        const { id } = bankTransferIdSchema.parse(req.params);
+
+        const deletedPayment = await deleteBankTransferPaymentService(id);
+
+        if (!deletedPayment) {
+            return res.status(404).json({
+                success: false,
+                message: 'Bank transfer payment not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Bank transfer payment deleted successfully'
+        });
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation error',
+                errors: error.issues
+            });
+        }
+
+        console.error('Error deleting bank transfer:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete bank transfer payment'
         });
     }
 };

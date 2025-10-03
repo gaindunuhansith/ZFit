@@ -1,4 +1,5 @@
 import Invoice from '../models/invoice.model.js';
+import { cleanupPendingPaymentsService } from './payment.services.js';
 
 /**
  * Check for overdue invoices and update their status
@@ -14,8 +15,6 @@ export const checkAndUpdateOverdueInvoices = async (): Promise<void> => {
             dueDate: { $lt: currentDate }
         }).populate('userId', 'name email contactNo');
 
-        console.log(`Found ${overdueInvoices.length} potentially overdue invoices`);
-
         for (const invoice of overdueInvoices) {
             try {
                 // Update status to overdue
@@ -23,8 +22,6 @@ export const checkAndUpdateOverdueInvoices = async (): Promise<void> => {
                     status: 'overdue',
                     updatedAt: new Date()
                 });
-
-                console.log(`Invoice ${invoice.number} marked as overdue`);
             } catch (updateError) {
                 console.error(`Failed to update invoice ${invoice._id}:`, updateError);
             }
@@ -77,5 +74,16 @@ export const getInvoiceStatistics = async () => {
     } catch (error) {
         console.error('Error getting invoice statistics:', error);
         throw error;
+    }
+};
+
+/**
+ * Cleanup old pending payments (older than 30 days by default)
+ */
+export const cleanupOldPendingPayments = async (daysOld: number = 30): Promise<void> => {
+    try {
+        const result = await cleanupPendingPaymentsService(daysOld);
+    } catch (error) {
+        console.error('Error during pending payment cleanup:', error);
     }
 };

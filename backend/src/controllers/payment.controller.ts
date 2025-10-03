@@ -8,7 +8,9 @@ import {
     updatePaymentService,
     deletePaymentService,
     processPaymentService,
-    deleteAllPaymentsService
+    deleteAllPaymentsService,
+    cleanupPendingPaymentsService,
+    getPendingPaymentStatsService
 } from '../services/payment.services.js';
 
 // Zod validation schemas
@@ -166,6 +168,30 @@ export const deleteAllPayments = async (req: Request, res: Response, next: NextF
             message: `All ${result.deletedCount} payments deleted successfully`,
             data: { deletedCount: result.deletedCount }
         });
+    } catch (error) {
+        next(error); 
+    }
+};
+
+export const cleanupPendingPayments = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const result = await cleanupPendingPaymentsService();
+        
+        res.json({ 
+            success: true, 
+            message: `All ${result.deletedCount} pending payments deleted successfully`,
+            data: { deletedCount: result.deletedCount }
+        });
+    } catch (error) {
+        next(error); 
+    }
+};
+
+export const getPendingPaymentStats = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const stats = await getPendingPaymentStatsService();
+        
+        res.json({ success: true, data: stats });
     } catch (error) {
         next(error); 
     }

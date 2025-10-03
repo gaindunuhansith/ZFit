@@ -27,7 +27,6 @@ import lowStockAlertRoutes from "./routes/lowStockAlert.routes.js";
 import errorMiddleware from "./middleware/error.middleware.js";
 import { rateLimitMiddleware } from "./middleware/rateLimit.middleware.js";
 
-console.log("🚀 APP.TS: Starting application setup...");
 
 //creating a express app instance
 const app: express.Application = express();

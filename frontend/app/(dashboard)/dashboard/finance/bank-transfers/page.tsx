@@ -25,8 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CheckCircle, XCircle, Eye, Loader2, AlertCircle, User, Mail, Phone, CreditCard, MoreHorizontal, Search, RefreshCw } from "lucide-react"
-import { getPendingBankTransfers, approveBankTransfer, declineBankTransfer, type BankTransferAdmin } from "@/lib/api/paymentApi"
+import { CheckCircle, XCircle, Eye, Loader2, AlertCircle, Mail, Phone, CreditCard, MoreHorizontal, Search, RefreshCw, Trash2 } from "lucide-react"
+import { getPendingBankTransfers, approveBankTransfer, declineBankTransfer, deleteBankTransfer, type BankTransferAdmin } from "@/lib/api/paymentApi"
 
 export default function BankTransfersPage() {
   const router = useRouter()
@@ -105,6 +105,28 @@ export default function BankTransfersPage() {
     }
   }
 
+  const handleDeleteTransfer = async (transfer: BankTransferAdmin) => {
+    if (!confirm(`Are you sure you want to delete this bank transfer from ${transfer.userId?.name || 'Unknown User'}? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setProcessing(transfer._id)
+      const result = await deleteBankTransfer(transfer._id)
+      
+      // Show success message
+      alert(`Success: ${result.message}`)
+      
+      // Remove from list
+      setTransfers(prev => prev.filter(t => t._id !== transfer._id))
+    } catch (error) {
+      console.error('Error deleting transfer:', error)
+      alert(`Error: Failed to delete bank transfer`)
+    } finally {
+      setProcessing(null)
+    }
+  }
+
   const confirmAction = async () => {
     if (!selectedTransfer || !actionType) return
 
@@ -170,6 +192,52 @@ export default function BankTransfersPage() {
         </p>
       </div>
 
+      {/* Search and Filters */}
+      <div className="flex items-center space-x-2 mb-6">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name, email, or membership..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="declined">Declined</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={membershipFilter} onValueChange={setMembershipFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Membership" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Memberships</SelectItem>
+            {membershipOptions.map(membership => (
+              <SelectItem key={membership} value={membership}>
+                {membership}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fetchPendingTransfers}
+          disabled={loading}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Pending Bank Transfers</CardTitle>
@@ -178,52 +246,6 @@ export default function BankTransfersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Search and Filters */}
-          <div className="flex items-center space-x-2 mb-6">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, email, or membership..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="declined">Declined</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={membershipFilter} onValueChange={setMembershipFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Membership" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Memberships</SelectItem>
-                {membershipOptions.map(membership => (
-                  <SelectItem key={membership} value={membership}>
-                    {membership}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchPendingTransfers}
-              disabled={loading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </div>
-
           {filteredTransfers.length === 0 ? (
             <div className="text-center py-8">
               <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -326,12 +348,20 @@ export default function BankTransfersPage() {
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleViewUserDetails(transfer)}>
-                              <User className="h-4 w-4 mr-2" />
+                              <Eye className="h-4 w-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleViewPaymentHistory(transfer)}>
                               <CreditCard className="h-4 w-4 mr-2" />
                               Payment History
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteTransfer(transfer)}
+                              disabled={processing === transfer._id}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Transfer
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

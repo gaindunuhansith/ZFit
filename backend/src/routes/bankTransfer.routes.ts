@@ -5,7 +5,8 @@ import {
     getPendingBankTransfers,
     approveBankTransfer,
     declineBankTransfer,
-    getUserBankTransfers
+    getUserBankTransfers,
+    deleteBankTransfer
 } from '../controllers/bankTransfer.controller.js';
 import { uploadReceiptImage, handleMulterError } from '../services/fileUpload.service.js';
 import authenticate from '../middleware/auth.middleware.js';
@@ -31,6 +32,7 @@ router.get('/my-payments', getUserBankTransfers);
 adminRouter.get('/pending', getPendingBankTransfers);
 adminRouter.put('/:id/approve', approveBankTransfer);
 adminRouter.put('/:id/decline', declineBankTransfer);
+adminRouter.delete('/:id', deleteBankTransfer);
 
 export { adminRouter };
 export default router;

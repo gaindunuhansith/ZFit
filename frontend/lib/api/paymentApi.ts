@@ -447,3 +447,23 @@ export const declineBankTransfer = async (transferId: string, data: ApproveDecli
     throw error
   }
 }
+
+export const deleteBankTransfer = async (transferId: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await apiRequest<{ success: boolean; message: string }>(`/admin/payments/bank-transfer/${transferId}`, {
+      method: 'DELETE',
+    })
+
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to delete bank transfer')
+    }
+
+    return {
+      success: response.success,
+      message: response.message || 'Bank transfer deleted successfully'
+    }
+  } catch (error) {
+    console.error('Error deleting bank transfer:', error)
+    throw error
+  }
+}
