@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Building2,
   Eye,
+  Trash2,
 } from "lucide-react"
 
 import {
@@ -52,7 +53,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { getPayments, getPaymentsByUserId, type Payment, deletePayment } from "@/lib/api/paymentApi"
+import { getPayments, getPaymentsByUserId, type Payment, deletePayment, deleteAllPayments } from "@/lib/api/paymentApi"
 import { generatePaymentsReport } from "@/lib/api/reportApi"
 
 const getStatusBadge = (status: string) => {
@@ -170,6 +171,19 @@ export default function PaymentManagementPage() {
     } catch (error) {
       console.error('Error deleting payment:', error)
       setError('Failed to delete payment')
+    }
+  }
+
+  const handleDeleteAllPayments = async () => {
+    if (!confirm('Are you sure you want to delete ALL payment history? This action cannot be undone!')) return
+
+    try {
+      const result = await deleteAllPayments()
+      setPayments([])
+      alert(`Successfully deleted ${result.deletedCount} payments`)
+    } catch (error) {
+      console.error('Error deleting all payments:', error)
+      setError('Failed to delete all payments')
     }
   }
 
@@ -449,6 +463,10 @@ export default function PaymentManagementPage() {
           <Button onClick={handleGenerateReport}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Generate Report
+          </Button>
+          <Button variant="destructive" onClick={handleDeleteAllPayments}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete All Payments
           </Button>
         </div>
       </div>
