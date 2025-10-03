@@ -67,6 +67,38 @@ export default function PaymentSuccessPage() {
     }
   }
 
+  // Development only: Manual payment completion
+  const handleTestComplete = async () => {
+    if (!paymentData?.orderId) return
+    
+    setLoading(true)
+    try {
+      const response = await fetch(`http://localhost:5000/api/v1/gateways/dev/complete-payment/${paymentData.orderId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: paymentData.amount || '1000.00'
+        })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        console.log('✅ Payment completed automatically:', result)
+        // Refresh payment status
+        await verifyPayment(paymentData.orderId)
+      } else {
+        console.error('❌ Failed to complete payment:', result.message)
+      }
+    } catch (error) {
+      console.error('❌ Auto completion failed:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     // Extract payment data from URL parameters (PayHere returns these)
     const orderId = searchParams.get('order_id')
@@ -89,6 +121,19 @@ export default function PaymentSuccessPage() {
       setLoading(false)
     }
   }, [searchParams])
+
+  // Auto-complete payment in development if it's pending
+  useEffect(() => {
+    if (verification?.status === 'pending' && !loading && process.env.NODE_ENV !== 'production') {
+      console.log('🧪 DEV: Auto-completing pending membership payment...')
+      // Wait a moment then auto-complete
+      const timer = setTimeout(() => {
+        handleTestComplete()
+      }, 2000) // Wait 2 seconds then auto-complete
+      
+      return () => clearTimeout(timer)
+    }
+  }, [verification?.status, loading])
 
   const getStatusIcon = () => {
     if (loading) {
@@ -133,6 +178,13 @@ export default function PaymentSuccessPage() {
     }
     
     if (verification.status === 'pending') {
+      // Check if we're in development and will auto-complete
+      if (process.env.NODE_ENV !== 'production') {
+        return {
+          title: "Finalizing Membership",
+          description: "This will complete automatically in a moment."
+        }
+      }
       return {
         title: "Payment Processing",
         description: "Your payment is being processed. This may take a few moments."
