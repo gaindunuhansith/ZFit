@@ -449,21 +449,9 @@ export default function RefundManagementPage() {
             <RefreshCw className="mr-2 h-4 w-4" />
             Generate Report
           </Button>
-          <Button variant="outline" onClick={() => router.push('/dashboard/finance/refund/requests')} className="relative">
-            <Eye className="mr-2 h-4 w-4" />
-            View Requests
-            {pendingRequestsCount > 0 && (
-              <Badge 
-                variant="destructive" 
-                className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
-              >
-                {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
-              </Badge>
-            )}
-          </Button>
           <Button variant="outline" onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Create Refund
+            Create
           </Button>
         </div>
       </div>
