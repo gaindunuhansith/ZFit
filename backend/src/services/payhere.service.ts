@@ -3,10 +3,11 @@ import mongoose from 'mongoose';
 import { PayHereUtils } from '../util/payhere.util.js';
 import { createPaymentService, updatePaymentService } from './payment.services.js';
 import { createMembership } from './membership.service.js';
-import { sendMembershipPurchaseSuccessEmail, sendMembershipPurchaseFailureEmail } from '../util/sendMail.util.js';
+import { sendMembershipPurchaseSuccessEmail, sendMembershipPurchaseFailureEmail, sendCartPurchaseSuccessEmail, sendCartPurchaseFailureEmail } from '../util/sendMail.util.js';
 import { getMembershipPlanById } from './membershipPlan.service.js';
 import UserModel from '../models/user.model.js';
 import Payment from '../models/payment.model.js';
+import InventoryItem from '../models/inventoryItem.schema.js';
 
 export interface PayHerePaymentRequest {
     userId: string;
@@ -123,10 +124,14 @@ export class PayHereService {
 
             const payment = await createPaymentService(paymentData);
 
-            // Prepare PayHere payment data
+            // Prepare PayHere payment data with dynamic return URL based on payment type
+            const returnUrl = paymentRequest.type === 'other' || paymentRequest.type === 'inventory' 
+                ? `${env.FRONTEND_APP_ORIGIN}/cart/success`
+                : env.PAYHERE_RETURN_URL;
+
             const payhereData: PayHerePaymentData = {
                 merchant_id: env.PAYHERE_MERCHANT_ID,
-                return_url: env.PAYHERE_RETURN_URL,
+                return_url: returnUrl,
                 cancel_url: env.PAYHERE_CANCEL_URL,
                 notify_url: env.PAYHERE_NOTIFY_URL,
                 order_id: orderId,
@@ -334,6 +339,122 @@ export class PayHereService {
                     }
                 } catch (emailError) {
                     console.error('Failed to send membership failure email:', emailError);
+                    // Don't fail the webhook if email sending fails
+                }
+            }
+
+            // Handle cart payment success
+            if (paymentStatus === 'completed' && (payment.type === 'other' || payment.type === 'inventory')) {
+                try {
+                    const user = await UserModel.findById(payment.userId);
+                    
+                    if (user) {
+                        console.log('Processing cart payment success for user:', user.email);
+                        
+                        // Get cart items from user's cart
+                        // Note: You might want to store cart items in the payment record for better tracking
+                        const CartModel = (await import('../models/cart.model.js')).default;
+                        const cart = await CartModel.findOne({ memberId: payment.userId.toString() }).populate('items.itemId');
+                        
+                        if (cart && cart.items && cart.items.length > 0) {
+                            // Prepare cart items for email
+                            const cartItems = cart.items.map((item: any) => ({
+                                itemName: item.itemId.name || 'Unknown Item',
+                                quantity: item.quantity || 1,
+                                price: item.itemId.price || 0,
+                                totalPrice: (item.itemId.price || 0) * (item.quantity || 1)
+                            }));
+
+                            const emailData = {
+                                userName: user.name || 'Customer',
+                                userEmail: user.email,
+                                orderNumber: payment.transactionId,
+                                items: cartItems,
+                                totalAmount: payment.amount,
+                                currency: payment.currency,
+                                orderDate: new Date().toLocaleDateString('en-US', { 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                }),
+                                transactionId: payment.transactionId,
+                                paymentMethod: 'Credit/Debit Card'
+                            };
+
+                            await sendCartPurchaseSuccessEmail(user.email, emailData);
+                            console.log('Cart purchase success email sent to:', user.email);
+
+                            // Clear the user's cart after successful payment
+                            await CartModel.findOneAndDelete({ memberId: payment.userId.toString() });
+                            console.log('Cart cleared for user after successful purchase');
+
+                            // TODO: Update inventory stock quantities here
+                            for (const item of cart.items) {
+                                try {
+                                    await InventoryItem.findByIdAndUpdate(
+                                        item.itemId._id,
+                                        { $inc: { stock: -item.quantity } },
+                                        { new: true }
+                                    );
+                                    console.log(`Reduced stock for item ${(item.itemId as any).name || 'Unknown'} by ${item.quantity}`);
+                                } catch (stockError) {
+                                    console.error(`Failed to update stock for item ${item.itemId._id}:`, stockError);
+                                }
+                            }
+                        } else {
+                            console.log('No cart items found for user, sending basic success email');
+                            
+                            // Send basic success email without cart details
+                            const emailData = {
+                                userName: user.name || 'Customer',
+                                userEmail: user.email,
+                                orderNumber: payment.transactionId,
+                                items: [],
+                                totalAmount: payment.amount,
+                                currency: payment.currency,
+                                orderDate: new Date().toLocaleDateString('en-US', { 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                }),
+                                transactionId: payment.transactionId,
+                                paymentMethod: 'Credit/Debit Card'
+                            };
+
+                            await sendCartPurchaseSuccessEmail(user.email, emailData);
+                            console.log('Basic cart purchase success email sent to:', user.email);
+                        }
+                    }
+                } catch (emailError) {
+                    console.error('Failed to send cart purchase success email:', emailError);
+                    // Don't fail the webhook if email sending fails
+                }
+            }
+
+            // Send failure email for failed cart payments
+            if (paymentStatus === 'failed' && (payment.type === 'other' || payment.type === 'inventory')) {
+                try {
+                    const user = await UserModel.findById(payment.userId);
+                    
+                    if (user) {
+                        const retryUrl = `${env.FRONTEND_APP_ORIGIN}/memberDashboard/cart`;
+                        
+                        const emailData = {
+                            userName: user.name || 'Customer',
+                            userEmail: user.email,
+                            orderNumber: payment.transactionId,
+                            totalAmount: payment.amount,
+                            currency: payment.currency,
+                            transactionId: payment.transactionId,
+                            failureReason: payment.failureReason || webhookData.status_message || 'Payment processing failed',
+                            retryUrl: retryUrl
+                        };
+
+                        await sendCartPurchaseFailureEmail(user.email, emailData);
+                        console.log('Cart purchase failure email sent to:', user.email);
+                    }
+                } catch (emailError) {
+                    console.error('Failed to send cart purchase failure email:', emailError);
                     // Don't fail the webhook if email sending fails
                 }
             }
