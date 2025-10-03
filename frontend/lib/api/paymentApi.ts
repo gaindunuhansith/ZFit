@@ -189,6 +189,23 @@ export const deletePayment = async (id: string): Promise<void> => {
   }
 }
 
+export const deleteAllPayments = async (): Promise<{ deletedCount: number }> => {
+  try {
+    const response = await apiRequest<{ deletedCount: number }>(`/payments/all`, {
+      method: 'DELETE',
+    })
+    
+    if (response.success && response.data) {
+      return response.data
+    } else {
+      throw new Error(response.message || 'Failed to delete all payments')
+    }
+  } catch (error) {
+    console.error('Error deleting all payments:', error)
+    throw error
+  }
+}
+
 // User API functions
 export const getUserById = async (userId: string): Promise<ApiResponse<User>> => {
   try {
@@ -259,6 +276,7 @@ export interface BankTransferUploadResponse {
 }
 
 export interface BankTransferPaymentRequest {
+  userId?: string // Optional for when included explicitly
   membershipId: string
   amount: number
   currency?: string

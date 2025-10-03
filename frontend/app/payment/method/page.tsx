@@ -64,6 +64,12 @@ export default function PaymentMethodPage() {
       try {
         const parsedData = JSON.parse(cartData)
         setPaymentData(parsedData)
+        // For cart payments, automatically select card payment and proceed
+        setSelectedMethod('card')
+        // Auto-trigger card payment for cart
+        setTimeout(() => {
+          handleCardPayment(parsedData)
+        }, 1000)
       } catch (err) {
         console.error('Error parsing cart payment data:', err)
         setError('Invalid cart data. Please try again.')
@@ -72,6 +78,88 @@ export default function PaymentMethodPage() {
       setError('No payment data found. Please select a membership plan or add items to cart first.')
     }
   }, [user])
+
+  const handleCardPayment = async (data?: PaymentData) => {
+    const paymentDataToUse = data || paymentData
+    if (!paymentDataToUse || !user) return
+    
+    setIsProcessing(true)
+    setError(null)
+
+    try {
+      let response: { paymentForm: string }
+
+      if (paymentDataToUse.type === 'cart') {
+        // Handle cart payment
+        const nameParts = (user.name || 'Customer').split(' ')
+        const paymentRequest: PayHerePaymentRequest = {
+          userId: user?._id || '',
+          amount: paymentDataToUse.totalAmount || 0,
+          currency: paymentDataToUse.currency || 'LKR',
+          type: 'other' as const,
+          relatedId: '', // Cart payments don't have a single related ID
+          description: `Purchase of ${paymentDataToUse.totalItems} items`,
+          customerFirstName: nameParts[0] || 'Customer',
+          customerLastName: nameParts.slice(1).join(' ') || 'User',
+          customerEmail: user.email || 'customer@example.com',
+          customerPhone: user.contactNo || '0000000000',
+          customerAddress: user.profile?.address || 'No address provided',
+          customerCity: 'Colombo', // Default city
+        }
+
+        console.log('Initiating PayHere cart payment:', paymentRequest)
+
+        response = await initiatePayHerePayment(paymentRequest)
+      } else {
+        // Handle membership payment
+        const nameParts = (user.name || 'Customer').split(' ')
+        const paymentRequest: PayHerePaymentRequest = {
+          userId: user?._id || '',
+          amount: paymentDataToUse.amount || 0,
+          currency: paymentDataToUse.currency || 'LKR',
+          type: 'membership' as const,
+          relatedId: paymentDataToUse.planId || '',
+          description: paymentDataToUse.description || '',
+          customerFirstName: nameParts[0] || 'Customer',
+          customerLastName: nameParts.slice(1).join(' ') || 'User',
+          customerEmail: user.email || 'customer@example.com',
+          customerPhone: user.contactNo || '0000000000',
+          customerAddress: user.profile?.address || 'No address provided',
+          customerCity: 'Colombo', // Default city
+        }
+
+        console.log('Initiating PayHere membership payment:', paymentRequest)
+
+        response = await initiatePayHerePayment(paymentRequest)
+      }
+
+      if (response.paymentForm) {
+        console.log('Payment form received, submitting...')
+
+        // Create form in current window and submit immediately
+        const formContainer = document.createElement('div')
+        formContainer.innerHTML = response.paymentForm
+        document.body.appendChild(formContainer)
+
+        // Find the form and submit it manually
+        const paymentForm = document.getElementById('payhere-form') as HTMLFormElement
+        if (paymentForm) {
+          setTimeout(() => {
+            paymentForm.submit()
+          }, 100)
+        } else {
+          throw new Error('Payment form element not found')
+        }
+      } else {
+        throw new Error('Payment form not received')
+      }
+    } catch (err) {
+      console.error('Payment initiation failed:', err)
+      setError(err instanceof Error ? err.message : 'Payment initiation failed. Please try again.')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
 
   const handleMethodSelect = (method: 'card' | 'bank') => {
     setSelectedMethod(method)
@@ -188,6 +276,7 @@ export default function PaymentMethodPage() {
         // Step 2: Create bank transfer payment record for membership
         console.log('Creating bank transfer payment...')
         const paymentRequest = {
+          userId: user._id, // Include the current user's ID
           membershipId: paymentData.planId || '',
           amount: paymentData.amount || 0,
           currency: paymentData.currency || 'LKR',
@@ -254,7 +343,7 @@ export default function PaymentMethodPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Payment Method Options */}
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className={`grid gap-4 ${paymentData?.type === 'cart' ? 'grid-cols-1' : 'md:grid-cols-2'}`}>
             {/* Card Payment Option */}
             <Card
               className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
@@ -285,36 +374,47 @@ export default function PaymentMethodPage() {
               </CardContent>
             </Card>
 
-            {/* Bank Transfer Option */}
-            <Card
-              className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
-                selectedMethod === 'bank'
-                  ? 'ring-2 ring-primary border-primary'
-                  : 'hover:border-primary/50'
-              }`}
-              onClick={() => handleMethodSelect('bank')}
-            >
-              <CardContent className="p-6 text-center space-y-4">
-                <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Building2 className="h-8 w-8 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    Bank Transfer
-                  </h3>
-                  <p className="text-muted-foreground text-sm">
-                    Transfer directly from your bank account to our account
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Processing time:</p>
-                  <p className="text-xs font-medium text-foreground">
-                    1-3 business days
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Bank Transfer Option - Only show for membership payments */}
+            {paymentData?.type !== 'cart' && (
+              <Card
+                className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                  selectedMethod === 'bank'
+                    ? 'ring-2 ring-primary border-primary'
+                    : 'hover:border-primary/50'
+                }`}
+                onClick={() => handleMethodSelect('bank')}
+              >
+                <CardContent className="p-6 text-center space-y-4">
+                  <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Building2 className="h-8 w-8 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-foreground mb-2">
+                      Bank Transfer
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      Transfer directly from your bank account to our account
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Processing time:</p>
+                    <p className="text-xs font-medium text-foreground">
+                      1-3 business days
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
+
+          {/* Cart Payment Info */}
+          {paymentData?.type === 'cart' && (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Cart Purchase:</strong> For cart orders, only card payment is available for instant processing and immediate order confirmation.
+              </p>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-center pt-4">

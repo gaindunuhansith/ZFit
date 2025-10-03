@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { cartApi, type Cart, type CartItem } from '@/lib/api/cartApi'
+import { initiatePayHerePayment, type PayHerePaymentRequest } from '@/lib/api/paymentApi'
 
 export default function CartPage() {
   const { user } = useAuth()
@@ -108,29 +109,60 @@ export default function CartPage() {
     return cart.items.reduce((total, item) => total + ((item.itemId.price || 0) * item.quantity), 0)
   }
 
-  const handleCheckout = () => {
-    if (!cart?.items || cart.items.length === 0) return
+  const handleCheckout = async () => {
+    if (!cart?.items || cart.items.length === 0 || !user) return
 
-    // Prepare cart payment data
-    const cartPaymentData = {
-      type: 'cart',
-      items: cart.items.map(item => ({
-        _id: item.itemId._id,
-        itemName: item.itemId.name,
-        price: item.itemId.price || 0,
-        cartQuantity: item.quantity,
-        quantity: item.itemId.stock || 0
-      })),
-      totalAmount: getTotalPrice(),
-      totalItems: getTotalItems(),
-      currency: 'LKR'
+    setLoading(true)
+    setError('')
+
+    try {
+      // Prepare PayHere payment request
+      const nameParts = (user.name || 'Customer').split(' ')
+      const paymentRequest: PayHerePaymentRequest = {
+        userId: user._id,
+        amount: getTotalPrice(),
+        currency: 'LKR',
+        type: 'other' as const,
+        relatedId: '', // Cart payments don't have a single related ID
+        description: `Purchase of ${getTotalItems()} items from ZFit Store`,
+        customerFirstName: nameParts[0] || 'Customer',
+        customerLastName: nameParts.slice(1).join(' ') || 'User',
+        customerEmail: user.email || 'customer@example.com',
+        customerPhone: user.contactNo || '0000000000',
+        customerAddress: user.profile?.address || 'No address provided',
+        customerCity: 'Colombo', // Default city
+      }
+
+      console.log('Initiating PayHere cart payment:', paymentRequest)
+
+      const response = await initiatePayHerePayment(paymentRequest)
+
+      if (response.paymentForm) {
+        console.log('Payment form received, submitting...')
+
+        // Create form in current window and submit immediately
+        const formContainer = document.createElement('div')
+        formContainer.innerHTML = response.paymentForm
+        document.body.appendChild(formContainer)
+
+        // Find the form and submit it manually
+        const paymentForm = document.getElementById('payhere-form') as HTMLFormElement
+        if (paymentForm) {
+          setTimeout(() => {
+            paymentForm.submit()
+          }, 100)
+        } else {
+          throw new Error('Payment form element not found')
+        }
+      } else {
+        throw new Error('Payment form not received')
+      }
+    } catch (err) {
+      console.error('Payment initiation failed:', err)
+      setError(err instanceof Error ? err.message : 'Payment initiation failed. Please try again.')
+    } finally {
+      setLoading(false)
     }
-
-    // Store cart data in localStorage
-    localStorage.setItem('cartPaymentData', JSON.stringify(cartPaymentData))
-
-    // Navigate to payment method page
-    router.push('/payment/method')
   }
 
   const isOutOfStock = (item: CartItem) => {
@@ -367,10 +399,19 @@ export default function CartPage() {
                   className="w-full"
                   size="lg"
                   onClick={handleCheckout}
-                  disabled={!cart?.items || cart.items.length === 0}
+                  disabled={!cart?.items || cart.items.length === 0 || loading}
                 >
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Proceed to Checkout
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 mr-2 animate-spin border-2 border-current border-t-transparent rounded-full" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Proceed to Checkout
+                    </>
+                  )}
                 </Button>
 
                 <div className="text-center">

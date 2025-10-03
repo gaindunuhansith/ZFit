@@ -51,3 +51,9 @@ export const processPaymentService = async (id: string, response: Record<string,
         { new: true }
     ).populate('userId', 'name email contactNo role status');
 };
+
+// Delete all payments
+export const deleteAllPaymentsService = async () => {
+    const result = await Payment.deleteMany({});
+    return result;
+};

@@ -5,7 +5,8 @@ import {
     getPaymentById,
     updatePayment,
     deletePayment,
-    processPayment
+    processPayment,
+    deleteAllPayments
 } from '../controllers/payment.controller.js';
 import authenticate from '../middleware/auth.middleware.js';
 
@@ -24,6 +25,8 @@ router.use('/gateways', gatewayRoutes);
 // Main payment routes
 // Process payment 
 router.post('/process/:id', processPayment);
+// Delete all payments
+router.delete('/all', deleteAllPayments);
 //get all payments
 router.get('/', getPayments);
 router.get('/:id', getPaymentById);

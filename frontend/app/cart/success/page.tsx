@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CheckCircle, ArrowRight, CreditCard, Loader2, AlertCircle, RefreshCw } from "lucide-react"
+import { CheckCircle, ArrowRight, ShoppingCart, Loader2, AlertCircle, RefreshCw, Package } from "lucide-react"
 import Link from "next/link"
 
 interface PaymentData {
@@ -18,11 +18,10 @@ interface PaymentVerification {
   verified: boolean
   status: string
   payment?: any
-  membership?: any
   error?: string
 }
 
-export default function PaymentSuccessPage() {
+export default function CartSuccessPage() {
   const searchParams = useSearchParams()
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null)
   const [verification, setVerification] = useState<PaymentVerification | null>(null)
@@ -99,6 +98,19 @@ export default function PaymentSuccessPage() {
     }
   }
 
+  // Auto-complete payment in development if it's pending
+  useEffect(() => {
+    if (verification?.status === 'pending' && !loading && process.env.NODE_ENV !== 'production') {
+      console.log('🧪 DEV: Auto-completing pending payment...')
+      // Wait a moment then auto-complete
+      const timer = setTimeout(() => {
+        handleTestComplete()
+      }, 2000) // Wait 2 seconds then auto-complete
+      
+      return () => clearTimeout(timer)
+    }
+  }, [verification?.status, loading])
+
   useEffect(() => {
     // Extract payment data from URL parameters (PayHere returns these)
     const orderId = searchParams.get('order_id')
@@ -121,19 +133,6 @@ export default function PaymentSuccessPage() {
       setLoading(false)
     }
   }, [searchParams])
-
-  // Auto-complete payment in development if it's pending
-  useEffect(() => {
-    if (verification?.status === 'pending' && !loading && process.env.NODE_ENV !== 'production') {
-      console.log('🧪 DEV: Auto-completing pending membership payment...')
-      // Wait a moment then auto-complete
-      const timer = setTimeout(() => {
-        handleTestComplete()
-      }, 2000) // Wait 2 seconds then auto-complete
-      
-      return () => clearTimeout(timer)
-    }
-  }, [verification?.status, loading])
 
   const getStatusIcon = () => {
     if (loading) {
@@ -158,42 +157,35 @@ export default function PaymentSuccessPage() {
   const getStatusMessage = () => {
     if (loading) {
       return {
-        title: "Verifying Payment...",
-        description: "Please wait while we confirm your payment"
+        title: "Processing Order...",
+        description: "Please wait while we confirm and complete your order payment"
       }
     }
     
     if (!verification?.verified) {
       return {
-        title: "Payment Verification Pending",
-        description: "We're still processing your payment. Please try refreshing."
+        title: "Order Verification Pending",
+        description: "We're still processing your order. Please try refreshing."
       }
     }
     
     if (verification.status === 'completed') {
       return {
-        title: "Payment Successful!",
-        description: "Your membership has been purchased successfully"
+        title: "Order Confirmed!",
+        description: "Your order has been successfully placed and confirmed"
       }
     }
     
     if (verification.status === 'pending') {
-      // Check if we're in development and will auto-complete
-      if (process.env.NODE_ENV !== 'production') {
-        return {
-          title: "Finalizing Membership",
-          description: "This will complete automatically in a moment."
-        }
-      }
       return {
-        title: "Payment Processing",
-        description: "Your payment is being processed. This may take a few moments."
+        title: "Finalizing Order",
+        description: "We're completing your order processing. This will just take a moment."
       }
     }
     
     return {
-      title: "Payment Issue",
-      description: verification.error || "There was an issue with your payment"
+      title: "Order Issue",
+      description: verification.error || "There was an issue with your order"
     }
   }
 
@@ -253,10 +245,10 @@ export default function PaymentSuccessPage() {
             {verification?.status === 'completed' && (
               <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
                 <p className="text-green-800 font-medium text-sm mb-1">
-                  ✅ Membership Activated!
+                  ✅ Order Confirmed!
                 </p>
                 <p className="text-green-700 text-xs">
-                  Your membership is now active and ready to use. Check your email for confirmation details.
+                  Your order has been successfully placed! Check your email for order details and pickup/delivery information.
                 </p>
               </div>
             )}
@@ -264,10 +256,10 @@ export default function PaymentSuccessPage() {
             {(verification?.status === 'pending' || loading) && (
               <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
                 <p className="text-blue-800 font-medium text-sm mb-1">
-                  ⏳ Processing Payment
+                  ⏳ Finalizing Order
                 </p>
                 <p className="text-blue-700 text-xs">
-                  Your payment is being processed. Please wait a moment and refresh if needed.
+                  We're completing your order processing. This will complete automatically in a moment.
                 </p>
               </div>
             )}
@@ -290,14 +282,25 @@ export default function PaymentSuccessPage() {
                     asChild 
                     className="w-full"
                   >
-                    <Link href="/memberDashboard/memberships/my-memberships">
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      View My Memberships
+                    <Link href="/memberDashboard/orders">
+                      <Package className="w-4 h-4 mr-2" />
+                      View My Orders
                     </Link>
                   </Button>
                   
                   <Button 
                     variant="outline" 
+                    asChild 
+                    className="w-full"
+                  >
+                    <Link href="/memberDashboard/store">
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      Continue Shopping
+                    </Link>
+                  </Button>
+                  
+                  <Button 
+                    variant="ghost" 
                     asChild 
                     className="w-full"
                   >
@@ -327,9 +330,20 @@ export default function PaymentSuccessPage() {
                     asChild 
                     className="w-full"
                   >
-                    <Link href="/memberDashboard/memberships/browse">
+                    <Link href="/memberDashboard/cart">
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      Back to Cart
+                    </Link>
+                  </Button>
+                  
+                  <Button 
+                    variant="ghost" 
+                    asChild 
+                    className="w-full"
+                  >
+                    <Link href="/memberDashboard/store">
                       <ArrowRight className="w-4 h-4 mr-2" />
-                      Back to Memberships
+                      Continue Shopping
                     </Link>
                   </Button>
                 </>

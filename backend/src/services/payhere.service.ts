@@ -3,7 +3,11 @@ import mongoose from 'mongoose';
 import { PayHereUtils } from '../util/payhere.util.js';
 import { createPaymentService, updatePaymentService } from './payment.services.js';
 import { createMembership } from './membership.service.js';
+import { sendMembershipPurchaseSuccessEmail, sendMembershipPurchaseFailureEmail, sendCartPurchaseSuccessEmail, sendCartPurchaseFailureEmail } from '../util/sendMail.util.js';
+import { getMembershipPlanById } from './membershipPlan.service.js';
+import UserModel from '../models/user.model.js';
 import Payment from '../models/payment.model.js';
+import InventoryItem from '../models/inventoryItem.schema.js';
 
 export interface PayHerePaymentRequest {
     userId: string;
@@ -120,10 +124,14 @@ export class PayHereService {
 
             const payment = await createPaymentService(paymentData);
 
-            // Prepare PayHere payment data
+            // Prepare PayHere payment data with dynamic return URL based on payment type
+            const returnUrl = paymentRequest.type === 'other' || paymentRequest.type === 'inventory' 
+                ? `${env.FRONTEND_APP_ORIGIN}/cart/success`
+                : env.PAYHERE_RETURN_URL;
+
             const payhereData: PayHerePaymentData = {
                 merchant_id: env.PAYHERE_MERCHANT_ID,
-                return_url: env.PAYHERE_RETURN_URL,
+                return_url: returnUrl,
                 cancel_url: env.PAYHERE_CANCEL_URL,
                 notify_url: env.PAYHERE_NOTIFY_URL,
                 order_id: orderId,
@@ -149,31 +157,10 @@ export class PayHereService {
                 merchant_secret: env.PAYHERE_MERCHANT_SECRET
             });
 
-            // For sandbox environment, simulate automatic payment completion after a delay
+            // Note: In sandbox environment, PayHere will send actual webhooks when payments are processed
+            // No need for auto-completion simulation that could trigger premature emails
             if (env.PAYHERE_ENV === 'sandbox') {
-                console.log('Sandbox mode: Will auto-complete payment after 10 seconds');
-                setTimeout(async () => {
-                    try {
-                        console.log(`Auto-completing sandbox payment: ${orderId}`);
-                        
-                        const mockWebhookData = {
-                            merchant_id: env.PAYHERE_MERCHANT_ID,
-                            order_id: orderId,
-                            payhere_amount: paymentRequest.amount.toString(),
-                            payhere_currency: paymentRequest.currency,
-                            status_code: '2', // Success status
-                            md5sig: 'SANDBOX_AUTO_COMPLETE',
-                            method: 'SANDBOX',
-                            status_message: 'Auto-completed in sandbox',
-                            payment_id: `SANDBOX_${Date.now()}`
-                        };
-
-                        await this.handleWebhook(mockWebhookData);
-                        console.log(`Successfully auto-completed sandbox payment: ${orderId}`);
-                    } catch (error) {
-                        console.error(`Failed to auto-complete sandbox payment ${orderId}:`, error);
-                    }
-                }, 10000); // 10 seconds delay instead of 60
+                console.log('Sandbox mode: Payment initiated, waiting for actual PayHere webhook...');
             }
 
             return {
@@ -266,11 +253,209 @@ export class PayHereService {
                     });
                     
                     console.log('Membership created successfully:', membership);
+
+                    // Send success email notification
+                    if (membership) {
+                        try {
+                            const user = await UserModel.findById(payment.userId);
+                            const membershipPlan = await getMembershipPlanById(payment.relatedId.toString());
+                            
+                            if (user && membershipPlan) {
+                                const formatDuration = (days: number): string => {
+                                    if (days === 30 || days === 31) return '1 Month';
+                                    if (days === 90 || days === 92) return '3 Months';
+                                    if (days === 180 || days === 183) return '6 Months';
+                                    if (days === 365 || days === 366) return '1 Year';
+                                    return `${days} Days`;
+                                };
+
+                                const emailData = {
+                                    userName: user.name || 'Member',
+                                    userEmail: user.email,
+                                    membershipPlanName: membershipPlan.name,
+                                    membershipDuration: formatDuration(membershipPlan.durationInDays),
+                                    amount: payment.amount,
+                                    currency: payment.currency,
+                                    activationDate: new Date().toLocaleDateString('en-US', { 
+                                        year: 'numeric', 
+                                        month: 'long', 
+                                        day: 'numeric' 
+                                    }),
+                                    expiryDate: new Date(Date.now() + membershipPlan.durationInDays * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 
+                                        year: 'numeric', 
+                                        month: 'long', 
+                                        day: 'numeric' 
+                                    }),
+                                    transactionId: payment.transactionId,
+                                    paymentMethod: 'Credit/Debit Card',
+                                    membershipFeatures: [
+                                        'Access to gym equipment and facilities',
+                                        'Group fitness classes',
+                                        'Personal training consultation',
+                                        'Locker and shower facilities',
+                                        'Member support and guidance',
+                                        'Progress tracking and monitoring'
+                                    ]
+                                };
+
+                                await sendMembershipPurchaseSuccessEmail(user.email, emailData);
+                                console.log('Membership success email sent to:', user.email);
+                            }
+                        } catch (emailError) {
+                            console.error('Failed to send membership success email:', emailError);
+                            // Don't fail the webhook if email sending fails
+                        }
+                    }
                 } catch (membershipError) {
                     console.error('Failed to auto-create membership:', membershipError);
                     console.error('Membership error stack:', (membershipError as Error).stack);
                     // Don't fail the webhook if membership creation fails
                     // The membership can be created manually later
+                }
+            }
+
+            // Send failure email for failed membership payments
+            if (paymentStatus === 'failed' && payment.type === 'membership' && payment.relatedId) {
+                try {
+                    const user = await UserModel.findById(payment.userId);
+                    const membershipPlan = await getMembershipPlanById(payment.relatedId.toString());
+                    
+                    if (user && membershipPlan) {
+                        const retryUrl = `${env.FRONTEND_APP_ORIGIN}/memberDashboard/memberships/browse/${payment.relatedId}`;
+                        
+                        const emailData = {
+                            userName: user.name || 'Member',
+                            userEmail: user.email,
+                            membershipPlanName: membershipPlan.name,
+                            amount: payment.amount,
+                            currency: payment.currency,
+                            transactionId: payment.transactionId,
+                            failureReason: payment.failureReason || webhookData.status_message || 'Payment processing failed',
+                            retryUrl: retryUrl
+                        };
+
+                        await sendMembershipPurchaseFailureEmail(user.email, emailData);
+                        console.log('Membership failure email sent to:', user.email);
+                    }
+                } catch (emailError) {
+                    console.error('Failed to send membership failure email:', emailError);
+                    // Don't fail the webhook if email sending fails
+                }
+            }
+
+            // Handle cart payment success
+            if (paymentStatus === 'completed' && (payment.type === 'other' || payment.type === 'inventory')) {
+                try {
+                    const user = await UserModel.findById(payment.userId);
+                    
+                    if (user) {
+                        console.log('Processing cart payment success for user:', user.email);
+                        
+                        // Get cart items from user's cart
+                        // Note: You might want to store cart items in the payment record for better tracking
+                        const CartModel = (await import('../models/cart.model.js')).default;
+                        const cart = await CartModel.findOne({ memberId: payment.userId.toString() }).populate('items.itemId');
+                        
+                        if (cart && cart.items && cart.items.length > 0) {
+                            // Prepare cart items for email
+                            const cartItems = cart.items.map((item: any) => ({
+                                itemName: item.itemId.name || 'Unknown Item',
+                                quantity: item.quantity || 1,
+                                price: item.itemId.price || 0,
+                                totalPrice: (item.itemId.price || 0) * (item.quantity || 1)
+                            }));
+
+                            const emailData = {
+                                userName: user.name || 'Customer',
+                                userEmail: user.email,
+                                orderNumber: payment.transactionId,
+                                items: cartItems,
+                                totalAmount: payment.amount,
+                                currency: payment.currency,
+                                orderDate: new Date().toLocaleDateString('en-US', { 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                }),
+                                transactionId: payment.transactionId,
+                                paymentMethod: 'Credit/Debit Card'
+                            };
+
+                            await sendCartPurchaseSuccessEmail(user.email, emailData);
+                            console.log('Cart purchase success email sent to:', user.email);
+
+                            // Clear the user's cart after successful payment
+                            await CartModel.findOneAndDelete({ memberId: payment.userId.toString() });
+                            console.log('Cart cleared for user after successful purchase');
+
+                            // TODO: Update inventory stock quantities here
+                            for (const item of cart.items) {
+                                try {
+                                    await InventoryItem.findByIdAndUpdate(
+                                        item.itemId._id,
+                                        { $inc: { stock: -item.quantity } },
+                                        { new: true }
+                                    );
+                                    console.log(`Reduced stock for item ${(item.itemId as any).name || 'Unknown'} by ${item.quantity}`);
+                                } catch (stockError) {
+                                    console.error(`Failed to update stock for item ${item.itemId._id}:`, stockError);
+                                }
+                            }
+                        } else {
+                            console.log('No cart items found for user, sending basic success email');
+                            
+                            // Send basic success email without cart details
+                            const emailData = {
+                                userName: user.name || 'Customer',
+                                userEmail: user.email,
+                                orderNumber: payment.transactionId,
+                                items: [],
+                                totalAmount: payment.amount,
+                                currency: payment.currency,
+                                orderDate: new Date().toLocaleDateString('en-US', { 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                }),
+                                transactionId: payment.transactionId,
+                                paymentMethod: 'Credit/Debit Card'
+                            };
+
+                            await sendCartPurchaseSuccessEmail(user.email, emailData);
+                            console.log('Basic cart purchase success email sent to:', user.email);
+                        }
+                    }
+                } catch (emailError) {
+                    console.error('Failed to send cart purchase success email:', emailError);
+                    // Don't fail the webhook if email sending fails
+                }
+            }
+
+            // Send failure email for failed cart payments
+            if (paymentStatus === 'failed' && (payment.type === 'other' || payment.type === 'inventory')) {
+                try {
+                    const user = await UserModel.findById(payment.userId);
+                    
+                    if (user) {
+                        const retryUrl = `${env.FRONTEND_APP_ORIGIN}/memberDashboard/cart`;
+                        
+                        const emailData = {
+                            userName: user.name || 'Customer',
+                            userEmail: user.email,
+                            orderNumber: payment.transactionId,
+                            totalAmount: payment.amount,
+                            currency: payment.currency,
+                            transactionId: payment.transactionId,
+                            failureReason: payment.failureReason || webhookData.status_message || 'Payment processing failed',
+                            retryUrl: retryUrl
+                        };
+
+                        await sendCartPurchaseFailureEmail(user.email, emailData);
+                        console.log('Cart purchase failure email sent to:', user.email);
+                    }
+                } catch (emailError) {
+                    console.error('Failed to send cart purchase failure email:', emailError);
+                    // Don't fail the webhook if email sending fails
                 }
             }
 

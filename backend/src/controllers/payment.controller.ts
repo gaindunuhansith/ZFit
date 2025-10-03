@@ -7,7 +7,8 @@ import {
     getPaymentByIdService,
     updatePaymentService,
     deletePaymentService,
-    processPaymentService
+    processPaymentService,
+    deleteAllPaymentsService
 } from '../services/payment.services.js';
 
 // Zod validation schemas
@@ -150,6 +151,20 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
             success: true, 
             message: 'Payment processed successfully',
             data: payment 
+        });
+    } catch (error) {
+        next(error); 
+    }
+};
+
+export const deleteAllPayments = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const result = await deleteAllPaymentsService();
+        
+        res.json({ 
+            success: true, 
+            message: `All ${result.deletedCount} payments deleted successfully`,
+            data: { deletedCount: result.deletedCount }
         });
     } catch (error) {
         next(error); 
