@@ -72,8 +72,8 @@ const getTypeBadge = (type: string) => {
     other: "destructive",
   }
 
-  // Display "inventory" for cart payments (stored as 'other' type)
-  const displayText = type === 'other' ? 'inventory' : type
+  // Display "orders" for cart payments (stored as 'other' type)
+  const displayText = type === 'other' ? 'orders' : type
 
   return <Badge variant={variants[type] || "outline"}>{displayText}</Badge>
 }
@@ -512,7 +512,7 @@ export default function PaymentManagementPage() {
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="membership">Membership</SelectItem>
             <SelectItem value="booking">Booking</SelectItem>
-            <SelectItem value="inventory">Inventory</SelectItem>
+            <SelectItem value="inventory">Orders</SelectItem>
             <SelectItem value="other">Other</SelectItem>
           </SelectContent>
         </Select>
