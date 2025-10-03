@@ -6,7 +6,9 @@ import {
     updatePayment,
     deletePayment,
     processPayment,
-    deleteAllPayments
+    deleteAllPayments,
+    cleanupPendingPayments,
+    getPendingPaymentStats
 } from '../controllers/payment.controller.js';
 import authenticate from '../middleware/auth.middleware.js';
 
@@ -22,6 +24,10 @@ router.use('/invoices', invoiceRoutes);
 router.use('/refunds', refundRoutes);
 router.use('/gateways', gatewayRoutes);
 
+// Payment cleanup and stats routes (admin only)
+router.post('/cleanup-pending', authenticate, cleanupPendingPayments);
+router.get('/stats/pending', authenticate, getPendingPaymentStats);
+
 // Main payment routes
 // Process payment 
 router.post('/process/:id', processPayment);
@@ -34,5 +40,10 @@ router.get('/:id', getPaymentById);
 router.post('/', createPayment);
 router.put('/:id', updatePayment);
 router.delete('/:id', deletePayment);
+
+// Cleanup pending payments
+router.post('/cleanup', cleanupPendingPayments);
+// Get pending payment stats
+router.get('/stats/pending', getPendingPaymentStats);
 
 export default router;

@@ -81,6 +81,74 @@ export const deleteAllPaymentsService = async () => {
     return result;
 };
 
+// Cleanup old pending payments (older than specified days)
+export const cleanupPendingPaymentsService = async (daysOld: number = 30): Promise<{ deletedCount: number }> => {
+    try {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+        const result = await Payment.deleteMany({
+            status: 'pending',
+            createdAt: { $lt: cutoffDate }
+        });
+
+        console.log(`Cleaned up ${result.deletedCount} pending payments older than ${daysOld} days`);
+        return { deletedCount: result.deletedCount };
+    } catch (error) {
+        console.error('Error cleaning up pending payments:', error);
+        throw error;
+    }
+};
+
+// Get pending payment statistics
+export const getPendingPaymentStatsService = async (): Promise<{
+    totalPending: number;
+    pendingByAge: {
+        lessThan7Days: number;
+        between7And30Days: number;
+        between30And90Days: number;
+        moreThan90Days: number;
+    };
+    oldestPendingPayment?: Date | undefined;
+}> => {
+    try {
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+
+        const [
+            totalPending,
+            lessThan7Days,
+            between7And30Days,
+            between30And90Days,
+            moreThan90Days,
+            oldestPending
+        ] = await Promise.all([
+            Payment.countDocuments({ status: 'pending' }),
+            Payment.countDocuments({ status: 'pending', createdAt: { $gte: sevenDaysAgo } }),
+            Payment.countDocuments({ status: 'pending', createdAt: { $gte: thirtyDaysAgo, $lt: sevenDaysAgo } }),
+            Payment.countDocuments({ status: 'pending', createdAt: { $gte: ninetyDaysAgo, $lt: thirtyDaysAgo } }),
+            Payment.countDocuments({ status: 'pending', createdAt: { $lt: ninetyDaysAgo } }),
+            Payment.findOne({ status: 'pending' }).sort({ createdAt: 1 }).select('createdAt')
+        ]);
+
+        return {
+            totalPending,
+            pendingByAge: {
+                lessThan7Days,
+                between7And30Days,
+                between30And90Days,
+                moreThan90Days
+            },
+            oldestPendingPayment: oldestPending?.createdAt || undefined
+        };
+    } catch (error) {
+        console.error('Error getting pending payment stats:', error);
+        throw error;
+    }
+};
+
 // Helper function to create invoice for completed payment
 const createInvoiceForPayment = async (payment: IPayment) => {
     try {

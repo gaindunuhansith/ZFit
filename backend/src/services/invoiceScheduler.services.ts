@@ -1,4 +1,5 @@
 import Invoice from '../models/invoice.model.js';
+import { cleanupPendingPaymentsService } from './payment.services.js';
 
 /**
  * Check for overdue invoices and update their status
@@ -77,5 +78,18 @@ export const getInvoiceStatistics = async () => {
     } catch (error) {
         console.error('Error getting invoice statistics:', error);
         throw error;
+    }
+};
+
+/**
+ * Cleanup old pending payments (older than 30 days by default)
+ */
+export const cleanupOldPendingPayments = async (daysOld: number = 30): Promise<void> => {
+    try {
+        console.log(`Starting cleanup of pending payments older than ${daysOld} days...`);
+        const result = await cleanupPendingPaymentsService(daysOld);
+        console.log(`Cleanup completed: ${result.deletedCount} pending payments removed`);
+    } catch (error) {
+        console.error('Error during pending payment cleanup:', error);
     }
 };
