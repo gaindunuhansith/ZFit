@@ -1,6 +1,6 @@
 import resend from "../config/resend.js";
 import env from "../config/env.js";
-import { getBankTransferApprovalTemplate, getBankTransferDeclineTemplate, type BankTransferApprovalData, getMembershipPurchaseSuccessTemplate, getMembershipPurchaseFailureTemplate, type MembershipPurchaseSuccessData, type MembershipPurchaseFailureData, getCartPurchaseSuccessTemplate, getCartPurchaseFailureTemplate, type CartPurchaseSuccessData, type CartPurchaseFailureData } from "./emailTemplates.js";
+import { getBankTransferApprovalTemplate, getBankTransferDeclineTemplate, type BankTransferApprovalData, getMembershipPurchaseSuccessTemplate, getMembershipPurchaseFailureTemplate, type MembershipPurchaseSuccessData, type MembershipPurchaseFailureData, getCartPurchaseSuccessTemplate, getCartPurchaseFailureTemplate, type CartPurchaseSuccessData, type CartPurchaseFailureData, getRefundApprovalTemplate, getRefundDeclineTemplate, type RefundApprovalData, type RefundDeclineData } from "./emailTemplates.js";
 import { getLowStockAlertTemplate, type LowStockAlertData } from "./lowStockTemplate.js";
 
 type Params = {
@@ -11,10 +11,10 @@ type Params = {
 };
 
 const getFromEmail = () => 
-    env.NODE_ENV === "development" ? "onboarding@resend.dev" : env.EMAIL_SENDER;
+    env.EMAIL_MODE === "development" ? "onboarding@resend.dev" : env.EMAIL_SENDER;
 
 const getToEmail = (to: string) => 
-    env.NODE_ENV === "development" ? "delivered@resend.dev" : to;
+    env.EMAIL_MODE === "development" ? "delivered@resend.dev" : to;
 
 export const sendMail = async ({ to, subject, text, html }: Params) => {
 
@@ -193,6 +193,56 @@ export const sendCartPurchaseFailureEmail = async (
     } catch (error) {
         console.error('Failed to send cart purchase failure email:', error);
         throw new Error(`Failed to send cart failure email: ${(error as Error).message}`);
+    }
+};
+
+/**
+ * Send refund approval email notification
+ */
+export const sendRefundApprovalEmail = async (
+    userEmail: string, 
+    data: RefundApprovalData
+) => {
+    try {
+        const template = getRefundApprovalTemplate(data);
+        
+        const result = await sendMail({
+            to: userEmail,
+            subject: template.subject,
+            text: template.text,
+            html: template.html
+        });
+
+        console.log('Refund approval email sent successfully:', result.data?.id);
+        return { success: true, messageId: result.data?.id };
+    } catch (error) {
+        console.error('Failed to send refund approval email:', error);
+        throw new Error(`Failed to send refund approval email: ${(error as Error).message}`);
+    }
+};
+
+/**
+ * Send refund decline email notification
+ */
+export const sendRefundDeclineEmail = async (
+    userEmail: string, 
+    data: RefundDeclineData
+) => {
+    try {
+        const template = getRefundDeclineTemplate(data);
+        
+        const result = await sendMail({
+            to: userEmail,
+            subject: template.subject,
+            text: template.text,
+            html: template.html
+        });
+
+        console.log('Refund decline email sent successfully:', result.data?.id);
+        return { success: true, messageId: result.data?.id };
+    } catch (error) {
+        console.error('Failed to send refund decline email:', error);
+        throw new Error(`Failed to send refund decline email: ${(error as Error).message}`);
     }
 };
 

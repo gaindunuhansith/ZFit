@@ -70,7 +70,7 @@ export default function PaymentSuccessPage() {
   // Development only: Manual payment completion
   const handleTestComplete = async () => {
     if (!paymentData?.orderId) return
-    
+
     setLoading(true)
     try {
       const response = await fetch(`http://localhost:5000/api/v1/gateways/dev/complete-payment/${paymentData.orderId}`, {
@@ -82,9 +82,14 @@ export default function PaymentSuccessPage() {
           amount: paymentData.amount || '1000.00'
         })
       })
-      
+
       const result = await response.json()
-      
+
+      if (response.status === 403 && result.message === 'Not available in production') {
+        console.log('🚫 Dev endpoint not available in production mode, payment will complete via webhook')
+        return
+      }
+
       if (result.success) {
         console.log('✅ Payment completed automatically:', result)
         // Refresh payment status
