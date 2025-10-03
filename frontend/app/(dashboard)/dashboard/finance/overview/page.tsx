@@ -6,9 +6,7 @@ import {
   CreditCard,
   MoreHorizontal,
   Search,
-  FileText,
   RefreshCw,
-  Building2,
   Eye,
   Trash2,
 } from "lucide-react"
@@ -53,7 +51,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { getPayments, getPaymentsByUserId, type Payment, deletePayment, deleteAllPayments } from "@/lib/api/paymentApi"
+import { getPayments, type Payment, deletePayment, deleteAllPayments } from "@/lib/api/paymentApi"
 import { generatePaymentsReport } from "@/lib/api/reportApi"
 
 const getStatusBadge = (status: string) => {
@@ -456,10 +454,6 @@ export default function PaymentManagementPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.push('/dashboard/finance/bank-transfers')}>
-            <Building2 className="mr-2 h-4 w-4" />
-            Bank Transactions
-          </Button>
           <Button onClick={handleGenerateReport}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Generate Report
