@@ -3,6 +3,9 @@ import mongoose from 'mongoose';
 import { PayHereUtils } from '../util/payhere.util.js';
 import { createPaymentService, updatePaymentService } from './payment.services.js';
 import { createMembership } from './membership.service.js';
+import { sendMembershipPurchaseSuccessEmail, sendMembershipPurchaseFailureEmail } from '../util/sendMail.util.js';
+import { getMembershipPlanById } from './membershipPlan.service.js';
+import UserModel from '../models/user.model.js';
 import Payment from '../models/payment.model.js';
 
 export interface PayHerePaymentRequest {
@@ -149,31 +152,10 @@ export class PayHereService {
                 merchant_secret: env.PAYHERE_MERCHANT_SECRET
             });
 
-            // For sandbox environment, simulate automatic payment completion after a delay
+            // Note: In sandbox environment, PayHere will send actual webhooks when payments are processed
+            // No need for auto-completion simulation that could trigger premature emails
             if (env.PAYHERE_ENV === 'sandbox') {
-                console.log('Sandbox mode: Will auto-complete payment after 10 seconds');
-                setTimeout(async () => {
-                    try {
-                        console.log(`Auto-completing sandbox payment: ${orderId}`);
-                        
-                        const mockWebhookData = {
-                            merchant_id: env.PAYHERE_MERCHANT_ID,
-                            order_id: orderId,
-                            payhere_amount: paymentRequest.amount.toString(),
-                            payhere_currency: paymentRequest.currency,
-                            status_code: '2', // Success status
-                            md5sig: 'SANDBOX_AUTO_COMPLETE',
-                            method: 'SANDBOX',
-                            status_message: 'Auto-completed in sandbox',
-                            payment_id: `SANDBOX_${Date.now()}`
-                        };
-
-                        await this.handleWebhook(mockWebhookData);
-                        console.log(`Successfully auto-completed sandbox payment: ${orderId}`);
-                    } catch (error) {
-                        console.error(`Failed to auto-complete sandbox payment ${orderId}:`, error);
-                    }
-                }, 10000); // 10 seconds delay instead of 60
+                console.log('Sandbox mode: Payment initiated, waiting for actual PayHere webhook...');
             }
 
             return {
@@ -266,11 +248,93 @@ export class PayHereService {
                     });
                     
                     console.log('Membership created successfully:', membership);
+
+                    // Send success email notification
+                    if (membership) {
+                        try {
+                            const user = await UserModel.findById(payment.userId);
+                            const membershipPlan = await getMembershipPlanById(payment.relatedId.toString());
+                            
+                            if (user && membershipPlan) {
+                                const formatDuration = (days: number): string => {
+                                    if (days === 30 || days === 31) return '1 Month';
+                                    if (days === 90 || days === 92) return '3 Months';
+                                    if (days === 180 || days === 183) return '6 Months';
+                                    if (days === 365 || days === 366) return '1 Year';
+                                    return `${days} Days`;
+                                };
+
+                                const emailData = {
+                                    userName: user.name || 'Member',
+                                    userEmail: user.email,
+                                    membershipPlanName: membershipPlan.name,
+                                    membershipDuration: formatDuration(membershipPlan.durationInDays),
+                                    amount: payment.amount,
+                                    currency: payment.currency,
+                                    activationDate: new Date().toLocaleDateString('en-US', { 
+                                        year: 'numeric', 
+                                        month: 'long', 
+                                        day: 'numeric' 
+                                    }),
+                                    expiryDate: new Date(Date.now() + membershipPlan.durationInDays * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 
+                                        year: 'numeric', 
+                                        month: 'long', 
+                                        day: 'numeric' 
+                                    }),
+                                    transactionId: payment.transactionId,
+                                    paymentMethod: 'Credit/Debit Card',
+                                    membershipFeatures: [
+                                        'Access to gym equipment and facilities',
+                                        'Group fitness classes',
+                                        'Personal training consultation',
+                                        'Locker and shower facilities',
+                                        'Member support and guidance',
+                                        'Progress tracking and monitoring'
+                                    ]
+                                };
+
+                                await sendMembershipPurchaseSuccessEmail(user.email, emailData);
+                                console.log('Membership success email sent to:', user.email);
+                            }
+                        } catch (emailError) {
+                            console.error('Failed to send membership success email:', emailError);
+                            // Don't fail the webhook if email sending fails
+                        }
+                    }
                 } catch (membershipError) {
                     console.error('Failed to auto-create membership:', membershipError);
                     console.error('Membership error stack:', (membershipError as Error).stack);
                     // Don't fail the webhook if membership creation fails
                     // The membership can be created manually later
+                }
+            }
+
+            // Send failure email for failed membership payments
+            if (paymentStatus === 'failed' && payment.type === 'membership' && payment.relatedId) {
+                try {
+                    const user = await UserModel.findById(payment.userId);
+                    const membershipPlan = await getMembershipPlanById(payment.relatedId.toString());
+                    
+                    if (user && membershipPlan) {
+                        const retryUrl = `${env.FRONTEND_APP_ORIGIN}/memberDashboard/memberships/browse/${payment.relatedId}`;
+                        
+                        const emailData = {
+                            userName: user.name || 'Member',
+                            userEmail: user.email,
+                            membershipPlanName: membershipPlan.name,
+                            amount: payment.amount,
+                            currency: payment.currency,
+                            transactionId: payment.transactionId,
+                            failureReason: payment.failureReason || webhookData.status_message || 'Payment processing failed',
+                            retryUrl: retryUrl
+                        };
+
+                        await sendMembershipPurchaseFailureEmail(user.email, emailData);
+                        console.log('Membership failure email sent to:', user.email);
+                    }
+                } catch (emailError) {
+                    console.error('Failed to send membership failure email:', emailError);
+                    // Don't fail the webhook if email sending fails
                 }
             }
 

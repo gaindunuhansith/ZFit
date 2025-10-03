@@ -188,6 +188,7 @@ export default function PaymentMethodPage() {
         // Step 2: Create bank transfer payment record for membership
         console.log('Creating bank transfer payment...')
         const paymentRequest = {
+          userId: user._id, // Include the current user's ID
           membershipId: paymentData.planId || '',
           amount: paymentData.amount || 0,
           currency: paymentData.currency || 'LKR',

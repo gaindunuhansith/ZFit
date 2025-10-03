@@ -259,6 +259,7 @@ export interface BankTransferUploadResponse {
 }
 
 export interface BankTransferPaymentRequest {
+  userId?: string // Optional for when included explicitly
   membershipId: string
   amount: number
   currency?: string

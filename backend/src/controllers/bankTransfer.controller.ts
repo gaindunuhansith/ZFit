@@ -28,6 +28,7 @@ declare global {
 
 // Zod validation schemas
 const createBankTransferSchema = z.object({
+    userId: z.string().optional(), // Optional for backward compatibility when auth middleware provides it
     membershipId: z.string().min(1, 'Membership ID is required'),
     amount: z.number().min(0, 'Amount must be non-negative'),
     currency: z.string().optional(),
@@ -85,8 +86,15 @@ export const uploadReceipt = async (req: Request, res: Response) => {
 export const createBankTransferPayment = async (req: Request, res: Response) => {
     try {
         const validated = createBankTransferSchema.parse(req.body);
-        // Temporarily use dummy userId for testing since auth is disabled
-        const userId = (req as any).userId || '68d8a030e4a8bd489c11703e'; // Use Lehan Nawaratne's ID for testing
+        // Get userId from request body if provided, otherwise use authenticated user ID
+        const userId = validated.userId || (req as any).userId;
+
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'User ID is required'
+            });
+        }
 
         // Check if user already has a pending bank transfer for this membership
         const existingPayment = await BankTransferPayment.findOne({
@@ -206,27 +214,11 @@ export const approveBankTransfer = async (req: Request, res: Response) => {
                 });
             }
 
-
-        if (payment.status !== 'pending') {
-            return res.status(400).json({
-                success: false,
-                message: 'Payment is not in pending status'
-            });
-        }
-
-        // Populate user and membership data for email
-        await payment.populate([
-            { path: 'userId', select: 'name email contactNo' },
-            { path: 'membershipId', select: 'name price' }
-        ]);
-
-
-            if (!payment) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Bank transfer payment not found'
-                });
-            }
+            // Populate user and membership data for email (already populated by service)
+            // await payment.populate([
+            //     { path: 'userId', select: 'name email contactNo' },
+            //     { path: 'membershipId', select: 'name price' }
+            // ]);
 
             // Send approval email notification
             try {
@@ -311,26 +303,11 @@ export const declineBankTransfer = async (req: Request, res: Response) => {
                 });
             }
 
-        if (payment.status !== 'pending') {
-            return res.status(400).json({
-                success: false,
-                message: 'Payment is not in pending status'
-            });
-        }
-
-        // Populate user and membership data for email
-        await payment.populate([
-            { path: 'userId', select: 'name email contactNo' },
-            { path: 'membershipId', select: 'name price' }
-        ]);
-
-
-            if (!payment) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Bank transfer payment not found'
-                });
-            }
+            // Populate user and membership data for email (already populated by service)
+            // await payment.populate([
+            //     { path: 'userId', select: 'name email contactNo' },
+            //     { path: 'membershipId', select: 'name price' }
+            // ]);
 
             // Send decline email notification
             try {

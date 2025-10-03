@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CheckCircle, ArrowRight, CreditCard } from "lucide-react"
+import { CheckCircle, ArrowRight, CreditCard, Loader2, AlertCircle, RefreshCw } from "lucide-react"
 import Link from "next/link"
 
 interface PaymentData {
@@ -14,9 +14,58 @@ interface PaymentData {
   currency?: string
 }
 
+interface PaymentVerification {
+  verified: boolean
+  status: string
+  payment?: any
+  membership?: any
+  error?: string
+}
+
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams()
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null)
+  const [verification, setVerification] = useState<PaymentVerification | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [retryCount, setRetryCount] = useState(0)
+
+  const verifyPayment = async (orderId: string) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/v1/gateways/status/${orderId}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setVerification({
+          verified: true,
+          status: result.status,
+          payment: result.payment
+        })
+      } else {
+        setVerification({
+          verified: false,
+          status: 'unknown',
+          error: result.message
+        })
+      }
+    } catch (error) {
+      console.error('Payment verification failed:', error)
+      setVerification({
+        verified: false,
+        status: 'error',
+        error: 'Failed to verify payment status'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRetryVerification = () => {
+    if (paymentData?.orderId) {
+      setLoading(true)
+      setRetryCount(prev => prev + 1)
+      verifyPayment(paymentData.orderId)
+    }
+  }
 
   useEffect(() => {
     // Extract payment data from URL parameters (PayHere returns these)
@@ -26,27 +75,90 @@ export default function PaymentSuccessPage() {
     const currency = searchParams.get('payhere_currency')
     
     if (orderId) {
-      setPaymentData({
+      const data = {
         orderId,
         paymentId: paymentId || undefined,
         amount: amount || undefined,
         currency: currency || undefined
-      })
+      }
+      setPaymentData(data)
+      
+      // Verify payment status
+      verifyPayment(orderId)
+    } else {
+      setLoading(false)
     }
   }, [searchParams])
+
+  const getStatusIcon = () => {
+    if (loading) {
+      return <Loader2 className="h-16 w-16 text-foreground animate-spin" />
+    }
+    
+    if (!verification?.verified) {
+      return <AlertCircle className="h-16 w-16 text-yellow-500" />
+    }
+    
+    if (verification.status === 'completed') {
+      return <CheckCircle className="h-16 w-16 text-green-500" />
+    }
+    
+    if (verification.status === 'pending') {
+      return <Loader2 className="h-16 w-16 text-blue-500 animate-spin" />
+    }
+    
+    return <AlertCircle className="h-16 w-16 text-red-500" />
+  }
+
+  const getStatusMessage = () => {
+    if (loading) {
+      return {
+        title: "Verifying Payment...",
+        description: "Please wait while we confirm your payment"
+      }
+    }
+    
+    if (!verification?.verified) {
+      return {
+        title: "Payment Verification Pending",
+        description: "We're still processing your payment. Please try refreshing."
+      }
+    }
+    
+    if (verification.status === 'completed') {
+      return {
+        title: "Payment Successful!",
+        description: "Your membership has been purchased successfully"
+      }
+    }
+    
+    if (verification.status === 'pending') {
+      return {
+        title: "Payment Processing",
+        description: "Your payment is being processed. This may take a few moments."
+      }
+    }
+    
+    return {
+      title: "Payment Issue",
+      description: verification.error || "There was an issue with your payment"
+    }
+  }
+
+  const statusMessage = getStatusMessage()
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md text-center">
         <CardHeader>
           <div className="mx-auto mb-4">
-            <CheckCircle className="h-16 w-16 text-foreground" />
+            {getStatusIcon()}
           </div>
           <CardTitle className="text-2xl font-bold text-foreground">
-            Payment Successful!
+            {statusMessage.title}
           </CardTitle>
           <CardDescription>
-            Your membership has been purchased successfully
+            {statusMessage.description}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -70,42 +182,106 @@ export default function PaymentSuccessPage() {
                   </span>
                 </div>
               )}
+              {verification && (
+                <div className="flex justify-between">
+                  <span className="font-medium text-foreground">Status:</span>
+                  <span className={`text-sm font-medium ${
+                    verification.status === 'completed' ? 'text-green-600' :
+                    verification.status === 'pending' ? 'text-blue-600' :
+                    'text-yellow-600'
+                  }`}>
+                    {verification.status.charAt(0).toUpperCase() + verification.status.slice(1)}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
           <div className="space-y-3">
-            <div className="bg-muted p-3 rounded-lg border border-border">
-              <p className="text-foreground font-medium text-sm mb-1">
-                Membership Activation in Progress
-              </p>
-              <p className="text-muted-foreground text-xs">
-                Your membership will be automatically activated within 10-30 seconds. Click &quot;View My Memberships&quot; and use the refresh button if you don&apos;t see it immediately!
-              </p>
-            </div>
+            {verification?.status === 'completed' && (
+              <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+                <p className="text-green-800 font-medium text-sm mb-1">
+                  ✅ Membership Activated!
+                </p>
+                <p className="text-green-700 text-xs">
+                  Your membership is now active and ready to use. Check your email for confirmation details.
+                </p>
+              </div>
+            )}
+            
+            {(verification?.status === 'pending' || loading) && (
+              <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                <p className="text-blue-800 font-medium text-sm mb-1">
+                  ⏳ Processing Payment
+                </p>
+                <p className="text-blue-700 text-xs">
+                  Your payment is being processed. Please wait a moment and refresh if needed.
+                </p>
+              </div>
+            )}
+
+            {!verification?.verified && !loading && (
+              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
+                <p className="text-yellow-800 font-medium text-sm mb-1">
+                  ⚠️ Verification Pending
+                </p>
+                <p className="text-yellow-700 text-xs">
+                  We're still confirming your payment. You can refresh or contact support if this persists.
+                </p>
+              </div>
+            )}
             
             <div className="flex flex-col gap-2">
-              <Button 
-                asChild 
-                className="w-full"
-                onClick={() => console.log('View My Memberships clicked')}
-              >
-                <Link href="/memberDashboard/memberships/my-memberships">
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  View My Memberships
-                </Link>
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                asChild 
-                className="w-full bg-white hover:bg-gray-100 text-black border-gray-300"
-                onClick={() => console.log('Go to Dashboard clicked')}
-              >
-                <Link href="/memberDashboard">
-                  <ArrowRight className="w-4 h-4 mr-2" />
-                  Go to Dashboard
-                </Link>
-              </Button>
+              {verification?.status === 'completed' ? (
+                <>
+                  <Button 
+                    asChild 
+                    className="w-full"
+                  >
+                    <Link href="/memberDashboard/memberships/my-memberships">
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      View My Memberships
+                    </Link>
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    asChild 
+                    className="w-full"
+                  >
+                    <Link href="/memberDashboard">
+                      <ArrowRight className="w-4 h-4 mr-2" />
+                      Go to Dashboard
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button 
+                    onClick={handleRetryVerification}
+                    disabled={loading}
+                    className="w-full"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                    )}
+                    {loading ? 'Checking...' : 'Refresh Status'}
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    asChild 
+                    className="w-full"
+                  >
+                    <Link href="/memberDashboard/memberships/browse">
+                      <ArrowRight className="w-4 h-4 mr-2" />
+                      Back to Memberships
+                    </Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </CardContent>
