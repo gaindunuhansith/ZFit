@@ -1,6 +1,6 @@
 import resend from "../config/resend.js";
 import env from "../config/env.js";
-import { getBankTransferApprovalTemplate, getBankTransferDeclineTemplate, type BankTransferApprovalData, getMembershipPurchaseSuccessTemplate, getMembershipPurchaseFailureTemplate, type MembershipPurchaseSuccessData, type MembershipPurchaseFailureData } from "./emailTemplates.js";
+import { getBankTransferApprovalTemplate, getBankTransferDeclineTemplate, type BankTransferApprovalData, getMembershipPurchaseSuccessTemplate, getMembershipPurchaseFailureTemplate, type MembershipPurchaseSuccessData, type MembershipPurchaseFailureData, getCartPurchaseSuccessTemplate, getCartPurchaseFailureTemplate, type CartPurchaseSuccessData, type CartPurchaseFailureData } from "./emailTemplates.js";
 import { getLowStockAlertTemplate, type LowStockAlertData } from "./lowStockTemplate.js";
 
 type Params = {
@@ -143,6 +143,56 @@ export const sendMembershipPurchaseFailureEmail = async (
     } catch (error) {
         console.error('Failed to send membership purchase failure email:', error);
         throw new Error(`Failed to send failure email: ${(error as Error).message}`);
+    }
+};
+
+/**
+ * Send cart purchase success email notification
+ */
+export const sendCartPurchaseSuccessEmail = async (
+    userEmail: string, 
+    data: CartPurchaseSuccessData
+) => {
+    try {
+        const template = getCartPurchaseSuccessTemplate(data);
+        
+        const result = await sendMail({
+            to: userEmail,
+            subject: template.subject,
+            text: template.text,
+            html: template.html
+        });
+
+        console.log('Cart purchase success email sent successfully:', result.data?.id);
+        return { success: true, messageId: result.data?.id };
+    } catch (error) {
+        console.error('Failed to send cart purchase success email:', error);
+        throw new Error(`Failed to send cart success email: ${(error as Error).message}`);
+    }
+};
+
+/**
+ * Send cart purchase failure email notification
+ */
+export const sendCartPurchaseFailureEmail = async (
+    userEmail: string, 
+    data: CartPurchaseFailureData
+) => {
+    try {
+        const template = getCartPurchaseFailureTemplate(data);
+        
+        const result = await sendMail({
+            to: userEmail,
+            subject: template.subject,
+            text: template.text,
+            html: template.html
+        });
+
+        console.log('Cart purchase failure email sent successfully:', result.data?.id);
+        return { success: true, messageId: result.data?.id };
+    } catch (error) {
+        console.error('Failed to send cart purchase failure email:', error);
+        throw new Error(`Failed to send cart failure email: ${(error as Error).message}`);
     }
 };
 

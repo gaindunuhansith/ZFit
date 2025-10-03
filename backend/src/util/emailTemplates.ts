@@ -1429,3 +1429,651 @@ export const getMembershipPurchaseFailureTemplate = (data: MembershipPurchaseFai
     </html>
   `,
 });
+
+// Cart Purchase Email Templates
+
+export interface CartPurchaseSuccessData {
+  userName: string;
+  userEmail: string;
+  orderNumber: string;
+  items: Array<{
+    itemName: string;
+    quantity: number;
+    price: number;
+    totalPrice: number;
+  }>;
+  totalAmount: number;
+  currency: string;
+  orderDate: string;
+  transactionId: string;
+  paymentMethod: string;
+}
+
+export const getCartPurchaseSuccessTemplate = (data: CartPurchaseSuccessData) => ({
+  subject: "🛒 Order Confirmed - ZFit Store Purchase",
+  text: `Hi ${data.userName}, your order (#${data.orderNumber}) has been successfully placed! Total: ${data.currency} ${data.totalAmount}. Transaction ID: ${data.transactionId}. Your items will be available for pickup or delivery soon. Thank you for shopping with ZFit!`,
+  html: `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Order Confirmed - ZFit Store</title>
+      <style>
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          margin: 0;
+          padding: 0;
+          background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+          color: #ffffff;
+        }
+        .container {
+          max-width: 650px;
+          margin: 0 auto;
+          background: linear-gradient(145deg, #2a2a2a 0%, #1f1f1f 100%);
+          border-radius: 20px;
+          overflow: hidden;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+        .email-body {
+          padding: 0;
+        }
+        .header-section {
+          background: linear-gradient(135deg, #AAFF69 0%, #7BC96F 100%);
+          padding: 40px 30px;
+          text-align: center;
+          position: relative;
+          overflow: hidden;
+        }
+        .header-section::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: repeating-linear-gradient(
+            45deg,
+            rgba(255,255,255,0.05) 0px,
+            rgba(255,255,255,0.05) 10px,
+            transparent 10px,
+            transparent 20px
+          );
+          animation: backgroundShift 20s linear infinite;
+        }
+        @keyframes backgroundShift {
+          0% { transform: translateX(-50px) translateY(-50px); }
+          100% { transform: translateX(0px) translateY(0px); }
+        }
+        .logo-area {
+          font-size: 36px;
+          font-weight: 900;
+          color: #000;
+          letter-spacing: -1px;
+          margin-bottom: 10px;
+          position: relative;
+          z-index: 2;
+          text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        .celebration-icon {
+          font-size: 48px;
+          margin: 15px 0;
+          position: relative;
+          z-index: 2;
+          animation: bounce 2s ease-in-out infinite;
+        }
+        @keyframes bounce {
+          0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+          40% { transform: translateY(-10px); }
+          60% { transform: translateY(-5px); }
+        }
+        .main-title {
+          font-size: 28px;
+          font-weight: 800;
+          color: #000;
+          margin-bottom: 8px;
+          position: relative;
+          z-index: 2;
+          text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        .content-section {
+          padding: 40px 30px;
+        }
+        .greeting {
+          font-size: 18px;
+          color: #cccccc;
+          margin: 20px 0 12px 0;
+          font-weight: 400;
+        }
+        .message {
+          font-size: 16px;
+          line-height: 1.6;
+          color: #e0e0e0;
+          margin: 12px 0;
+          font-weight: 400;
+        }
+        .order-summary {
+          background: linear-gradient(135deg, #AAFF69 0%, #7BC96F 100%);
+          color: #000;
+          padding: 25px;
+          border-radius: 15px;
+          margin: 25px 0;
+          box-shadow: 0 4px 15px rgba(170, 255, 105, 0.2);
+        }
+        .order-number {
+          font-size: 20px;
+          font-weight: 700;
+          text-align: center;
+          margin-bottom: 20px;
+          padding: 15px;
+          background: rgba(0,0,0,0.1);
+          border-radius: 10px;
+        }
+        .items-table {
+          width: 100%;
+          margin: 20px 0;
+          border-collapse: collapse;
+          background: rgba(255,255,255,0.1);
+          border-radius: 10px;
+          overflow: hidden;
+        }
+        .items-table th {
+          background: rgba(0,0,0,0.2);
+          color: #000;
+          padding: 12px;
+          font-weight: 600;
+          text-align: left;
+        }
+        .items-table td {
+          padding: 12px;
+          border-bottom: 1px solid rgba(0,0,0,0.1);
+          color: #000;
+        }
+        .items-table tr:last-child td {
+          border-bottom: none;
+        }
+        .total-row {
+          background: rgba(0,0,0,0.1);
+          font-weight: 700;
+          font-size: 16px;
+        }
+        .details-table {
+          width: 100%;
+          margin: 25px 0;
+          border-collapse: collapse;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+          overflow: hidden;
+        }
+        .details-table td {
+          padding: 15px 20px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .details-table tr:last-child td {
+          border-bottom: none;
+        }
+        .label {
+          font-weight: 600;
+          color: #AAFF69;
+          width: 40%;
+        }
+        .value {
+          color: #ffffff;
+          font-weight: 500;
+        }
+        .cta-button {
+          display: inline-block;
+          padding: 16px 32px;
+          border-radius: 50px;
+          text-decoration: none;
+          font-weight: 700;
+          font-size: 16px;
+          text-align: center;
+          margin: 20px 10px;
+          transition: all 0.3s ease;
+          background: linear-gradient(135deg, #AAFF69 0%, #7BC96F 100%);
+          color: #000;
+          box-shadow: 0 4px 15px rgba(170, 255, 105, 0.3);
+        }
+        .cta-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(170, 255, 105, 0.4);
+        }
+        .cta-button-secondary {
+          background: linear-gradient(135deg, #404040 0%, #2a2a2a 100%);
+          color: #ffffff;
+          box-shadow: 0 4px 15px rgba(64, 64, 64, 0.3);
+        }
+        .cta-button-secondary:hover {
+          box-shadow: 0 6px 20px rgba(64, 64, 64, 0.4);
+        }
+        .next-steps {
+          background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+          padding: 25px;
+          border-radius: 15px;
+          margin: 25px 0;
+          border: 1px solid #404040;
+        }
+        .next-steps-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #AAFF69;
+          margin-bottom: 15px;
+          display: flex;
+          align-items: center;
+        }
+        .next-steps-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+        }
+        .next-steps-list li {
+          padding: 8px 0;
+          color: #e0e0e0;
+          position: relative;
+          padding-left: 25px;
+        }
+        .next-steps-list li::before {
+          content: '✓';
+          position: absolute;
+          left: 0;
+          color: #AAFF69;
+          font-weight: bold;
+        }
+        .footer {
+          text-align: center;
+          padding: 20px;
+          background: linear-gradient(145deg, #1a1a1a 0%, #252525 100%);
+          border-top: 1px solid #404040;
+          font-size: 13px;
+          color: #888;
+        }
+        .footer a {
+          color: #AAFF69;
+          text-decoration: none;
+          font-weight: 500;
+        }
+        .footer a:hover {
+          color: #7BC96F;
+          text-decoration: underline;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="email-body">
+          <div class="header-section">
+            <div class="logo-area">ZFit</div>
+            <div class="celebration-icon">🛒</div>
+            <div class="main-title">Order Confirmed!</div>
+          </div>
+
+          <div class="content-section">
+            <div class="greeting">Hi <strong style="color: #AAFF69;">${data.userName}</strong>,</div>
+
+            <div class="message">
+              Great news! Your order has been successfully placed and is being processed. Thank you for shopping with ZFit Store!
+            </div>
+
+            <div class="order-summary">
+              <div class="order-number">Order #${data.orderNumber}</div>
+              
+              <table class="items-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${data.items.map(item => `
+                    <tr>
+                      <td>${item.itemName}</td>
+                      <td>${item.quantity}</td>
+                      <td>${data.currency} ${item.price.toFixed(2)}</td>
+                      <td>${data.currency} ${item.totalPrice.toFixed(2)}</td>
+                    </tr>
+                  `).join('')}
+                  <tr class="total-row">
+                    <td colspan="3"><strong>Total Amount</strong></td>
+                    <td><strong>${data.currency} ${data.totalAmount.toFixed(2)}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <table class="details-table">
+              <tr>
+                <td class="label">Order Date</td>
+                <td class="value">${data.orderDate}</td>
+              </tr>
+              <tr>
+                <td class="label">Transaction ID</td>
+                <td class="value">${data.transactionId}</td>
+              </tr>
+              <tr>
+                <td class="label">Payment Method</td>
+                <td class="value">${data.paymentMethod}</td>
+              </tr>
+            </table>
+
+            <div style="text-align: center; margin: 25px 0;">
+              <a href="${process.env.FRONTEND_APP_ORIGIN || 'http://localhost:3000'}/memberDashboard/orders" class="cta-button">
+                View Order Details
+              </a>
+              <a href="${process.env.FRONTEND_APP_ORIGIN || 'http://localhost:3000'}/memberDashboard/store" class="cta-button cta-button-secondary">
+                Continue Shopping
+              </a>
+            </div>
+
+            <div class="next-steps">
+              <div class="next-steps-title">What's Next?</div>
+              <ul class="next-steps-list">
+                <li>Your order is being prepared by our team</li>
+                <li>You'll receive updates on your order status</li>
+                <li>Items will be available for pickup/delivery soon</li>
+                <li>Contact support if you have any questions</li>
+              </ul>
+            </div>
+
+            <div class="message">
+              Thank you for being a valued member of the ZFit community. We appreciate your business!
+            </div>
+          </div>
+
+          <div class="footer">
+            <div style="margin-bottom: 10px; font-weight: 600;">&copy; ${new Date().getFullYear()} ZFit Gym Management System</div>
+            <div>
+              <a href="#">Privacy Policy</a> • <a href="#">Terms of Service</a> • <a href="#">Contact Support</a>
+            </div>
+            <div style="margin-top: 10px; font-size: 11px; color: #666;">
+              123 Fitness Street, Colombo, Sri Lanka
+            </div>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `,
+});
+
+export interface CartPurchaseFailureData {
+  userName: string;
+  userEmail: string;
+  orderNumber: string;
+  totalAmount: number;
+  currency: string;
+  transactionId: string;
+  failureReason: string;
+  retryUrl: string;
+}
+
+export const getCartPurchaseFailureTemplate = (data: CartPurchaseFailureData) => ({
+  subject: "Order Payment Issue - ZFit Store",
+  text: `Hi ${data.userName}, we encountered an issue processing your order payment (#${data.orderNumber}) for ${data.currency} ${data.totalAmount}. Reason: ${data.failureReason}. Transaction ID: ${data.transactionId}. Please try again or contact support for assistance.`,
+  html: `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Order Payment Issue - ZFit Store</title>
+      <style>
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          margin: 0;
+          padding: 0;
+          background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+          color: #ffffff;
+        }
+        .container {
+          max-width: 650px;
+          margin: 0 auto;
+          background: linear-gradient(145deg, #2a2a2a 0%, #1f1f1f 100%);
+          border-radius: 20px;
+          overflow: hidden;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+        .email-body {
+          padding: 0;
+        }
+        .header-section {
+          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+          padding: 40px 30px;
+          text-align: center;
+          position: relative;
+          overflow: hidden;
+        }
+        .logo-area {
+          font-size: 36px;
+          font-weight: 900;
+          color: #fff;
+          letter-spacing: -1px;
+          margin-bottom: 10px;
+          text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .status-icon {
+          font-size: 48px;
+          margin: 15px 0;
+          animation: shake 0.5s ease-in-out infinite alternate;
+        }
+        @keyframes shake {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(5px); }
+        }
+        .main-title {
+          font-size: 28px;
+          font-weight: 800;
+          color: #fff;
+          margin-bottom: 8px;
+          text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        .content-section {
+          padding: 40px 30px;
+        }
+        .greeting {
+          font-size: 18px;
+          color: #cccccc;
+          margin: 20px 0 12px 0;
+          font-weight: 400;
+        }
+        .message {
+          font-size: 16px;
+          line-height: 1.6;
+          color: #e0e0e0;
+          margin: 12px 0;
+          font-weight: 400;
+        }
+        .error-box {
+          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+          color: #fff;
+          padding: 20px;
+          border-radius: 10px;
+          text-align: center;
+          margin: 20px 0;
+          font-weight: 600;
+          box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+        }
+        .error-reason {
+          font-size: 16px;
+          margin-top: 10px;
+          font-style: italic;
+        }
+        .details-table {
+          width: 100%;
+          margin: 25px 0;
+          border-collapse: collapse;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+          overflow: hidden;
+        }
+        .details-table td {
+          padding: 15px 20px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .details-table tr:last-child td {
+          border-bottom: none;
+        }
+        .label {
+          font-weight: 600;
+          color: #AAFF69;
+          width: 40%;
+        }
+        .value {
+          color: #ffffff;
+          font-weight: 500;
+        }
+        .cta-button {
+          display: inline-block;
+          padding: 16px 32px;
+          border-radius: 50px;
+          text-decoration: none;
+          font-weight: 700;
+          font-size: 16px;
+          text-align: center;
+          margin: 20px 10px;
+          transition: all 0.3s ease;
+          background: linear-gradient(135deg, #AAFF69 0%, #7BC96F 100%);
+          color: #000;
+          box-shadow: 0 4px 15px rgba(170, 255, 105, 0.3);
+        }
+        .cta-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(170, 255, 105, 0.4);
+        }
+        .cta-button-secondary {
+          background: linear-gradient(135deg, #404040 0%, #2a2a2a 100%);
+          color: #ffffff;
+          box-shadow: 0 4px 15px rgba(64, 64, 64, 0.3);
+        }
+        .cta-button-secondary:hover {
+          box-shadow: 0 6px 20px rgba(64, 64, 64, 0.4);
+        }
+        .help-section {
+          background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+          padding: 25px;
+          border-radius: 15px;
+          margin: 25px 0;
+          border: 1px solid #404040;
+        }
+        .help-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #AAFF69;
+          margin-bottom: 15px;
+        }
+        .help-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+        }
+        .help-list li {
+          padding: 8px 0;
+          color: #e0e0e0;
+          position: relative;
+          padding-left: 25px;
+        }
+        .help-list li::before {
+          content: '•';
+          position: absolute;
+          left: 0;
+          color: #AAFF69;
+          font-weight: bold;
+        }
+        .footer {
+          text-align: center;
+          padding: 20px;
+          background: linear-gradient(145deg, #1a1a1a 0%, #252525 100%);
+          border-top: 1px solid #404040;
+          font-size: 13px;
+          color: #888;
+        }
+        .footer a {
+          color: #AAFF69;
+          text-decoration: none;
+          font-weight: 500;
+        }
+        .footer a:hover {
+          color: #7BC96F;
+          text-decoration: underline;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="email-body">
+          <div class="header-section">
+            <div class="logo-area">ZFit</div>
+            <div class="status-icon">⚠️</div>
+            <div class="main-title">Payment Issue</div>
+          </div>
+
+          <div class="content-section">
+            <div class="greeting">Hi <strong style="color: #AAFF69;">${data.userName}</strong>,</div>
+
+            <div class="message">
+              We encountered an issue while processing your order payment. Don't worry - no charges have been made to your account and your cart items are still saved.
+            </div>
+
+            <div class="error-box">
+              <div>Order Payment Failed</div>
+              <div class="error-reason">${data.failureReason}</div>
+            </div>
+
+            <table class="details-table">
+              <tr>
+                <td class="label">Order Number</td>
+                <td class="value">#${data.orderNumber}</td>
+              </tr>
+              <tr>
+                <td class="label">Amount</td>
+                <td class="value">${data.currency} ${data.totalAmount.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td class="label">Transaction ID</td>
+                <td class="value">${data.transactionId}</td>
+              </tr>
+            </table>
+
+            <div style="text-align: center; margin: 25px 0;">
+              <a href="${data.retryUrl}" class="cta-button">
+                Try Payment Again
+              </a>
+              <a href="${process.env.FRONTEND_APP_ORIGIN || 'http://localhost:3000'}/memberDashboard/cart" class="cta-button cta-button-secondary">
+                View Cart
+              </a>
+            </div>
+
+            <div class="help-section">
+              <div class="help-title">Common Solutions:</div>
+              <ul class="help-list">
+                <li>Check that your card details are correct</li>
+                <li>Ensure your card has sufficient funds</li>
+                <li>Try using a different payment method</li>
+                <li>Contact your bank if the issue persists</li>
+                <li>Reach out to our support team for assistance</li>
+              </ul>
+            </div>
+
+            <div class="message">
+              If you continue to experience issues, please don't hesitate to contact our support team. We're here to help!
+            </div>
+          </div>
+
+          <div class="footer">
+            <div style="margin-bottom: 10px; font-weight: 600;">&copy; ${new Date().getFullYear()} ZFit Gym Management System</div>
+            <div>
+              <a href="#">Privacy Policy</a> • <a href="#">Terms of Service</a> • <a href="#">Contact Support</a>
+            </div>
+            <div style="margin-top: 10px; font-size: 11px; color: #666;">
+              123 Fitness Street, Colombo, Sri Lanka
+            </div>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `,
+});
