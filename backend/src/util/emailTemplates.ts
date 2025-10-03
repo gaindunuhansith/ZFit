@@ -2077,3 +2077,505 @@ export const getCartPurchaseFailureTemplate = (data: CartPurchaseFailureData) =>
     </html>
   `,
 });
+
+// Refund email interfaces
+export interface RefundApprovalData {
+  userName: string;
+  requestId: string;
+  requestedAmount: number;
+  currency: string;
+  originalPaymentId: string;
+  paymentType: string; // 'membership' | 'cart'
+  approvedDate: string;
+  adminNotes?: string;
+}
+
+export interface RefundDeclineData {
+  userName: string;
+  requestId: string;
+  requestedAmount: number;
+  currency: string;
+  declinedDate: string;
+  adminNotes?: string;
+  declineReason: string;
+}
+
+// Refund approval email template
+export const getRefundApprovalTemplate = (data: RefundApprovalData) => ({
+  subject: "Refund Request Approved - ZFit Gym",
+  text: `Hi ${data.userName}, your refund request #${data.requestId} for ${data.currency} ${data.requestedAmount} has been approved. The refund will be processed within 5-7 business days.${data.adminNotes ? ` Admin note: ${data.adminNotes}` : ''}`,
+  html: `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Refund Request Approved - ZFit Gym</title>
+      <style>
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          margin: 0;
+          padding: 0;
+          background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+          color: #ffffff;
+        }
+        .container {
+          max-width: 650px;
+          margin: 0 auto;
+          background: linear-gradient(145deg, #2a2a2a 0%, #1e1e1e 100%);
+          border-radius: 12px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+          overflow: hidden;
+        }
+        .email-body {
+          padding: 30px;
+        }
+        .header-section {
+          text-align: center;
+          padding: 20px 0;
+          border-bottom: 2px solid #404040;
+          position: relative;
+        }
+        .header-section::after {
+          content: '';
+          position: absolute;
+          bottom: -1px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 60px;
+          height: 2px;
+          background: linear-gradient(90deg, #AAFF69 0%, #7BC96F 100%);
+        }
+        .logo-area {
+          font-size: 28px;
+          font-weight: 800;
+          color: #AAFF69;
+          margin-bottom: 8px;
+          text-shadow: 0 2px 4px rgba(170, 255, 105, 0.3);
+        }
+        .status-badge {
+          display: inline-block;
+          background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+          color: white;
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-top: 10px;
+        }
+        .main-title {
+          font-size: 24px;
+          font-weight: 700;
+          color: #ffffff;
+          margin: 25px 0 15px 0;
+          text-align: center;
+        }
+        .greeting {
+          font-size: 16px;
+          color: #cccccc;
+          margin-bottom: 25px;
+          text-align: center;
+        }
+        .refund-details {
+          background: linear-gradient(135deg, #3a3a3a 0%, #2d2d2d 100%);
+          border-radius: 8px;
+          padding: 20px;
+          margin: 20px 0;
+          border-left: 4px solid #AAFF69;
+        }
+        .detail-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 12px;
+          padding: 8px 0;
+          border-bottom: 1px solid #404040;
+        }
+        .detail-row:last-child {
+          border-bottom: none;
+          margin-bottom: 0;
+        }
+        .detail-label {
+          color: #aaaaaa;
+          font-weight: 500;
+        }
+        .detail-value {
+          color: #ffffff;
+          font-weight: 600;
+        }
+        .amount-highlight {
+          color: #AAFF69;
+          font-size: 18px;
+          font-weight: 700;
+        }
+        .message {
+          background: linear-gradient(135deg, #1a4d2e 0%, #0f3321 100%);
+          border-radius: 8px;
+          padding: 20px;
+          margin: 20px 0;
+          border-left: 4px solid #AAFF69;
+        }
+        .message-title {
+          font-size: 16px;
+          font-weight: 600;
+          color: #AAFF69;
+          margin-bottom: 10px;
+        }
+        .admin-note {
+          background: linear-gradient(135deg, #404040 0%, #333333 100%);
+          border-radius: 8px;
+          padding: 15px;
+          margin: 15px 0;
+          border-left: 4px solid #ffc107;
+        }
+        .admin-note-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #ffc107;
+          margin-bottom: 8px;
+        }
+        .footer {
+          text-align: center;
+          padding: 20px 0;
+          border-top: 2px solid #404040;
+          margin-top: 30px;
+        }
+        .footer a {
+          color: #AAFF69;
+          text-decoration: none;
+          margin: 0 8px;
+        }
+        .footer a:hover {
+          text-decoration: underline;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="email-body">
+          <div class="header-section">
+            <div class="logo-area">ZFit</div>
+            <div style="color: #888; font-size: 14px;">Gym Management System</div>
+            <div class="status-badge">✅ Approved</div>
+          </div>
+
+          <div class="main-title">Refund Request Approved!</div>
+          <div class="greeting">Hi ${data.userName},</div>
+
+          <div class="message">
+            <div class="message-title">Good News!</div>
+            Your refund request has been approved by our admin team. The refund will be processed and credited back to your original payment method within 5-7 business days.
+          </div>
+
+          <div class="refund-details">
+            <div class="detail-row">
+              <span class="detail-label">Request ID:</span>
+              <span class="detail-value">#${data.requestId}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Refund Amount:</span>
+              <span class="detail-value amount-highlight">${data.currency} ${data.requestedAmount.toFixed(2)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Original Payment:</span>
+              <span class="detail-value">#${data.originalPaymentId}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Payment Type:</span>
+              <span class="detail-value">${data.paymentType === 'membership' ? 'Membership' : 'Store Purchase'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Approved Date:</span>
+              <span class="detail-value">${data.approvedDate}</span>
+            </div>
+          </div>
+
+          ${data.adminNotes ? `
+          <div class="admin-note">
+            <div class="admin-note-title">Admin Note:</div>
+            <div style="color: #cccccc; line-height: 1.5;">${data.adminNotes}</div>
+          </div>
+          ` : ''}
+
+          <div class="message">
+            <div class="message-title">What happens next?</div>
+            <ul style="color: #cccccc; line-height: 1.6; margin: 10px 0; padding-left: 20px;">
+              <li>Your refund is now being processed</li>
+              <li>You'll receive the refund in your original payment method</li>
+              <li>Processing time: 5-7 business days</li>
+              <li>You'll receive a confirmation once the refund is completed</li>
+            </ul>
+          </div>
+
+          <div class="footer">
+            <div style="margin-bottom: 10px; font-weight: 600;">&copy; ${new Date().getFullYear()} ZFit Gym Management System</div>
+            <div>
+              <a href="#">Privacy Policy</a> • <a href="#">Terms of Service</a> • <a href="#">Contact Support</a>
+            </div>
+            <div style="margin-top: 10px; font-size: 11px; color: #666;">
+              Questions? Our support team is here to help at <a href="mailto:support@zfit.com" style="color: #AAFF69; font-weight: 600;">support@zfit.com</a>
+            </div>
+            <div style="margin-top: 10px; font-size: 11px; color: #666;">
+              123 Fitness Street, Colombo, Sri Lanka
+            </div>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `,
+});
+
+// Refund decline email template
+export const getRefundDeclineTemplate = (data: RefundDeclineData) => ({
+  subject: "Refund Request Update - ZFit Gym",
+  text: `Hi ${data.userName}, we've reviewed your refund request #${data.requestId} for ${data.currency} ${data.requestedAmount}. Unfortunately, we cannot process this refund at this time. Reason: ${data.declineReason}${data.adminNotes ? ` Admin note: ${data.adminNotes}` : ''}`,
+  html: `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Refund Request Update - ZFit Gym</title>
+      <style>
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          margin: 0;
+          padding: 0;
+          background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+          color: #ffffff;
+        }
+        .container {
+          max-width: 650px;
+          margin: 0 auto;
+          background: linear-gradient(145deg, #2a2a2a 0%, #1e1e1e 100%);
+          border-radius: 12px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+          overflow: hidden;
+        }
+        .email-body {
+          padding: 30px;
+        }
+        .header-section {
+          text-align: center;
+          padding: 20px 0;
+          border-bottom: 2px solid #404040;
+          position: relative;
+        }
+        .header-section::after {
+          content: '';
+          position: absolute;
+          bottom: -1px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 60px;
+          height: 2px;
+          background: linear-gradient(90deg, #AAFF69 0%, #7BC96F 100%);
+        }
+        .logo-area {
+          font-size: 28px;
+          font-weight: 800;
+          color: #AAFF69;
+          margin-bottom: 8px;
+          text-shadow: 0 2px 4px rgba(170, 255, 105, 0.3);
+        }
+        .status-badge {
+          display: inline-block;
+          background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+          color: white;
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-top: 10px;
+        }
+        .main-title {
+          font-size: 24px;
+          font-weight: 700;
+          color: #ffffff;
+          margin: 25px 0 15px 0;
+          text-align: center;
+        }
+        .greeting {
+          font-size: 16px;
+          color: #cccccc;
+          margin-bottom: 25px;
+          text-align: center;
+        }
+        .refund-details {
+          background: linear-gradient(135deg, #3a3a3a 0%, #2d2d2d 100%);
+          border-radius: 8px;
+          padding: 20px;
+          margin: 20px 0;
+          border-left: 4px solid #dc3545;
+        }
+        .detail-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 12px;
+          padding: 8px 0;
+          border-bottom: 1px solid #404040;
+        }
+        .detail-row:last-child {
+          border-bottom: none;
+          margin-bottom: 0;
+        }
+        .detail-label {
+          color: #aaaaaa;
+          font-weight: 500;
+        }
+        .detail-value {
+          color: #ffffff;
+          font-weight: 600;
+        }
+        .amount-highlight {
+          color: #dc3545;
+          font-size: 18px;
+          font-weight: 700;
+        }
+        .message {
+          background: linear-gradient(135deg, #4a1f1f 0%, #331515 100%);
+          border-radius: 8px;
+          padding: 20px;
+          margin: 20px 0;
+          border-left: 4px solid #dc3545;
+        }
+        .message-title {
+          font-size: 16px;
+          font-weight: 600;
+          color: #ff6b6b;
+          margin-bottom: 10px;
+        }
+        .reason-box {
+          background: linear-gradient(135deg, #5a2d2d 0%, #4a2424 100%);
+          border-radius: 8px;
+          padding: 15px;
+          margin: 15px 0;
+          border-left: 4px solid #ffc107;
+        }
+        .reason-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #ffc107;
+          margin-bottom: 8px;
+        }
+        .admin-note {
+          background: linear-gradient(135deg, #404040 0%, #333333 100%);
+          border-radius: 8px;
+          padding: 15px;
+          margin: 15px 0;
+          border-left: 4px solid #ffc107;
+        }
+        .admin-note-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #ffc107;
+          margin-bottom: 8px;
+        }
+        .help-section {
+          background: linear-gradient(135deg, #1a4d3a 0%, #0f3328 100%);
+          border-radius: 8px;
+          padding: 20px;
+          margin: 20px 0;
+          border-left: 4px solid #AAFF69;
+        }
+        .help-title {
+          font-size: 16px;
+          font-weight: 600;
+          color: #AAFF69;
+          margin-bottom: 10px;
+        }
+        .footer {
+          text-align: center;
+          padding: 20px 0;
+          border-top: 2px solid #404040;
+          margin-top: 30px;
+        }
+        .footer a {
+          color: #AAFF69;
+          text-decoration: none;
+          margin: 0 8px;
+        }
+        .footer a:hover {
+          text-decoration: underline;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="email-body">
+          <div class="header-section">
+            <div class="logo-area">ZFit</div>
+            <div style="color: #888; font-size: 14px;">Gym Management System</div>
+            <div class="status-badge">❌ Declined</div>
+          </div>
+
+          <div class="main-title">Refund Request Update</div>
+          <div class="greeting">Hi ${data.userName},</div>
+
+          <div class="message">
+            <div class="message-title">Refund Request Status</div>
+            We've carefully reviewed your refund request, and unfortunately, we cannot process this refund at this time. Please see the details below for more information.
+          </div>
+
+          <div class="refund-details">
+            <div class="detail-row">
+              <span class="detail-label">Request ID:</span>
+              <span class="detail-value">#${data.requestId}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Requested Amount:</span>
+              <span class="detail-value amount-highlight">${data.currency} ${data.requestedAmount.toFixed(2)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Declined Date:</span>
+              <span class="detail-value">${data.declinedDate}</span>
+            </div>
+          </div>
+
+          <div class="reason-box">
+            <div class="reason-title">Reason for Decline:</div>
+            <div style="color: #cccccc; line-height: 1.5;">${data.declineReason}</div>
+          </div>
+
+          ${data.adminNotes ? `
+          <div class="admin-note">
+            <div class="admin-note-title">Additional Information:</div>
+            <div style="color: #cccccc; line-height: 1.5;">${data.adminNotes}</div>
+          </div>
+          ` : ''}
+
+          <div class="help-section">
+            <div class="help-title">Need Help or Have Questions?</div>
+            <div style="color: #cccccc; line-height: 1.6; margin: 10px 0;">
+              If you believe this decision was made in error or if you have questions about this refund request, please don't hesitate to:
+              <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Contact our support team directly</li>
+                <li>Visit our gym location to speak with management</li>
+                <li>Submit additional documentation if applicable</li>
+                <li>Request a review of your refund request</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="footer">
+            <div style="margin-bottom: 10px; font-weight: 600;">&copy; ${new Date().getFullYear()} ZFit Gym Management System</div>
+            <div>
+              <a href="#">Privacy Policy</a> • <a href="#">Terms of Service</a> • <a href="#">Contact Support</a>
+            </div>
+            <div style="margin-top: 10px; font-size: 11px; color: #666;">
+              Questions? Our support team is here to help at <a href="mailto:support@zfit.com" style="color: #AAFF69; font-weight: 600;">support@zfit.com</a>
+            </div>
+            <div style="margin-top: 10px; font-size: 11px; color: #666;">
+              123 Fitness Street, Colombo, Sri Lanka
+            </div>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `,
+});

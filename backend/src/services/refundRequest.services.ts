@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
 import RefundRequest from '../models/refundRequest.model.js';
+import { sendRefundApprovalEmail, sendRefundDeclineEmail } from '../util/sendMail.util.js';
+
+// Simple change to trigger reload
 
 export const createRefundRequestService = async (data: any) => {
     const refundRequest = new RefundRequest(data);
@@ -60,10 +63,22 @@ export const deleteRefundRequestService = async (id: string) => {
 };
 
 export const approveRefundRequestService = async (id: string, adminNotes?: string) => {
+    console.log('🚀 approveRefundRequestService called with ID:', id);
+    
     if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new Error('Invalid refund request ID');
     }
 
+    // First get the refund request with populated data for email
+    const refundRequestForEmail = await RefundRequest.findById(id)
+        .populate('userId', 'name email')
+        .populate('paymentId', 'amount transactionId type');
+
+    if (!refundRequestForEmail) {
+        throw new Error('Refund request not found');
+    }
+
+    // Update the refund request status
     const refundRequest = await RefundRequest.findByIdAndUpdate(
         id,
         {
@@ -78,14 +93,66 @@ export const approveRefundRequestService = async (id: string, adminNotes?: strin
         throw new Error('Refund request not found');
     }
 
+    // Send approval email
+    try {
+        const user = refundRequestForEmail.userId as any;
+        const payment = refundRequestForEmail.paymentId as any;
+        
+        console.log('🔍 Starting email sending process for approval...');
+        console.log('📧 User email:', user?.email);
+        console.log('📝 Request ID:', refundRequestForEmail.requestId);
+        
+        if (user && user.email) {
+            const emailData: any = {
+                userName: user.name,
+                requestId: refundRequestForEmail.requestId,
+                requestedAmount: refundRequestForEmail.requestedAmount,
+                currency: 'LKR', // Default currency
+                originalPaymentId: payment?.transactionId || 'N/A',
+                paymentType: payment?.type || 'unknown',
+                approvedDate: new Date().toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                })
+            };
+            
+            if (adminNotes) {
+                emailData.adminNotes = adminNotes;
+            }
+            
+            console.log('📨 Sending approval email to:', user.email);
+            console.log('📋 Email data:', JSON.stringify(emailData, null, 2));
+            
+            await sendRefundApprovalEmail(user.email, emailData);
+            console.log('✅ Approval email sent successfully!');
+        } else {
+            console.log('❌ No user email found for sending approval notification');
+        }
+    } catch (emailError) {
+        console.error('❌ Failed to send approval email:', emailError);
+        console.error('📄 Error details:', emailError instanceof Error ? emailError.message : String(emailError));
+        // Don't throw error for email failure, just log it
+    }
+
     return refundRequest;
 };
 
-export const declineRefundRequestService = async (id: string, adminNotes?: string) => {
+export const declineRefundRequestService = async (id: string, adminNotes?: string, declineReason?: string) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new Error('Invalid refund request ID');
     }
 
+    // First get the refund request with populated data for email
+    const refundRequestForEmail = await RefundRequest.findById(id)
+        .populate('userId', 'name email')
+        .populate('paymentId', 'amount transactionId type');
+
+    if (!refundRequestForEmail) {
+        throw new Error('Refund request not found');
+    }
+
+    // Update the refund request status
     const refundRequest = await RefundRequest.findByIdAndUpdate(
         id,
         {
@@ -98,6 +165,46 @@ export const declineRefundRequestService = async (id: string, adminNotes?: strin
 
     if (!refundRequest) {
         throw new Error('Refund request not found');
+    }
+
+    // Send decline email
+    try {
+        const user = refundRequestForEmail.userId as any;
+        
+        console.log('🔍 Starting email sending process for decline...');
+        console.log('📧 User email:', user?.email);
+        console.log('📝 Request ID:', refundRequestForEmail.requestId);
+        
+        if (user && user.email) {
+            const emailData: any = {
+                userName: user.name,
+                requestId: refundRequestForEmail.requestId,
+                requestedAmount: refundRequestForEmail.requestedAmount,
+                currency: 'LKR', // Default currency
+                declinedDate: new Date().toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }),
+                declineReason: declineReason || 'No specific reason provided'
+            };
+            
+            if (adminNotes) {
+                emailData.adminNotes = adminNotes;
+            }
+            
+            console.log('📨 Sending decline email to:', user.email);
+            console.log('📋 Email data:', JSON.stringify(emailData, null, 2));
+            
+            await sendRefundDeclineEmail(user.email, emailData);
+            console.log('✅ Decline email sent successfully!');
+        } else {
+            console.log('❌ No user email found for sending decline notification');
+        }
+    } catch (emailError) {
+        console.error('❌ Failed to send decline email:', emailError);
+        console.error('📄 Error details:', emailError instanceof Error ? emailError.message : String(emailError));
+        // Don't throw error for email failure, just log it
     }
 
     return refundRequest;

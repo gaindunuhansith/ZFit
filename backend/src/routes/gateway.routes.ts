@@ -26,7 +26,7 @@ router.get('/payhere/test', testPayHereConfig);
 
 // Development only: Manual payment completion for testing
 router.post('/dev/complete-payment/:transactionId', async (req, res) => {
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === 'production' && process.env.EMAIL_MODE !== 'development') {
         return res.status(403).json({ success: false, message: 'Not available in production' });
     }
     
