@@ -343,6 +343,7 @@ export const createBankTransferPayment = async (paymentData: BankTransferPayment
 // Bank Transfer Admin types
 export interface BankTransferAdmin {
   _id: string
+  transferId?: string
   userId: {
     _id: string
     name: string
