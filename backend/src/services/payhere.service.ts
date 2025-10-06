@@ -3,7 +3,8 @@ import mongoose from 'mongoose';
 import { PayHereUtils } from '../util/payhere.util.js';
 import { createPaymentService, updatePaymentService } from './payment.services.js';
 import { createMembership } from './membership.service.js';
-import { sendMembershipPurchaseSuccessEmail, sendMembershipPurchaseFailureEmail, sendCartPurchaseSuccessEmail, sendCartPurchaseFailureEmail } from '../util/sendMail.util.js';
+import { sendMail } from '../util/sendMail.util.js';
+import { getCartPurchaseSuccessTemplate, getCartPurchaseFailureTemplate, getMembershipPurchaseSuccessTemplate, getMembershipPurchaseFailureTemplate } from '../util/emailTemplates.js';
 import { getMembershipPlanById } from './membershipPlan.service.js';
 import UserModel from '../models/user.model.js';
 import Payment from '../models/payment.model.js';
@@ -298,7 +299,13 @@ export class PayHereService {
                                     ]
                                 };
 
-                                await sendMembershipPurchaseSuccessEmail(user.email, emailData);
+                                const template = getMembershipPurchaseSuccessTemplate(emailData);
+                                await sendMail({
+                                    to: user.email,
+                                    subject: template.subject,
+                                    text: template.text,
+                                    html: template.html
+                                });
                                 console.log('Membership success email sent to:', user.email);
                             }
                         } catch (emailError) {
@@ -334,7 +341,13 @@ export class PayHereService {
                             retryUrl: retryUrl
                         };
 
-                        await sendMembershipPurchaseFailureEmail(user.email, emailData);
+                        const template = getMembershipPurchaseFailureTemplate(emailData);
+                        await sendMail({
+                            to: user.email,
+                            subject: template.subject,
+                            text: template.text,
+                            html: template.html
+                        });
                         console.log('Membership failure email sent to:', user.email);
                     }
                 } catch (emailError) {
@@ -381,7 +394,13 @@ export class PayHereService {
                                 paymentMethod: 'Credit/Debit Card'
                             };
 
-                            await sendCartPurchaseSuccessEmail(user.email, emailData);
+                            const template = getCartPurchaseSuccessTemplate(emailData);
+                            await sendMail({
+                                to: user.email,
+                                subject: template.subject,
+                                text: template.text,
+                                html: template.html
+                            });
                             console.log('Cart purchase success email sent to:', user.email);
 
                             // Clear the user's cart after successful payment
@@ -421,7 +440,13 @@ export class PayHereService {
                                 paymentMethod: 'Credit/Debit Card'
                             };
 
-                            await sendCartPurchaseSuccessEmail(user.email, emailData);
+                            const template = getCartPurchaseSuccessTemplate(emailData);
+                            await sendMail({
+                                to: user.email,
+                                subject: template.subject,
+                                text: template.text,
+                                html: template.html
+                            });
                             console.log('Basic cart purchase success email sent to:', user.email);
                         }
                     }
@@ -450,7 +475,13 @@ export class PayHereService {
                             retryUrl: retryUrl
                         };
 
-                        await sendCartPurchaseFailureEmail(user.email, emailData);
+                        const template = getCartPurchaseFailureTemplate(emailData);
+                        await sendMail({
+                            to: user.email,
+                            subject: template.subject,
+                            text: template.text,
+                            html: template.html
+                        });
                         console.log('Cart purchase failure email sent to:', user.email);
                     }
                 } catch (emailError) {

@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import RefundRequest from '../models/refundRequest.model.js';
-import { sendRefundApprovalEmail, sendRefundDeclineEmail } from '../util/sendMail.util.js';
+import { sendMail } from '../util/sendMail.util.js';
+import { getRefundApprovalTemplate, getRefundDeclineTemplate } from '../util/emailTemplates.js';
 
 // Simple change to trigger reload
 
@@ -124,7 +125,13 @@ export const approveRefundRequestService = async (id: string, adminNotes?: strin
             console.log('📨 Sending approval email to:', user.email);
             console.log('📋 Email data:', JSON.stringify(emailData, null, 2));
             
-            await sendRefundApprovalEmail(user.email, emailData);
+            const template = getRefundApprovalTemplate(emailData);
+            await sendMail({
+                to: user.email,
+                subject: template.subject,
+                text: template.text,
+                html: template.html
+            });
             console.log('✅ Approval email sent successfully!');
         } else {
             console.log('❌ No user email found for sending approval notification');
@@ -196,7 +203,13 @@ export const declineRefundRequestService = async (id: string, adminNotes?: strin
             console.log('📨 Sending decline email to:', user.email);
             console.log('📋 Email data:', JSON.stringify(emailData, null, 2));
             
-            await sendRefundDeclineEmail(user.email, emailData);
+            const template = getRefundDeclineTemplate(emailData);
+            await sendMail({
+                to: user.email,
+                subject: template.subject,
+                text: template.text,
+                html: template.html
+            });
             console.log('✅ Decline email sent successfully!');
         } else {
             console.log('❌ No user email found for sending decline notification');
