@@ -136,11 +136,11 @@ export default function BankTransferForm({ paymentData, onSubmit, isSubmitting }
               </div>
             </div>
 
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="bg-black border border-red-500/75 rounded-lg p-4">
               <div className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-green-600" />
-                <div className="text-sm text-green-800">
-                  <strong>Important:</strong> Please include your membership plan name &quot;{paymentData.planName}&quot;
+                <CreditCard className="h-4 w-4 text-red-500/75" />
+                <div className="text-sm text-red-500/75">
+                  <strong>Important:</strong> Please include your membership plan name &quot;MMA NO Xcuse&quot;
                   in the transfer description for faster processing.
                 </div>
               </div>
