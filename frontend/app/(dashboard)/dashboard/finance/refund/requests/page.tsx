@@ -12,6 +12,7 @@ import {
   Eye,
   Trash2,
   Plus,
+  Loader2,
 } from "lucide-react"
 
 import {
@@ -49,6 +50,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { getRefundRequests, approveRefundRequest, declineRefundRequest, deleteRefundRequest, getPendingRequestsCount, type RefundRequest } from "@/lib/api/refundRequestApi"
+import { updatePayment, initiatePayHereRefund, type PayHereRefundRequest } from "@/lib/api/paymentApi"
 
 const getStatusIcon = (status: string) => {
   switch (status) {
@@ -85,6 +87,7 @@ export default function RefundRequestsManagementPage() {
   const [processingAction, setProcessingAction] = useState<"approve" | "decline" | null>(null)
   const [adminNotes, setAdminNotes] = useState("")
   const [pendingCount, setPendingCount] = useState(0)
+  const [processingRequest, setProcessingRequest] = useState(false)
 
   // Fetch requests on component mount
   useEffect(() => {
@@ -128,11 +131,93 @@ export default function RefundRequestsManagementPage() {
     setIsViewModalOpen(true)
   }
 
-  const handleProcessRequest = (request: RefundRequest, action: "approve" | "decline") => {
-    setSelectedRequest(request)
-    setProcessingAction(action)
-    setAdminNotes("")
-    setIsProcessingModalOpen(true)
+  const handleProcessRequest = async (request: RefundRequest, action: "approve" | "decline") => {
+    if (action === 'decline') {
+      // Handle decline with modal
+      setSelectedRequest(request)
+      setProcessingAction(action)
+      setAdminNotes("")
+      setIsProcessingModalOpen(true)
+      return
+    }
+
+    // Handle approve with PayHere refund
+    if (action === 'approve') {
+      try {
+        setProcessingRequest(true)
+        
+        // Get payment details
+        const paymentId = typeof request.paymentId === 'string' 
+          ? request.paymentId 
+          : request.paymentId._id
+
+        // Initiate PayHere refund
+        const refundRequest: PayHereRefundRequest = {
+          paymentId: paymentId,
+          amount: request.requestedAmount,
+          reason: request.notes || 'Refund request approved'
+        }
+
+        console.log('Initiating PayHere refund:', refundRequest)
+        
+        const refundResponse = await initiatePayHereRefund(refundRequest)
+        
+        console.log('PayHere refund response:', refundResponse)
+
+        // Handle redirect-based refunds (like payments)
+        if (refundResponse.checkoutUrl) {
+          window.location.href = refundResponse.checkoutUrl
+          return // Exit here as we're redirecting
+        }
+
+        // Handle form-based refunds
+        if (refundResponse.paymentForm) {
+          const formContainer = document.createElement('div')
+          formContainer.innerHTML = refundResponse.paymentForm
+          document.body.appendChild(formContainer)
+
+          const refundForm = document.getElementById('payhere-refund-form') as HTMLFormElement
+          if (refundForm) {
+            setTimeout(() => {
+              refundForm.submit()
+            }, 100)
+          } else {
+            throw new Error('Refund form not found')
+          }
+          return // Exit here as we're submitting form
+        }
+
+        // If refund is successful without redirect, approve the request
+        if (refundResponse.status === 'completed' || refundResponse.status === 'success' || refundResponse.status === 'pending_verification') {
+          await approveRefundRequest(request._id, `PayHere refund processed - ${refundResponse.refundId}${refundResponse.status === 'pending_verification' ? ' (Manual verification required)' : ''}`)
+          
+          // Update payment status to 'refunded'
+          await updatePayment(paymentId, { status: 'refunded' })
+          
+          // Refresh requests list and count
+          const [updatedRequests, newCount] = await Promise.all([
+            getRefundRequests(),
+            getPendingRequestsCount()
+          ])
+          setRequests(updatedRequests)
+          setPendingCount(newCount)
+          
+          // Show success message
+          const message = refundResponse.status === 'pending_verification' 
+            ? 'Refund initiated successfully. Manual verification required by PayHere.'
+            : 'Refund processed successfully via PayHere'
+          alert(message)
+        } else {
+          throw new Error('Refund processing failed')
+        }
+        
+      } catch (error) {
+        console.error('Error processing PayHere refund:', error)
+        alert('Failed to process refund via PayHere. Please try again.')
+      } finally {
+        setProcessingRequest(false)
+      }
+    }
   }
 
   const handleConfirmProcessing = async () => {
@@ -351,9 +436,8 @@ export default function RefundRequestsManagementPage() {
         </CardContent>
       </Card>
 
-      {/* View Details Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
@@ -365,121 +449,116 @@ export default function RefundRequestsManagementPage() {
           </DialogHeader>
 
           {selectedRequest && (
-            <div className="space-y-4">
-              {/* Status and Amount Header */}
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  {getStatusIcon(selectedRequest.status)}
-                  <div>
-                    <p className="font-semibold text-lg">LKR {selectedRequest.requestedAmount.toFixed(2)}</p>
-                    <p className="text-sm text-muted-foreground">Refund Amount Requested</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  {getStatusBadge(selectedRequest.status)}
-                  <div className="text-right">
-                    <p className="text-sm font-medium">Requested on</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(selectedRequest.createdAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Main Content - Row-based Structure */}
-              <div className="space-y-8">
-                {/* User Information Row */}
-                <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Row 1: User Information and Payment Information side by side */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* User Information */}
+                <div className="space-y-3">
                   <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">User Information</h3>
-                  <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
-                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                      <span className="text-base font-medium text-primary">
-                        {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.name
-                          ? selectedRequest.userId.name.charAt(0).toUpperCase()
-                          : 'U'}
-                      </span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-lg">
-                        {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.name
-                          ? selectedRequest.userId.name
-                          : 'Unknown User'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">ID: {selectedRequest._id.slice(-8)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm">
-                        <span className="font-medium">Email:</span><br />
-                        {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.email
-                          ? selectedRequest.userId.email
-                          : 'N/A'}
-                      </p>
-                      {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.contactNo && (
-                        <p className="text-sm mt-1">
-                          <span className="font-medium">Phone:</span> {selectedRequest.userId.contactNo}
+                  <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-primary">
+                          {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.name
+                            ? selectedRequest.userId.name.charAt(0).toUpperCase()
+                            : 'U'}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-semibold">
+                          {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.name
+                            ? selectedRequest.userId.name
+                            : 'Unknown User'}
                         </p>
-                      )}
+                        <p className="text-xs text-muted-foreground">ID: {selectedRequest._id.slice(-8)}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-1 text-sm">
+                      <p><span className="font-medium">Email:</span> {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.email ? selectedRequest.userId.email : 'N/A'}</p>
+                      <p><span className="font-medium">Phone:</span> {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.contactNo ? selectedRequest.userId.contactNo : 'N/A'}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Payment Information Row */}
-                <div className="space-y-4">
+                {/* Payment Information */}
+                <div className="space-y-3">
                   <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">Payment Information</h3>
                   {typeof selectedRequest.paymentId === 'object' && selectedRequest.paymentId ? (
-                    <div className="p-4 bg-muted/30 rounded-lg space-y-4">
-                      <div className="flex items-center justify-between">
+                    <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                      <div>
+                        <p className="text-sm font-medium">Transaction ID</p>
+                        <p className="text-sm font-mono bg-background px-2 py-1 rounded border">
+                          {selectedRequest.paymentId.transactionId}
+                        </p>
+                      </div>
+                      <div className="flex justify-between items-center">
                         <div>
-                          <p className="text-sm font-medium">Transaction ID</p>
-                          <p className="text-sm font-mono bg-background px-3 py-1 rounded border">
-                            {selectedRequest.paymentId.transactionId}
-                          </p>
-                        </div>
-                        <div className="text-right">
                           <p className="text-sm font-medium">Original Amount</p>
                           <p className="text-lg font-semibold">
                             {selectedRequest.paymentId.currency || 'LKR'} {selectedRequest.paymentId.amount.toFixed(2)}
                           </p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-6 text-sm">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="font-medium">Type:</span> {selectedRequest.paymentId.type}
                         </div>
                         <div>
-                          <span className="font-medium">Method:</span> {selectedRequest.paymentId.method || 'N/A'}
+                          <span className="font-medium">Method:</span> <span className="font-semibold text-primary">{selectedRequest.paymentId.method || 'N/A'}</span>
                         </div>
                       </div>
                     </div>
                   ) : (
                     <div className="p-4 bg-muted/30 rounded-lg text-center text-muted-foreground">
-                      <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-                      <p>Payment details not available</p>
+                      <AlertCircle className="h-6 w-6 mx-auto mb-2" />
+                      <p className="text-sm">Payment details not available</p>
                     </div>
                   )}
                 </div>
+              </div>
 
-                {/* Request Timeline Row */}
-                <div className="space-y-4">
+              {/* Row 2: Refund Details and Timeline side by side */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column: Refund Amount, Status, Date */}
+                <div className="space-y-3">
+                  <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-primary">LKR {selectedRequest.requestedAmount.toFixed(2)}</p>
+                      <p className="text-sm text-muted-foreground">Refund Amount Requested</p>
+                    </div>
+                    <div className="flex justify-center">
+                      {getStatusBadge(selectedRequest.status)}
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-medium">Requested on</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(selectedRequest.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Request Timeline */}
+                <div className="space-y-3">
                   <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">Request Timeline</h3>
-                  <div className="p-4 bg-muted/30 rounded-lg space-y-4">
-                    <div className="flex items-start gap-4">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full mt-1 flex-shrink-0"></div>
+                  <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
                       <div className="flex-1">
                         <p className="font-medium text-sm">Request Created</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {new Date(selectedRequest.createdAt).toLocaleString()}
                         </p>
                       </div>
                     </div>
 
                     {selectedRequest.updatedAt && selectedRequest.updatedAt !== selectedRequest.createdAt && (
-                      <div className="flex items-start gap-4">
-                        <div className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${
+                      <div className="flex items-start gap-3">
+                        <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
                           selectedRequest.status === 'approved' ? 'bg-green-500' :
                           selectedRequest.status === 'declined' ? 'bg-red-500' : 'bg-yellow-500'
                         }`}></div>
@@ -487,7 +566,7 @@ export default function RefundRequestsManagementPage() {
                           <p className="font-medium text-sm">
                             Request {selectedRequest.status.charAt(0).toUpperCase() + selectedRequest.status.slice(1)}
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             {new Date(selectedRequest.updatedAt).toLocaleString()}
                           </p>
                         </div>
@@ -495,21 +574,24 @@ export default function RefundRequestsManagementPage() {
                     )}
                   </div>
                 </div>
+              </div>
 
-                {/* Request Notes Row */}
-                <div className="space-y-4">
+              {/* Row 3: Request Notes and Admin Notes side by side */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Request Notes */}
+                <div className="space-y-3">
                   <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">Request Notes</h3>
-                  <div className="p-4 bg-muted/50 rounded-lg min-h-[100px]">
+                  <div className="p-4 bg-muted/50 rounded-lg">
                     <p className="text-sm whitespace-pre-wrap">
                       {selectedRequest.notes || 'No notes provided'}
                     </p>
                   </div>
                 </div>
 
-                {/* Admin Notes Row */}
-                <div className="space-y-4">
+                {/* Admin Notes */}
+                <div className="space-y-3">
                   <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">Admin Notes</h3>
-                  <div className="p-4 bg-muted/50 rounded-lg min-h-[100px]">
+                  <div className="p-4 bg-muted/50 rounded-lg">
                     <p className="text-sm whitespace-pre-wrap">
                       {selectedRequest.adminNotes || 'No admin notes'}
                     </p>

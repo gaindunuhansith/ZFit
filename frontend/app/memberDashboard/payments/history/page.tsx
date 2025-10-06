@@ -53,6 +53,7 @@ export default function PaymentHistoryPage() {
   const [refundAmount, setRefundAmount] = useState("")
   const [refundNotes, setRefundNotes] = useState("")
   const [submittingRefund, setSubmittingRefund] = useState(false)
+  const [requestedRefunds, setRequestedRefunds] = useState<Set<string>>(new Set())
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState("")
@@ -60,6 +61,7 @@ export default function PaymentHistoryPage() {
   const [methodFilter, setMethodFilter] = useState<string>("all")
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
+  const [sortBy, setSortBy] = useState<string>("date-desc")
 
   const loadData = useCallback(async () => {
     if (!user?._id) return
@@ -76,6 +78,14 @@ export default function PaymentHistoryPage() {
       }
 
       setRefundRequests(refundRequestsResponse)
+
+      // Initialize requested refunds set with existing refund request payment IDs
+      const existingRefundPaymentIds = new Set(
+        refundRequestsResponse.map((request: RefundRequest) => 
+          typeof request.paymentId === 'string' ? request.paymentId : request.paymentId._id
+        )
+      )
+      setRequestedRefunds(existingRefundPaymentIds)
 
       // Calculate pending refund count
       const pendingCount = refundRequestsResponse.filter((request: RefundRequest) => request.status === 'pending').length
@@ -122,16 +132,38 @@ export default function PaymentHistoryPage() {
     }
   }
 
+  const getRefundStatus = (payment: Payment) => {
+    const refundRequest = refundRequests.find(req => 
+      (typeof req.paymentId === 'string' ? req.paymentId : req.paymentId._id) === payment._id
+    )
+    return refundRequest ? refundRequest.status : null
+  }
+
+  const getDisplayStatus = (payment: Payment) => {
+    const refundStatus = getRefundStatus(payment)
+    // If refund is approved, show as refunded
+    if (refundStatus === 'approved') {
+      return 'refunded'
+    }
+    // Otherwise show the original payment status
+    return payment.status
+  }
+
   const canRequestRefund = (payment: Payment) => {
     // Can request refund if payment is completed and not fully refunded
     if (payment.status !== 'completed') return false
     if (payment.refundedAmount >= payment.amount) return false
 
-    // Check if there's already a pending refund request for this payment
-    const existingRequest = refundRequests.find(req =>
-      req.paymentId === payment._id && req.status === 'pending'
+    // Check if there's any refund request for this payment
+    const existingRequest = refundRequests.find(req => 
+      (typeof req.paymentId === 'string' ? req.paymentId : req.paymentId._id) === payment._id
     )
-    return !existingRequest
+    if (existingRequest) return false
+
+    // Check if refund has been requested in this session
+    if (requestedRefunds.has(payment._id)) return false
+
+    return true
   }
 
   const handleRefundRequest = async () => {
@@ -151,6 +183,10 @@ export default function PaymentHistoryPage() {
 
     try {
       setSubmittingRefund(true)
+      
+      // Add to requested refunds set immediately to disable button
+      setRequestedRefunds(prev => new Set(prev).add(selectedPayment._id))
+      
       await createRefundRequest({
         paymentId: selectedPayment._id,
         userId: user._id,
@@ -169,6 +205,13 @@ export default function PaymentHistoryPage() {
     } catch (error) {
       console.error('Error submitting refund request:', error)
       toast.error('Failed to submit refund request')
+      
+      // Remove from requested refunds set if there was an error
+      setRequestedRefunds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(selectedPayment._id)
+        return newSet
+      })
     } finally {
       setSubmittingRefund(false)
     }
@@ -191,46 +234,74 @@ export default function PaymentHistoryPage() {
     })
   }
 
-  const filteredPayments = payments.filter((payment) => {
-    // Search term filter
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase()
-      const matchesSearch =
-        payment.transactionId.toLowerCase().includes(searchLower) ||
-        payment.type.toLowerCase().includes(searchLower) ||
-        payment.method.toLowerCase().includes(searchLower) ||
-        payment.currency.toLowerCase().includes(searchLower)
-      if (!matchesSearch) return false
-    }
-
-    // Status filter - removed, no longer filtering by status
-
-    // Type filter
-    if (typeFilter !== "all" && payment.type !== typeFilter) {
-      return false
-    }
-
-    // Method filter
-    if (methodFilter !== "all" && payment.method !== methodFilter) {
-      return false
-    }
-
-    // Date range filter
-    if (dateFrom || dateTo) {
-      const paymentDate = new Date(payment.date)
-      if (dateFrom) {
-        const fromDate = new Date(dateFrom)
-        if (paymentDate < fromDate) return false
+  const filteredPayments = payments
+    .filter((payment) => {
+      // Search term filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase()
+        const matchesSearch =
+          payment.transactionId.toLowerCase().includes(searchLower) ||
+          payment.type.toLowerCase().includes(searchLower) ||
+          payment.method.toLowerCase().includes(searchLower) ||
+          payment.currency.toLowerCase().includes(searchLower)
+        if (!matchesSearch) return false
       }
-      if (dateTo) {
-        const toDate = new Date(dateTo)
-        toDate.setHours(23, 59, 59, 999) // End of day
-        if (paymentDate > toDate) return false
-      }
-    }
 
-    return true
-  })
+      // Status filter - removed, no longer filtering by status
+
+      // Type filter
+      if (typeFilter !== "all" && payment.type !== typeFilter) {
+        return false
+      }
+
+      // Method filter
+      if (methodFilter !== "all" && payment.method !== methodFilter) {
+        return false
+      }
+
+      // Date range filter
+      if (dateFrom || dateTo) {
+        const paymentDate = new Date(payment.date)
+        if (dateFrom) {
+          const fromDate = new Date(dateFrom)
+          if (paymentDate < fromDate) return false
+        }
+        if (dateTo) {
+          const toDate = new Date(dateTo)
+          toDate.setHours(23, 59, 59, 999) // End of day
+          if (paymentDate > toDate) return false
+        }
+      }
+
+      return true
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'date-desc':
+          // Sort by date in descending order (newest first)
+          return new Date(b.date).getTime() - new Date(a.date).getTime()
+        case 'date-asc':
+          // Sort by date in ascending order (oldest first)
+          return new Date(a.date).getTime() - new Date(b.date).getTime()
+        case 'amount-desc':
+          // Sort by amount in descending order (highest first)
+          return b.amount - a.amount
+        case 'amount-asc':
+          // Sort by amount in ascending order (lowest first)
+          return a.amount - b.amount
+        case 'type':
+          // Sort by type alphabetically
+          return a.type.localeCompare(b.type)
+        case 'status':
+          // Sort by status
+          const statusA = getDisplayStatus(a)
+          const statusB = getDisplayStatus(b)
+          return statusA.localeCompare(statusB)
+        default:
+          // Default to date descending
+          return new Date(b.date).getTime() - new Date(a.date).getTime()
+      }
+    })
 
   const clearFilters = () => {
     setSearchTerm("")
@@ -238,6 +309,7 @@ export default function PaymentHistoryPage() {
     setMethodFilter("all")
     setDateFrom("")
     setDateTo("")
+    setSortBy("date-desc")
   }
 
   if (loading) {
@@ -313,6 +385,19 @@ export default function PaymentHistoryPage() {
             <SelectItem value="card">Card</SelectItem>
             <SelectItem value="bank-transfer">Bank Transfer</SelectItem>
             <SelectItem value="cash">Cash</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="date-desc">Newest First</SelectItem>
+            <SelectItem value="date-asc">Oldest First</SelectItem>
+            <SelectItem value="amount-desc">Highest Amount</SelectItem>
+            <SelectItem value="amount-asc">Lowest Amount</SelectItem>
+            <SelectItem value="type">Type (A-Z)</SelectItem>
+            <SelectItem value="status">Status</SelectItem>
           </SelectContent>
         </Select>
         <div className="flex items-center space-x-2">
@@ -404,18 +489,67 @@ export default function PaymentHistoryPage() {
                           </div>
                         )}
                       </TableCell>
-                      <TableCell>{getStatusBadge(payment.status)}</TableCell>
+                      <TableCell>{getStatusBadge(getDisplayStatus(payment))}</TableCell>
                       <TableCell className="font-mono text-sm">{payment.transactionId}</TableCell>
                       <TableCell>
-                        {canRequestRefund(payment) && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openRefundDialog(payment)}
-                          >
-                            Request Refund
-                          </Button>
-                        )}
+                        {(() => {
+                          const refundStatus = getRefundStatus(payment)
+                          
+                          if (refundStatus === 'pending') {
+                            return (
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-yellow-500" />
+                                <span className="text-sm text-yellow-700 font-medium">Refund Pending</span>
+                              </div>
+                            )
+                          }
+                          
+                          if (refundStatus === 'approved') {
+                            return (
+                              <div className="flex items-center gap-2">
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                                <span className="text-sm text-green-700 font-medium">Refund Completed</span>
+                              </div>
+                            )
+                          }
+                          
+                          if (refundStatus === 'declined') {
+                            return (
+                              <div className="flex items-center gap-2">
+                                <XCircle className="w-4 h-4 text-red-500" />
+                                <span className="text-sm text-red-700 font-medium">Refund Declined</span>
+                              </div>
+                            )
+                          }
+                          
+                          if (canRequestRefund(payment)) {
+                            return (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openRefundDialog(payment)}
+                              >
+                                Request Refund
+                              </Button>
+                            )
+                          }
+
+                          // Show disabled button if refund was requested in this session
+                          if (requestedRefunds.has(payment._id)) {
+                            return (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled
+                                className="cursor-not-allowed opacity-50"
+                              >
+                                Refund Requested
+                              </Button>
+                            )
+                          }
+                          
+                          return null
+                        })()}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -52,6 +52,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { getPayments, type Payment, deletePayment, deleteAllPayments } from "@/lib/api/paymentApi"
+import { getRefundRequests, type RefundRequest } from "@/lib/api/refundRequestApi"
 import { generatePaymentsReport } from "@/lib/api/reportApi"
 
 const getStatusBadge = (status: string) => {
@@ -82,8 +83,22 @@ const getMethodBadge = (method: string) => {
   return <Badge variant="outline">{method}</Badge>
 }
 
+const getEffectivePaymentStatus = (payment: Payment, refundRequests: RefundRequest[]) => {
+  // Check if there's an approved refund for this payment
+  const hasApprovedRefund = refundRequests.some(refund => {
+    const refundPaymentId = typeof refund.paymentId === 'string' 
+      ? refund.paymentId 
+      : refund.paymentId._id
+    return refundPaymentId === payment._id && refund.status === 'approved'
+  })
+  
+  // If there's an approved refund, show as refunded regardless of payment status
+  return hasApprovedRefund ? 'refunded' : payment.status
+}
+
 export default function PaymentManagementPage() {
   const [payments, setPayments] = useState<Payment[]>([])
+  const [refundRequests, setRefundRequests] = useState<RefundRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -100,8 +115,12 @@ export default function PaymentManagementPage() {
     const fetchPayments = async () => {
       try {
         setLoading(true)
-        const data = await getPayments()
-        setPayments(data)
+        const [paymentsData, refundData] = await Promise.all([
+          getPayments(),
+          getRefundRequests('approved') // Only get approved refunds
+        ])
+        setPayments(paymentsData)
+        setRefundRequests(refundData)
         setError(null)
       } catch (err) {
         console.error('Failed to fetch payments:', err)
@@ -154,7 +173,7 @@ export default function PaymentManagementPage() {
     const searchLower = searchTerm.toLowerCase()
     const matchesSearch = payment.transactionId?.toLowerCase().includes(searchLower) ||
                          payment._id?.toLowerCase().includes(searchLower)
-    const matchesStatus = statusFilter === "all" || payment.status === statusFilter
+    const matchesStatus = statusFilter === "all" || getEffectivePaymentStatus(payment, refundRequests) === statusFilter
     const matchesType = typeFilter === "all" || payment.type === typeFilter
     const matchesMethod = methodFilter === "all" || payment.method === methodFilter
     return matchesSearch && matchesStatus && matchesType && matchesMethod
@@ -371,7 +390,7 @@ export default function PaymentManagementPage() {
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">Payment Status</label>
                   <div>
-                    {selectedPayment && getStatusBadge(selectedPayment.status)}
+                    {selectedPayment && getStatusBadge(getEffectivePaymentStatus(selectedPayment, refundRequests))}
                   </div>
                 </div>
               </div>
@@ -577,7 +596,7 @@ export default function PaymentManagementPage() {
                       {getMethodBadge(payment.method)}
                     </TableCell>
                     <TableCell>
-                      {getStatusBadge(payment.status)}
+                      {getStatusBadge(getEffectivePaymentStatus(payment, refundRequests))}
                     </TableCell>
                     <TableCell>{new Date(payment.date).toLocaleString()}</TableCell>
                     <TableCell className="text-right">
