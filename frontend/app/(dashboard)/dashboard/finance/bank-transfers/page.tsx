@@ -77,7 +77,8 @@ export default function BankTransfersPage() {
       transfer.userId?.name?.toLowerCase().includes(searchLower) ||
       transfer.userId?.email?.toLowerCase().includes(searchLower) ||
       transfer.membershipId?.name?.toLowerCase().includes(searchLower) ||
-      transfer._id?.toLowerCase().includes(searchLower)
+      transfer._id?.toLowerCase().includes(searchLower) ||
+      transfer.notes?.toLowerCase().includes(searchLower)
     
     const matchesStatus = statusFilter === "all" || transfer.status === statusFilter
     const matchesMembership = membershipFilter === "all" || transfer.membershipId?.name === membershipFilter
@@ -197,7 +198,7 @@ export default function BankTransfersPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name, email, or membership..."
+            placeholder="Search by name, email, membership, or notes..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-8"
@@ -266,6 +267,7 @@ export default function BankTransfersPage() {
                   <TableHead>Amount</TableHead>
                   <TableHead>Submitted</TableHead>
                   <TableHead>Receipt</TableHead>
+                  <TableHead>Notes</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -309,6 +311,15 @@ export default function BankTransfersPage() {
                         <Eye className="h-4 w-4 mr-2" />
                         View
                       </Button>
+                    </TableCell>
+                    <TableCell>
+                      <div className="max-w-[200px] truncate text-sm">
+                        {transfer.notes ? (
+                          <span title={transfer.notes}>{transfer.notes}</span>
+                        ) : (
+                          <span className="text-muted-foreground">No notes</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-end">
@@ -540,6 +551,12 @@ export default function BankTransfersPage() {
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-muted-foreground">Membership Plan</label>
                     <p className="text-sm">{selectedTransfer.membershipId?.name || 'Unknown Plan'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Transaction ID</label>
+                    <p className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                      {selectedTransfer.transferId || 'Not available'}
+                    </p>
                   </div>
                 </div>
               </div>

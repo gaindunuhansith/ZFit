@@ -115,7 +115,7 @@ export const approveBankTransferPaymentService = async (id: string, adminId: str
         status: 'completed', // Bank transfers are completed when approved
         method: 'bank-transfer',
         relatedId: bankTransfer.membershipId,
-        transactionId: `BT-${bankTransfer._id}-${Date.now()}`, // Generate unique transaction ID
+        transactionId: bankTransfer.transferId || `BT-${bankTransfer._id}-${Date.now()}`, // Use the bank transfer ID or fallback to old format
         date: new Date()
     };
 

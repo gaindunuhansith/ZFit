@@ -246,6 +246,54 @@ export interface PayHerePaymentResponse {
   paymentForm: string
 }
 
+export interface PayHereRefundRequest {
+  paymentId: string
+  amount: number
+  reason?: string
+}
+
+export interface PayHereRefundResponse {
+  refundId: string
+  status: string
+  amount: number
+  currency: string
+  processedAt: string
+  checkoutUrl?: string // For redirect-based refunds
+  paymentForm?: string // For form-based refunds
+}
+
+// PayHere refund function
+export const initiatePayHereRefund = async (refundData: PayHereRefundRequest): Promise<PayHereRefundResponse> => {
+  try {
+    const response = await apiRequest<PayHereRefundResponse>('/gateways/payhere/refund', {
+      method: 'POST',
+      body: JSON.stringify(refundData),
+    })
+    
+    console.log('PayHere refund API response:', response)
+    
+    // Handle special case where refund is processed but requires manual verification
+    if (response.message && response.message.includes('Refund processed (manual verification required)')) {
+      // Return a mock successful response for manual verification cases
+      return {
+        refundId: `manual-${Date.now()}`,
+        status: 'pending_verification',
+        amount: refundData.amount,
+        currency: 'LKR',
+        processedAt: new Date().toISOString()
+      }
+    }
+    
+    if (!response.success || !response.data) {
+      throw new Error(response.message || 'Failed to initiate PayHere refund')
+    }
+    return response.data
+  } catch (error) {
+    console.error('Error initiating PayHere refund:', error)
+    throw error
+  }
+}
+
 // PayHere payment functions
 export const initiatePayHerePayment = async (paymentData: PayHerePaymentRequest): Promise<PayHerePaymentResponse> => {
   try {
@@ -343,6 +391,7 @@ export const createBankTransferPayment = async (paymentData: BankTransferPayment
 // Bank Transfer Admin types
 export interface BankTransferAdmin {
   _id: string
+  transferId?: string
   userId: {
     _id: string
     name: string

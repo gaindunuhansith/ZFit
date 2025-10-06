@@ -64,7 +64,18 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { getRefunds, approveRefund, denyRefund, deleteRefund, createRefund, updateRefund, type Refund } from "@/lib/api/refundApi"
+import { getPayments, type Payment } from "@/lib/api/paymentApi"
+import { getMembers } from "@/lib/api/userApi"
 import { generateRefundsReport } from "@/lib/api/reportApi"
+
+interface User {
+  _id: string
+  name: string
+  email: string
+  contactNo?: string
+  role: string
+  status: string
+}
 
 // Mock refund data - REMOVED
 // const refunds = [...]
@@ -126,6 +137,10 @@ export default function RefundManagementPage() {
     originalAmount: '',
     notes: ''
   })
+  const [userSearchTerm, setUserSearchTerm] = useState('')
+  const [userSearchResults, setUserSearchResults] = useState<User[]>([])
+  const [showUserDropdown, setShowUserDropdown] = useState(false)
+  const [allUsers, setAllUsers] = useState<User[]>([])
 
   // Fetch refunds on component mount
   useEffect(() => {
@@ -158,6 +173,22 @@ export default function RefundManagementPage() {
     }
 
     fetchPendingCount()
+  }, [])
+
+  // Load all users for search functionality
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const response = await getMembers()
+        if (response.success && response.data && Array.isArray(response.data)) {
+          setAllUsers(response.data)
+        }
+      } catch (err) {
+        console.error('Failed to load users:', err)
+      }
+    }
+
+    loadUsers()
   }, [])
 
   const filteredRefunds = refunds.filter(refund => {
@@ -237,6 +268,71 @@ export default function RefundManagementPage() {
     }
   }
 
+  // User search functions
+  const handleUserSearch = (searchTerm: string) => {
+    setUserSearchTerm(searchTerm)
+    if (searchTerm.trim().length > 0) {
+      const filtered = allUsers.filter(user =>
+        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.contactNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user._id?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      // Sort by relevance: exact matches first, then partial matches
+      const sorted = filtered.sort((a, b) => {
+        const aName = a.name.toLowerCase()
+        const bName = b.name.toLowerCase()
+        const search = searchTerm.toLowerCase()
+
+        // Exact name match gets highest priority
+        if (aName === search) return -1
+        if (bName === search) return 1
+
+        // Name starts with search term
+        if (aName.startsWith(search) && !bName.startsWith(search)) return -1
+        if (bName.startsWith(search) && !aName.startsWith(search)) return 1
+
+        // Alphabetical order as fallback
+        return aName.localeCompare(bName)
+      })
+
+      setUserSearchResults(sorted.slice(0, 10)) // Limit to 10 results
+      setShowUserDropdown(true)
+    } else {
+      setUserSearchResults([])
+      setShowUserDropdown(false)
+    }
+  }
+
+  const selectUser = (user: User) => {
+    setCreateFormData(prev => ({ ...prev, userId: user._id }))
+    setUserSearchTerm(`${user.name} (${user.email})`)
+    setShowUserDropdown(false)
+    setUserSearchResults([])
+    // Clear any userId validation errors
+    if (createFormErrors.userId) {
+      setCreateFormErrors(prev => ({ ...prev, userId: '' }))
+    }
+  }
+
+  // Helper function to highlight search terms
+  const highlightText = (text: string, searchTerm: string) => {
+    if (!searchTerm.trim()) return text
+
+    const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+    const parts = text.split(regex)
+
+    return parts.map((part, index) =>
+      regex.test(part) ? (
+        <span key={index} className="bg-green-600 text-white font-semibold px-1 rounded">
+          {part}
+        </span>
+      ) : (
+        part
+      )
+    )
+  }
+
   const validateObjectId = (id: string): boolean => {
     return /^[0-9a-fA-F]{24}$/.test(id);
   }
@@ -245,9 +341,7 @@ export default function RefundManagementPage() {
     const errors: {[key: string]: string} = {};
 
     if (!createFormData.paymentId.trim()) {
-      errors.paymentId = 'Payment ID is required';
-    } else if (!validateObjectId(createFormData.paymentId)) {
-      errors.paymentId = 'Payment ID must be a valid 24-character ObjectId';
+      errors.paymentId = 'Transaction ID is required';
     }
 
     if (!createFormData.userId.trim()) {
@@ -290,8 +384,23 @@ export default function RefundManagementPage() {
     }
 
     try {
+      setCreateFormErrors({});
+
+      // If paymentId looks like a transaction ID (not a 24-char ObjectId), look up the actual payment
+      let actualPaymentId = createFormData.paymentId;
+      if (!validateObjectId(createFormData.paymentId)) {
+        // It's a transaction ID, find the payment
+        const allPayments = await getPayments();
+        const payment = allPayments.find((p: Payment) => p.transactionId === createFormData.paymentId);
+        if (!payment) {
+          setCreateFormErrors({ paymentId: 'No payment found with this transaction ID' });
+          return;
+        }
+        actualPaymentId = payment._id;
+      }
+
       const refundData = {
-        paymentId: createFormData.paymentId,
+        paymentId: actualPaymentId,
         userId: createFormData.userId,
         refundAmount: parseFloat(createFormData.refundAmount),
         originalAmount: parseFloat(createFormData.originalAmount),
@@ -308,6 +417,9 @@ export default function RefundManagementPage() {
         originalAmount: '',
         notes: ''
       })
+      setUserSearchTerm('')
+      setUserSearchResults([])
+      setShowUserDropdown(false)
       setIsCreateModalOpen(false)
 
       // Refresh refunds list
@@ -644,24 +756,24 @@ export default function RefundManagementPage() {
 
       {/* Create Refund Modal */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Create Refund Request</DialogTitle>
             <DialogDescription>
               Create a new refund request for a member.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             {createFormErrors.general && (
-              <div className="col-span-2 p-3 bg-red-50 border border-red-200 rounded-md">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                 <p className="text-sm text-red-600">{createFormErrors.general}</p>
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="refund-payment">Payment ID *</Label>
+              <Label htmlFor="refund-payment">Transaction ID *</Label>
               <Input
                 id="refund-payment"
-                placeholder="Enter payment ID to refund"
+                placeholder="Enter transaction ID to refund"
                 value={createFormData.paymentId}
                 onChange={(e) => {
                   setCreateFormData(prev => ({ ...prev, paymentId: e.target.value }));
@@ -676,19 +788,123 @@ export default function RefundManagementPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="refund-user">User ID *</Label>
-              <Input
-                id="refund-user"
-                placeholder="Enter user ID"
-                value={createFormData.userId}
-                onChange={(e) => {
-                  setCreateFormData(prev => ({ ...prev, userId: e.target.value }));
-                  if (createFormErrors.userId) {
-                    setCreateFormErrors(prev => ({ ...prev, userId: '' }));
-                  }
-                }}
-                className={createFormErrors.userId ? 'border-red-500' : ''}
-              />
+              <Label htmlFor="refund-user">Search User *</Label>
+              <div className="relative">
+                <Input
+                  id="refund-user"
+                  placeholder="Search by name, email, or ID"
+                  value={userSearchTerm}
+                  onChange={(e) => handleUserSearch(e.target.value)}
+                  onFocus={() => {
+                    if (userSearchResults.length > 0) {
+                      setShowUserDropdown(true)
+                    }
+                  }}
+                  onBlur={() => {
+                    // Delay hiding dropdown to allow click on items
+                    setTimeout(() => setShowUserDropdown(false), 200)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setShowUserDropdown(false)
+                      setUserSearchResults([])
+                    }
+                  }}
+                  className={`transition-all duration-200 ${
+                    createFormErrors.userId
+                      ? 'border-red-500 focus:border-red-500 focus:ring-red-200'
+                      : 'border-gray-300 focus:border-green-500 focus:ring-green-200 hover:border-green-400'
+                  }`}
+                />
+                {showUserDropdown && userSearchResults.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-black border-2 border-green-400 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+                    <div className="py-1">
+                      {userSearchResults.map((user, index) => (
+                        <div
+                          key={user._id}
+                          className="px-4 py-3 hover:bg-gradient-to-r hover:from-green-900 hover:to-gray-800 cursor-pointer transition-all duration-200 border-b border-gray-700 last:border-b-0 group"
+                          onClick={() => selectUser(user)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            {/* User Avatar/Initials */}
+                            <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:shadow-lg transition-shadow">
+                              {user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                            </div>
+
+                            {/* User Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center space-x-2">
+                                <p className="text-sm font-semibold text-white truncate group-hover:text-green-400 transition-colors">
+                                  {highlightText(user.name, userSearchTerm)}
+                                </p>
+                                <Badge
+                                  variant={user.role === 'member' ? 'default' : user.role === 'staff' ? 'secondary' : 'outline'}
+                                  className={`text-xs px-2 py-0.5 font-medium ${
+                                    user.role === 'member'
+                                      ? 'bg-green-900 text-green-300 border-green-600 hover:bg-green-800'
+                                      : user.role === 'staff'
+                                      ? 'bg-emerald-900 text-emerald-300 border-emerald-600 hover:bg-emerald-800'
+                                      : 'bg-teal-900 text-teal-300 border-teal-600 hover:bg-teal-800'
+                                  }`}
+                                >
+                                  {user.role}
+                                </Badge>
+                                <Badge
+                                  variant={user.status === 'active' ? 'default' : user.status === 'inactive' ? 'secondary' : 'destructive'}
+                                  className={`text-xs px-2 py-0.5 font-medium ${
+                                    user.status === 'active'
+                                      ? 'bg-green-900 text-green-300 border-green-600 hover:bg-green-800'
+                                      : user.status === 'inactive'
+                                      ? 'bg-orange-900 text-orange-300 border-orange-600 hover:bg-orange-800'
+                                      : 'bg-red-900 text-red-300 border-red-600 hover:bg-red-800'
+                                  }`}
+                                >
+                                  {user.status}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-gray-300 truncate group-hover:text-green-400 transition-colors">
+                                {highlightText(user.email, userSearchTerm)}
+                              </p>
+                              {user.contactNo && (
+                                <p className="text-xs text-gray-400 truncate group-hover:text-emerald-400 transition-colors">
+                                  📞 {highlightText(user.contactNo, userSearchTerm)}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* User ID */}
+                            <div className="flex-shrink-0 text-xs text-gray-500 font-mono bg-gray-800 px-2 py-1 rounded group-hover:bg-green-900 group-hover:text-green-300 transition-colors">
+                              {user._id.slice(-6)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Footer with result count */}
+                    <div className="px-4 py-3 bg-gradient-to-r from-gray-900 to-gray-800 border-t-2 border-green-400 rounded-b-xl">
+                      <p className="text-xs text-green-400 font-medium text-center">
+                        🎯 {userSearchResults.length} user{userSearchResults.length !== 1 ? 's' : ''} found
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* No results message */}
+                {showUserDropdown && userSearchTerm.trim().length > 0 && userSearchResults.length === 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-black border-2 border-red-400 rounded-xl shadow-2xl">
+                    <div className="px-4 py-6 text-center">
+                      <div className="text-red-400 mb-2">
+                        <svg className="mx-auto h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 16.318A4.486 4.486 0 0012.016 15a4.486 4.486 0 00-3.198 1.318M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
+                        </svg>
+                      </div>
+                      <p className="text-sm font-medium text-red-400">No users found</p>
+                      <p className="text-xs text-red-500 mt-1">Try a different search term</p>
+                    </div>
+                  </div>
+                )}
+              </div>
               {createFormErrors.userId && (
                 <p className="text-sm text-red-600">{createFormErrors.userId}</p>
               )}
@@ -733,7 +949,7 @@ export default function RefundManagementPage() {
                 <p className="text-sm text-red-600">{createFormErrors.refundAmount}</p>
               )}
             </div>
-            <div className="space-y-2 col-span-2">
+            <div className="space-y-2">
               <Label htmlFor="refund-notes">Notes *</Label>
               <Textarea
                 id="refund-notes"
