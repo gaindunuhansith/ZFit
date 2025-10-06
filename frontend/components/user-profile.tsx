@@ -20,9 +20,7 @@ import {
   Eye,
   CheckCircle,
   XCircle,
-  Clock,
-  Building,
-  Briefcase
+  Clock
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { getUserById, updateUser } from "@/lib/api/userApi"
@@ -59,8 +57,6 @@ interface UserProfileData {
   lastLogin?: string
   updatedAt?: string
   fitnessGoals?: string[]
-  department?: string
-  position?: string
   employeeId?: string
   manager?: string
   salary?: number
@@ -495,21 +491,6 @@ export function UserProfile({
 
               {isStaff && (
                 <>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Building className="h-4 w-4" />
-                      Department
-                    </div>
-                    <p className="font-medium">{profileData?.department || 'N/A'}</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Briefcase className="h-4 w-4" />
-                      Position
-                    </div>
-                    <p className="font-medium">{profileData?.position || 'N/A'}</p>
-                  </div>
                 </>
               )}
             </div>

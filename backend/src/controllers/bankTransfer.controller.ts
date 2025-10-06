@@ -4,7 +4,8 @@ import mongoose from 'mongoose';
 import BankTransferPayment from '../models/bankTransfer.model.js';
 import type { IBankTransferPayment } from '../models/bankTransfer.model.js';
 import { uploadReceiptImage } from '../services/fileUpload.service.js';
-import { sendBankTransferApprovalEmail, sendBankTransferDeclineEmail } from '../util/sendMail.util.js';
+import { sendMail } from '../util/sendMail.util.js';
+import { getBankTransferApprovalTemplate, getBankTransferDeclineTemplate, type BankTransferApprovalData } from '../util/emailTemplates.js';
 
 import {
     createBankTransferPaymentService,
@@ -227,7 +228,7 @@ export const approveBankTransfer = async (req: Request, res: Response) => {
                 const membershipData = payment.membershipId as any;
                 
                 if (userData?.email) {
-                    await sendBankTransferApprovalEmail(userData.email, {
+                    const template = getBankTransferApprovalTemplate({
                         userName: userData.name || 'Customer',
                         membershipName: membershipData?.name || 'Membership',
                         amount: payment.amount,
@@ -241,6 +242,13 @@ export const approveBankTransfer = async (req: Request, res: Response) => {
                             minute: '2-digit'
                         }),
                         adminNotes: adminNotes || undefined
+                    });
+                    
+                    await sendMail({
+                        to: userData.email,
+                        subject: template.subject,
+                        text: template.text,
+                        html: template.html
                     });
                     
                     console.log(`Approval email sent to ${userData.email} for bank transfer ${payment._id}`);
@@ -316,7 +324,7 @@ export const declineBankTransfer = async (req: Request, res: Response) => {
                 const membershipData = payment.membershipId as any;
                 
                 if (userData?.email) {
-                    await sendBankTransferDeclineEmail(userData.email, {
+                    const template = getBankTransferDeclineTemplate({
                         userName: userData.name || 'Customer',
                         membershipName: membershipData?.name || 'Membership',
                         amount: payment.amount,
@@ -330,6 +338,13 @@ export const declineBankTransfer = async (req: Request, res: Response) => {
                             minute: '2-digit'
                         }),
                         adminNotes: adminNotes || undefined
+                    });
+                    
+                    await sendMail({
+                        to: userData.email,
+                        subject: template.subject,
+                        text: template.text,
+                        html: template.html
                     });
                     
                     console.log(`Decline email sent to ${userData.email} for bank transfer ${payment._id}`);
