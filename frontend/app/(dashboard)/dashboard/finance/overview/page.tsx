@@ -326,7 +326,7 @@ export default function PaymentManagementPage() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">Email Address</label>
                   <p className="text-sm break-all">{userData.email}</p>
@@ -334,6 +334,10 @@ export default function PaymentManagementPage() {
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">Contact Number</label>
                   <p className="text-sm font-medium">{userData.contactNo}</p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">User ID</label>
+                  <p className="text-xs font-mono bg-muted px-2 py-1 rounded">{userData._id}</p>
                 </div>
               </div>
             </div>
@@ -575,7 +579,7 @@ export default function PaymentManagementPage() {
                     <TableCell>
                       {getStatusBadge(payment.status)}
                     </TableCell>
-                    <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(payment.date).toLocaleString()}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

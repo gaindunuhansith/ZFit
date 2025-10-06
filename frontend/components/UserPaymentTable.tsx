@@ -218,7 +218,7 @@ export function UserPaymentTable({ userId, userName }: UserPaymentTableProps) {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {new Date(payment.date).toLocaleDateString()}
+                          {new Date(payment.date).toLocaleString()}
                         </div>
                       </TableCell>
                       <TableCell>
