@@ -256,11 +256,11 @@ export default function PaymentSuccessPage() {
 
           <div className="space-y-3">
             {verification?.status === 'completed' && (
-              <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
-                <p className="text-green-800 font-medium text-sm mb-1">
+              <div className="bg-black border border-green-500/75 p-3 rounded-lg">
+                <p className="text-white font-medium text-sm mb-1">
                   ✅ Membership Activated!
                 </p>
-                <p className="text-green-700 text-xs">
+                <p className="text-gray-300 text-xs">
                   Your membership is now active and ready to use. Check your email for confirmation details.
                 </p>
               </div>
@@ -268,9 +268,12 @@ export default function PaymentSuccessPage() {
             
             {(verification?.status === 'pending' || loading) && (
               <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
-                <p className="text-blue-800 font-medium text-sm mb-1">
-                  ⏳ Processing Payment
-                </p>
+                <div className="flex items-center gap-2 mb-1">
+                  <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+                  <p className="text-blue-800 font-medium text-sm">
+                    Processing Payment
+                  </p>
+                </div>
                 <p className="text-blue-700 text-xs">
                   Your payment is being processed. Please wait a moment and refresh if needed.
                 </p>
