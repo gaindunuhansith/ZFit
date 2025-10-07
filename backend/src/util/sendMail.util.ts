@@ -9,10 +9,10 @@ type Params = {
 };
 
 const getFromEmail = () => 
-    env.EMAIL_MODE === "development" ? "onboarding@resend.dev" : env.EMAIL_SENDER;
+    env.NODE_ENV === "development" ? "onboarding@resend.dev" : env.EMAIL_SENDER;
 
 const getToEmail = (to: string) => 
-    env.EMAIL_MODE === "development" ? "delivered@resend.dev" : to;
+    env.NODE_ENV === "development" ? "delivered@resend.dev" : to;
 
 export const sendMail = async ({ to, subject, text, html }: Params) => {
 
