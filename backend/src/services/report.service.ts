@@ -31,6 +31,11 @@ export interface InventoryReportFilters {
   maxStock?: number | undefined
 }
 
+export interface UserReportFilters {
+  searchTerm?: string | undefined
+  status?: string | undefined
+}
+
 /**
  * Apply filters to inventory items array
  */
@@ -610,13 +615,31 @@ export async function generateMembershipPlansReport(): Promise<Buffer> {
 /**
  * Generate members report
  */
-export async function generateMembersReport(): Promise<Buffer> {
+export async function generateMembersReport(filters?: UserReportFilters): Promise<Buffer> {
   // Get all members data
   const { getAllMembers } = await import('./user.service.js')
-  const members = await getAllMembers()
+  let members = await getAllMembers()
+
+  // Apply filters if provided
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      members = members.filter((member: any) => 
+        member.name?.toLowerCase().includes(searchLower) ||
+        member.email?.toLowerCase().includes(searchLower) ||
+        member.contactNo?.toLowerCase().includes(searchLower)
+      )
+    }
+
+    if (filters.status) {
+      members = members.filter((member: any) => 
+        member.status?.toLowerCase() === filters.status?.toLowerCase()
+      )
+    }
+  }
 
   const config: ReportConfig = {
-    title: 'Members Report',
+    title: filters?.searchTerm || filters?.status ? 'Members Report (Filtered)' : 'Members Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -652,13 +675,31 @@ export async function generateMembersReport(): Promise<Buffer> {
 /**
  * Generate staff report
  */
-export async function generateStaffReport(): Promise<Buffer> {
+export async function generateStaffReport(filters?: UserReportFilters): Promise<Buffer> {
   // Get all staff data
   const { getAllStaff } = await import('./user.service.js')
-  const staff = await getAllStaff()
+  let staff = await getAllStaff()
+
+  // Apply filters if provided
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      staff = staff.filter((member: any) => 
+        member.name?.toLowerCase().includes(searchLower) ||
+        member.email?.toLowerCase().includes(searchLower) ||
+        member.contactNo?.toLowerCase().includes(searchLower)
+      )
+    }
+
+    if (filters.status) {
+      staff = staff.filter((member: any) => 
+        member.status?.toLowerCase() === filters.status?.toLowerCase()
+      )
+    }
+  }
 
   const config: ReportConfig = {
-    title: 'Staff Report',
+    title: filters?.searchTerm || filters?.status ? 'Staff Report (Filtered)' : 'Staff Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -694,13 +735,31 @@ export async function generateStaffReport(): Promise<Buffer> {
 /**
  * Generate managers report
  */
-export async function generateManagersReport(): Promise<Buffer> {
+export async function generateManagersReport(filters?: UserReportFilters): Promise<Buffer> {
   // Get all managers data
   const { getAllManagers } = await import('./user.service.js')
-  const managers = await getAllManagers()
+  let managers = await getAllManagers()
+
+  // Apply filters if provided
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      managers = managers.filter((member: any) => 
+        member.name?.toLowerCase().includes(searchLower) ||
+        member.email?.toLowerCase().includes(searchLower) ||
+        member.contactNo?.toLowerCase().includes(searchLower)
+      )
+    }
+
+    if (filters.status) {
+      managers = managers.filter((member: any) => 
+        member.status?.toLowerCase() === filters.status?.toLowerCase()
+      )
+    }
+  }
 
   const config: ReportConfig = {
-    title: 'Managers Report',
+    title: filters?.searchTerm || filters?.status ? 'Managers Report (Filtered)' : 'Managers Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {

@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import { generateMembershipsReport, generateMembershipPlansReport, generateMembersReport, generateStaffReport, generateManagersReport, type InventoryReportFilters } from '../services/report.service.js'
+import { generateMembershipsReport, generateMembershipPlansReport, generateMembersReport, generateStaffReport, generateManagersReport, type InventoryReportFilters, type UserReportFilters } from '../services/report.service.js'
 
 export const generateMembershipsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -31,10 +31,23 @@ export const generateMembershipPlansReportHandler = async (req: Request, res: Re
 
 export const generateMembersReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const pdfBuffer = await generateMembersReport()
+    // Extract filter parameters from query string
+    const searchTerm = req.query.searchTerm as string
+    const status = req.query.status as string
+    
+    const filters = {
+      searchTerm: searchTerm || undefined,
+      status: status || undefined
+    }
+
+    const pdfBuffer = await generateMembersReport(filters)
+
+    // Generate appropriate filename
+    const hasFilters = searchTerm || status
+    const filename = hasFilters ? 'members-report-filtered.pdf' : 'members-report.pdf'
 
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=members-report.pdf')
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
     res.setHeader('Content-Length', pdfBuffer.length)
 
     res.send(pdfBuffer)
@@ -45,10 +58,23 @@ export const generateMembersReportHandler = async (req: Request, res: Response, 
 
 export const generateStaffReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const pdfBuffer = await generateStaffReport()
+    // Extract filter parameters from query string
+    const searchTerm = req.query.searchTerm as string
+    const status = req.query.status as string
+    
+    const filters = {
+      searchTerm: searchTerm || undefined,
+      status: status || undefined
+    }
+
+    const pdfBuffer = await generateStaffReport(filters)
+
+    // Generate appropriate filename
+    const hasFilters = searchTerm || status
+    const filename = hasFilters ? 'staff-report-filtered.pdf' : 'staff-report.pdf'
 
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=staff-report.pdf')
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
     res.setHeader('Content-Length', pdfBuffer.length)
 
     res.send(pdfBuffer)
@@ -59,10 +85,23 @@ export const generateStaffReportHandler = async (req: Request, res: Response, ne
 
 export const generateManagersReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const pdfBuffer = await generateManagersReport()
+    // Extract filter parameters from query string
+    const searchTerm = req.query.searchTerm as string
+    const status = req.query.status as string
+    
+    const filters = {
+      searchTerm: searchTerm || undefined,
+      status: status || undefined
+    }
+
+    const pdfBuffer = await generateManagersReport(filters)
+
+    // Generate appropriate filename
+    const hasFilters = searchTerm || status
+    const filename = hasFilters ? 'managers-report-filtered.pdf' : 'managers-report.pdf'
 
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=managers-report.pdf')
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
     res.setHeader('Content-Length', pdfBuffer.length)
 
     res.send(pdfBuffer)
