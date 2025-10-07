@@ -198,12 +198,17 @@ export default function PaymentHistoryPage() {
 
   const handleExportData = () => {
     const csvContent = [
-      ['Date', 'Transaction ID', 'Type', 'Amount', 'Status', 'Method'],
+      ['Date', 'Transaction ID', 'User ID', 'Amount', 'Currency', 'Type', 'Status', 'Method'],
       ...filteredPayments.map(payment => [
         formatDate(payment.createdAt),
         payment.transactionId || 'N/A',
-        payment.type || 'N/A',
+        // Extract user name properly from populated user object
+        typeof payment.userId === 'object' && payment.userId !== null 
+          ? (payment.userId as any).name || 'N/A'
+          : payment.userId || 'N/A',
         payment.amount.toString(),
+        payment.currency || 'LKR',
+        payment.type === 'other' ? 'inventory' : (payment.type || 'N/A'),
         payment.status,
         payment.method || 'N/A'
       ])
@@ -383,37 +388,6 @@ export default function PaymentHistoryPage() {
         </Button>
       </div>
 
-      {/* User Information Card */}
-      {user && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <User className="h-5 w-5" />
-              <span>User Information</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center space-x-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">Name:</span>
-                <span>{user.name}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">Email:</span>
-                <span>{user.email}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">Contact:</span>
-                <span>{user.contactNo}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Filters and Search */}
       <Card>
         <CardHeader>
@@ -453,7 +427,6 @@ export default function PaymentHistoryPage() {
                 <SelectItem value="all">All Methods</SelectItem>
                 <SelectItem value="card">Card</SelectItem>
                 <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                <SelectItem value="payhere">PayHere</SelectItem>
                 <SelectItem value="cash">Cash</SelectItem>
               </SelectContent>
             </Select>
