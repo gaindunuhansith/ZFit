@@ -115,7 +115,15 @@ export default function CategoriesPage() {
 
   const handleGenerateReport = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/v1/reports/categories/pdf', {
+      // Build query parameters based on current filters
+      const queryParams = new URLSearchParams()
+      
+      if (searchTerm) {
+        queryParams.append('searchTerm', searchTerm)
+      }
+      
+      const url = `http://localhost:5000/api/v1/reports/categories/pdf${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
@@ -127,14 +135,18 @@ export default function CategoriesPage() {
       }
 
       const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
+      const downloadUrl = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
-      link.href = url
-      link.download = `categories-report-${new Date().toISOString().split('T')[0]}.pdf`
+      link.href = downloadUrl
+      
+      // Include filter info in filename if filters are applied
+      const filterSuffix = searchTerm ? '-filtered' : ''
+      link.download = `categories-report${filterSuffix}-${new Date().toISOString().split('T')[0]}.pdf`
+      
       document.body.appendChild(link)
       link.click()
       link.remove()
-      window.URL.revokeObjectURL(url)
+      window.URL.revokeObjectURL(downloadUrl)
     } catch (error) {
       console.error('Error generating report:', error)
       setError('Failed to generate categories report')

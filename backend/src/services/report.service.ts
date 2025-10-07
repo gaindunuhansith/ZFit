@@ -3,39 +3,7 @@ import puppeteer from 'puppeteer'
 import { getAllMemberships } from './membership.service.js'
 import { getPaymentsService } from './payment.services.js'
 
-/**
- * Generic Report Service for generating PDF reports
- *
- * Usage Examples:
- *
- * // For Users Report
- * const userConfig: ReportConfig = {
- *   title: 'Users Report',
- *   companyName: 'ZFit Gym Management System',
- *   columns: [
- *     { key: 'name', header: 'Name' },
- *     { key: 'email', header: 'Email' },
- *     { key: 'role', header: 'Role', type: 'status' },
- *     { key: 'createdAt', header: 'Created Date', type: 'date' }
- *   ],
- *   data: users
- * }
- *
- * // For Staff Report
- * const staffConfig: ReportConfig = {
- *   title: 'Staff Report',
- *   columns: [
- *     { key: 'name', header: 'Name' },
- *     { key: 'position', header: 'Position' },
- *     { key: 'salary', header: 'Salary', type: 'currency' },
- *     { key: 'hireDate', header: 'Hire Date', type: 'date' }
- *   },
- *   data: staff
- * }
- *
- * // Generate report
- * const pdfBuffer = await generateGenericReport(config)
- */
+
 
 export interface ReportColumn {
   key: string
@@ -51,6 +19,74 @@ export interface ReportConfig {
   columns: ReportColumn[]
   data: any[]
   customStyles?: string
+}
+
+export interface InventoryReportFilters {
+  searchTerm?: string | undefined
+  categoryId?: string | undefined
+  type?: string | undefined
+  lowStockOnly?: boolean | undefined
+  supplierId?: string | undefined
+  minStock?: number | undefined
+  maxStock?: number | undefined
+}
+
+/**
+ * Apply filters to inventory items array
+ */
+function applyInventoryFilters(items: any[], filters: InventoryReportFilters): any[] {
+  let filteredItems = [...items]
+
+  // Filter by search term (item name)
+  if (filters.searchTerm) {
+    const searchLower = filters.searchTerm.toLowerCase()
+    filteredItems = filteredItems.filter(item => 
+      item.name?.toLowerCase().includes(searchLower) ||
+      (typeof item.categoryID === 'object' ? item.categoryID?.name?.toLowerCase().includes(searchLower) : false) ||
+      (typeof item.supplierID === 'object' ? item.supplierID?.supplierName?.toLowerCase().includes(searchLower) : false)
+    )
+  }
+
+  // Filter by category
+  if (filters.categoryId) {
+    filteredItems = filteredItems.filter(item => {
+      const categoryId = typeof item.categoryID === 'object' ? item.categoryID?._id?.toString() : item.categoryID?.toString()
+      return categoryId === filters.categoryId
+    })
+  }
+
+  // Filter by type
+  if (filters.type) {
+    filteredItems = filteredItems.filter(item => item.type === filters.type)
+  }
+
+  // Filter by supplier
+  if (filters.supplierId) {
+    filteredItems = filteredItems.filter(item => {
+      const supplierId = typeof item.supplierID === 'object' ? item.supplierID?._id?.toString() : item.supplierID?.toString()
+      return supplierId === filters.supplierId
+    })
+  }
+
+  // Filter by stock range
+  if (filters.minStock !== undefined) {
+    filteredItems = filteredItems.filter(item => (item.stock || 0) >= filters.minStock!)
+  }
+
+  if (filters.maxStock !== undefined) {
+    filteredItems = filteredItems.filter(item => (item.stock || 0) <= filters.maxStock!)
+  }
+
+  // Filter by low stock only
+  if (filters.lowStockOnly) {
+    filteredItems = filteredItems.filter(item => {
+      const currentStock = item.stock || 0
+      const alertThreshold = item.lowStockAlert || 10
+      return currentStock <= alertThreshold
+    })
+  }
+
+  return filteredItems
 }
 
 /**
@@ -698,50 +734,61 @@ export async function generateManagersReport(): Promise<Buffer> {
 }
 
 /**
- * Generate Inventory Items Report
+ * Generate Inventory Items Report with optional filters
  */
-export async function generateInventoryItemsReport(): Promise<Buffer> {
+export async function generateInventoryItemsReport(filters?: InventoryReportFilters): Promise<Buffer> {
   const inventoryService = new (await import('./inventoryItem.service.js')).default()
-  const items = await inventoryService.getAllItems()
+  let items = await inventoryService.getAllItems()
+
+  // Apply filters if provided
+  if (filters) {
+    items = applyInventoryFilters(items, filters)
+  }
+
+  const reportTitle = filters && Object.values(filters).some(v => v !== undefined && v !== '') 
+    ? 'Filtered Inventory Items Report' 
+    : 'Inventory Items Report'
 
   const config: ReportConfig = {
-    title: 'Inventory Items Report',
+    title: reportTitle,
     companyName: 'ZFit Gym Management System',
     columns: [
       {
-        key: 'itemName',
+        key: 'name',
         header: 'Item Name',
         className: 'item-name-cell'
       },
       {
         key: 'categoryID',
         header: 'Category',
-        className: 'category-cell'
+        formatter: (value) => typeof value === 'object' ? value?.name || 'Unknown Category' : value || 'Unknown Category'
       },
       {
         key: 'supplierID',
         header: 'Supplier',
-        formatter: (value) => value?.supplierName || 'No Supplier'
+        formatter: (value) => typeof value === 'object' ? value?.supplierName || 'No Supplier' : 'No Supplier'
       },
       {
-        key: 'quantity',
+        key: 'stock',
         header: 'Current Stock',
-        className: 'quantity-cell'
+        className: 'quantity-cell',
+        formatter: (value) => value || '0'
       },
       {
         key: 'price',
         header: 'Price (LKR)',
-        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+        formatter: (value) => value ? `LKR ${value.toFixed(2)}` : 'N/A'
       },
       {
-        key: 'lowStockThreshold',
+        key: 'lowStockAlert',
         header: 'Low Stock Alert',
-        className: 'threshold-cell'
+        className: 'threshold-cell',
+        formatter: (value) => value || 'Not Set'
       },
       {
-        key: 'maintenanceStatus',
-        header: 'Status',
-        formatter: (value) => `<span class="status-badge status-${value}">${value.replace('_', ' ').toUpperCase()}</span>`
+        key: 'type',
+        header: 'Type',
+        formatter: (value) => value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Unknown'
       }
     ],
     data: items as any[]
@@ -753,12 +800,35 @@ export async function generateInventoryItemsReport(): Promise<Buffer> {
 /**
  * Generate Stock Levels Report
  */
-export async function generateStockLevelsReport(): Promise<Buffer> {
-  const reportService = new (await import('./reportService.js')).default()
-  const stockData = await reportService.getStockLevels()
+export async function generateStockLevelsReport(filters?: InventoryReportFilters): Promise<Buffer> {
+  const inventoryService = new (await import('./inventoryItem.service.js')).default()
+  let items = await inventoryService.getAllItems()
+
+  // Filter only sellable items for stock report
+  items = items.filter((item: any) => item.type === 'sellable')
+
+  // Apply additional filters if provided
+  if (filters) {
+    items = applyInventoryFilters(items, filters)
+  }
+
+  // Transform data for stock report
+  const stockData = items.map((item: any) => ({
+    name: item.name,
+    category: typeof item.categoryID === 'object' ? item.categoryID?.name : 'Unknown Category',
+    supplier: typeof item.supplierID === 'object' ? item.supplierID?.supplierName : 'No Supplier',
+    quantity: item.stock || 0,
+    lowStock: (item.stock || 0) < (item.lowStockAlert || 10),
+    lowStockAlert: item.lowStockAlert || 'Not Set',
+    price: item.price || 0
+  }))
+
+  const reportTitle = filters && Object.values(filters).some(v => v !== undefined && v !== '') 
+    ? 'Filtered Stock Levels Report' 
+    : 'Stock Levels Report'
 
   const config: ReportConfig = {
-    title: 'Stock Levels Report',
+    title: reportTitle,
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -773,13 +843,22 @@ export async function generateStockLevelsReport(): Promise<Buffer> {
       },
       {
         key: 'supplier',
-        header: 'Supplier',
-        formatter: (value) => value?.supplierName || 'No Supplier'
+        header: 'Supplier'
       },
       {
         key: 'quantity',
         header: 'Current Stock',
         className: 'quantity-cell'
+      },
+      {
+        key: 'lowStockAlert',
+        header: 'Low Stock Alert',
+        className: 'threshold-cell'
+      },
+      {
+        key: 'price',
+        header: 'Price (LKR)',
+        formatter: (value) => value ? `LKR ${value.toFixed(2)}` : 'N/A'
       },
       {
         key: 'lowStock',
@@ -798,12 +877,27 @@ export async function generateStockLevelsReport(): Promise<Buffer> {
 /**
  * Generate Suppliers Report
  */
-export async function generateSuppliersReport(): Promise<Buffer> {
+export async function generateSuppliersReport(searchTerm?: string): Promise<Buffer> {
   const supplierService = new (await import('./inventorySupplier.service.js')).default()
-  const suppliers = await supplierService.getAllSuppliers()
+  let suppliers = await supplierService.getAllSuppliers()
+
+  // Apply search filter if provided
+  if (searchTerm) {
+    const searchLower = searchTerm.toLowerCase()
+    suppliers = suppliers.filter((supplier: any) => 
+      supplier.supplierName?.toLowerCase().includes(searchLower) ||
+      supplier.supplierEmail?.toLowerCase().includes(searchLower) ||
+      supplier.supplierPhone?.toLowerCase().includes(searchLower) ||
+      supplier.supplierAddress?.toLowerCase().includes(searchLower)
+    )
+  }
+
+  const reportTitle = searchTerm 
+    ? 'Filtered Suppliers Report' 
+    : 'Suppliers Report'
 
   const config: ReportConfig = {
-    title: 'Suppliers Report',
+    title: reportTitle,
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -842,12 +936,32 @@ export async function generateSuppliersReport(): Promise<Buffer> {
 /**
  * Generate Categories Report
  */
-export async function generateCategoriesReport(): Promise<Buffer> {
+export async function generateCategoriesReport(filters?: { searchTerm?: string; activeOnly?: boolean }): Promise<Buffer> {
   const Category = (await import('../models/category.model.js')).default
-  const categories = await Category.find().sort({ name: 1 })
+  let query: any = {}
+
+  // Filter by active status if specified
+  if (filters?.activeOnly) {
+    query.isActive = true
+  }
+
+  let categories = await Category.find(query).sort({ name: 1 })
+
+  // Apply search filter if provided
+  if (filters?.searchTerm) {
+    const searchLower = filters.searchTerm.toLowerCase()
+    categories = categories.filter((category: any) => 
+      category.name?.toLowerCase().includes(searchLower) ||
+      category.description?.toLowerCase().includes(searchLower)
+    )
+  }
+
+  const reportTitle = (filters?.searchTerm || filters?.activeOnly) 
+    ? 'Filtered Categories Report' 
+    : 'Categories Report'
 
   const config: ReportConfig = {
-    title: 'Categories Report',
+    title: reportTitle,
     columns: [
       {
         key: 'name',
@@ -857,7 +971,15 @@ export async function generateCategoriesReport(): Promise<Buffer> {
       {
         key: 'description',
         header: 'Description',
-        className: 'description-cell'
+        className: 'description-cell',
+        formatter: (value) => value || 'No description'
+      },
+      {
+        key: 'isActive',
+        header: 'Status',
+        formatter: (value) => value ? 
+          '<span class="status-badge status-good">ACTIVE</span>' : 
+          '<span class="status-badge status-inactive">INACTIVE</span>'
       },
       {
         key: 'createdAt',

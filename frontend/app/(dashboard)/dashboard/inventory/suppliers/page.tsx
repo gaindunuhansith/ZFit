@@ -17,35 +17,6 @@ import { supplierApiService } from '@/lib/api/supplierApi'
 import type { SupplierData } from '@/lib/api/supplierApi'
 import { SupplierFormModal, SupplierFormData, UpdateSupplierFormData } from '@/components/SupplierFormModal'
 
-const handleGenerateReport = async () => {
-  try {
-    const response = await fetch('http://localhost:5000/api/v1/reports/suppliers/pdf', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error('Failed to generate report')
-    }
-
-    const blob = await response.blob()
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.style.display = 'none'
-    a.href = url
-    a.download = `suppliers-report-${new Date().toISOString().split('T')[0]}.pdf`
-    document.body.appendChild(a)
-    a.click()
-    window.URL.revokeObjectURL(url)
-    document.body.removeChild(a)
-  } catch (error) {
-    console.error('Error generating report:', error)
-    alert('Failed to generate suppliers report')
-  }
-}
-
 interface Supplier {
   _id: string
   supplierName: string
@@ -117,6 +88,46 @@ export default function SuppliersPage() {
       console.error('Error saving supplier:', error)
       setError('Failed to save supplier')
       throw error
+    }
+  }
+
+  const handleGenerateReport = async () => {
+    try {
+      // Build query parameters based on current filters
+      const queryParams = new URLSearchParams()
+      
+      if (searchTerm) {
+        queryParams.append('searchTerm', searchTerm)
+      }
+      
+      const url = `http://localhost:5000/api/v1/reports/suppliers/pdf${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate report')
+      }
+
+      const blob = await response.blob()
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      
+      // Include filter info in filename if filters are applied
+      const filterSuffix = searchTerm ? '-filtered' : ''
+      link.download = `suppliers-report${filterSuffix}-${new Date().toISOString().split('T')[0]}.pdf`
+      
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(downloadUrl)
+    } catch (error) {
+      console.error('Error generating report:', error)
+      setError('Failed to generate suppliers report')
     }
   }
 

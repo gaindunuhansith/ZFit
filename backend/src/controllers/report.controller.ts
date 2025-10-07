@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import { generateMembershipsReport, generateMembershipPlansReport, generateMembersReport, generateStaffReport, generateManagersReport } from '../services/report.service.js'
+import { generateMembershipsReport, generateMembershipPlansReport, generateMembersReport, generateStaffReport, generateManagersReport, type InventoryReportFilters } from '../services/report.service.js'
 
 export const generateMembershipsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -74,10 +74,30 @@ export const generateManagersReportHandler = async (req: Request, res: Response,
 export const generateInventoryItemsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { generateInventoryItemsReport } = await import('../services/report.service.js')
-    const pdfBuffer = await generateInventoryItemsReport()
+    
+    // Extract filter parameters from query string (GET) or request body (POST)
+    const isPostRequest = req.method === 'POST'
+    const source = isPostRequest ? req.body : req.query
+    
+    const filters: InventoryReportFilters = {
+      searchTerm: source.searchTerm || undefined,
+      categoryId: source.categoryId || undefined,
+      type: source.type || undefined,
+      lowStockOnly: source.lowStockOnly === 'true' || source.lowStockOnly === true || undefined,
+      supplierId: source.supplierId || undefined,
+      minStock: source.minStock ? parseInt(source.minStock as string) : undefined,
+      maxStock: source.maxStock ? parseInt(source.maxStock as string) : undefined
+    }
+
+    const pdfBuffer = await generateInventoryItemsReport(filters)
+
+    // Generate filename with timestamp and filter indication
+    const timestamp = new Date().toISOString().split('T')[0]
+    const hasFilters = Object.values(filters).some(v => v !== undefined && v !== '')
+    const filename = `inventory-items-report${hasFilters ? '-filtered' : ''}-${timestamp}.pdf`
 
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=inventory-items-report.pdf')
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
     res.setHeader('Content-Length', pdfBuffer.length)
 
     res.send(pdfBuffer)
@@ -89,10 +109,29 @@ export const generateInventoryItemsReportHandler = async (req: Request, res: Res
 export const generateStockLevelsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { generateStockLevelsReport } = await import('../services/report.service.js')
-    const pdfBuffer = await generateStockLevelsReport()
+    
+    // Extract filter parameters from query string (GET) or request body (POST)
+    const isPostRequest = req.method === 'POST'
+    const source = isPostRequest ? req.body : req.query
+    
+    const filters: InventoryReportFilters = {
+      searchTerm: source.searchTerm || undefined,
+      categoryId: source.categoryId || undefined,
+      lowStockOnly: source.lowStockOnly === 'true' || source.lowStockOnly === true || undefined,
+      supplierId: source.supplierId || undefined,
+      minStock: source.minStock ? parseInt(source.minStock as string) : undefined,
+      maxStock: source.maxStock ? parseInt(source.maxStock as string) : undefined
+    }
+
+    const pdfBuffer = await generateStockLevelsReport(filters)
+
+    // Generate filename with timestamp and filter indication
+    const timestamp = new Date().toISOString().split('T')[0]
+    const hasFilters = Object.values(filters).some(v => v !== undefined && v !== '')
+    const filename = `stock-levels-report${hasFilters ? '-filtered' : ''}-${timestamp}.pdf`
 
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=stock-levels-report.pdf')
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
     res.setHeader('Content-Length', pdfBuffer.length)
 
     res.send(pdfBuffer)
@@ -104,7 +143,13 @@ export const generateStockLevelsReportHandler = async (req: Request, res: Respon
 export const generateSuppliersReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { generateSuppliersReport } = await import('../services/report.service.js')
-    const pdfBuffer = await generateSuppliersReport()
+    
+    // Extract filter parameters from query string
+    const filters = {
+      searchTerm: req.query.searchTerm as string
+    }
+
+    const pdfBuffer = await generateSuppliersReport(filters.searchTerm)
 
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', 'attachment; filename=suppliers-report.pdf')
@@ -119,7 +164,14 @@ export const generateSuppliersReportHandler = async (req: Request, res: Response
 export const generateCategoriesReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { generateCategoriesReport } = await import('../services/report.service.js')
-    const pdfBuffer = await generateCategoriesReport()
+    
+    // Extract filter parameters from query string
+    const filters = {
+      searchTerm: req.query.searchTerm as string,
+      activeOnly: req.query.activeOnly === 'true'
+    }
+
+    const pdfBuffer = await generateCategoriesReport(filters)
 
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', 'attachment; filename=categories-report.pdf')
