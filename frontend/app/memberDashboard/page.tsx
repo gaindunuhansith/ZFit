@@ -12,6 +12,7 @@ import {
   ArrowRight 
 } from 'lucide-react'
 import { useAuth } from "@/lib/auth-context"
+import { MemberTrackingWidget } from "@/components/member-tracking-widget"
 
 export default function MemberDashboardPage() {
   const { user } = useAuth()
@@ -67,8 +68,11 @@ export default function MemberDashboardPage() {
         </p>
       </div>
 
-      {/* Quick Actions Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* Dashboard Widgets */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <MemberTrackingWidget />
+        
+        {/* Quick Actions Grid */}
         {quickActions.map((action) => {
           const IconComponent = action.icon
           return (

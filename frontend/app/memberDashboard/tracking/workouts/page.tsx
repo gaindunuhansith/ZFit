@@ -1,19 +1,18 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Dumbbell, Calendar, Edit, Trash2, Search } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { trackingApi, type Workout, type WorkoutData } from "@/lib/api/trackingApi"
 import { useAuth } from "@/lib/auth-context"
+import { Dumbbell, Plus, Edit, Trash2, Search } from "lucide-react"
 
-export default function WorkoutTrackingPage() {
+export default function MemberWorkoutsPage() {
   const { user } = useAuth()
   const [workouts, setWorkouts] = useState<Workout[]>([])
   const [loading, setLoading] = useState(true)
@@ -105,20 +104,12 @@ export default function WorkoutTrackingPage() {
       notes: "",
       date: new Date().toISOString().split('T')[0]
     })
+    setEditingWorkout(null)
   }
 
   const filteredWorkouts = workouts.filter(workout =>
     workout.exercise.toLowerCase().includes(searchTerm.toLowerCase())
   )
-
-  const groupedWorkouts = filteredWorkouts.reduce((acc, workout) => {
-    const date = new Date(workout.date).toLocaleDateString()
-    if (!acc[date]) {
-      acc[date] = []
-    }
-    acc[date].push(workout)
-    return acc
-  }, {} as Record<string, Workout[]>)
 
   if (loading) {
     return (
@@ -132,9 +123,9 @@ export default function WorkoutTrackingPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Workout Tracking</h1>
+          <h1 className="text-3xl font-bold tracking-tight">My Workouts</h1>
           <p className="text-muted-foreground">
-            Track your exercises, sets, reps, and weights
+            Track your exercise sessions and monitor your progress
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -224,7 +215,7 @@ export default function WorkoutTrackingPage() {
                   Cancel
                 </Button>
                 <Button type="submit">
-                  {editingWorkout ? "Update" : "Add"} Workout
+                  {editingWorkout ? "Update Workout" : "Add Workout"}
                 </Button>
               </div>
             </form>
@@ -232,86 +223,85 @@ export default function WorkoutTrackingPage() {
         </Dialog>
       </div>
 
+      {/* Search */}
       <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search exercises..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
-          />
-        </div>
+        <Search className="h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search workouts..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
       </div>
 
-      {Object.keys(groupedWorkouts).length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Dumbbell className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No workouts found</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              {searchTerm ? "No workouts match your search criteria" : "Start tracking your workouts to see them here"}
-            </p>
-            {!searchTerm && (
+      {/* Workouts List */}
+      <div className="grid gap-4">
+        {filteredWorkouts.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Dumbbell className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No workouts found</h3>
+              <p className="text-muted-foreground text-center mb-4">
+                {searchTerm ? "Try adjusting your search terms" : "Start tracking your workouts to see them here"}
+              </p>
               <Button onClick={() => setIsDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Your First Workout
               </Button>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {Object.entries(groupedWorkouts)
-            .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
-            .map(([date, dateWorkouts]) => (
-              <div key={date} className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <h2 className="text-lg font-semibold">{date}</h2>
-                  <Badge variant="secondary">{dateWorkouts.length} workout{dateWorkouts.length !== 1 ? 's' : ''}</Badge>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredWorkouts.map((workout) => (
+            <Card key={workout._id}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{workout.exercise}</CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="secondary">
+                      {new Date(workout.date).toLocaleDateString()}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(workout)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(workout._id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="grid gap-3">
-                  {dateWorkouts.map((workout) => (
-                    <Card key={workout._id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="space-y-1">
-                            <h3 className="font-semibold">{workout.exercise}</h3>
-                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                              <span>{workout.sets} sets</span>
-                              <span>{workout.reps} reps</span>
-                              <span>{workout.weight} kg</span>
-                            </div>
-                            {workout.notes && (
-                              <p className="text-sm text-muted-foreground">{workout.notes}</p>
-                            )}
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(workout)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(workout._id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-600">{workout.sets}</p>
+                    <p className="text-sm text-muted-foreground">Sets</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">{workout.reps}</p>
+                    <p className="text-sm text-muted-foreground">Reps</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-purple-600">{workout.weight}kg</p>
+                    <p className="text-sm text-muted-foreground">Weight</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-        </div>
-      )}
+                {workout.notes && (
+                  <div className="mt-4 p-3 bg-muted rounded-lg">
+                    <p className="text-sm">{workout.notes}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   )
 }

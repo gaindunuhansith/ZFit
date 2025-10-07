@@ -117,29 +117,6 @@ const data = {
       ],
     },
     {
-      title: "Tracking & Progress",
-      url: "/dashboard/tracking",
-      icon: Activity,
-      items: [
-        {
-          title: "Workout Tracking",
-          url: "/dashboard/tracking/workouts",
-        },
-        {
-          title: "Nutrition Tracking",
-          url: "/dashboard/tracking/nutrition",
-        },
-        {
-          title: "Goal Management",
-          url: "/dashboard/tracking/goals",
-        },
-        {
-          title: "Progress Overview",
-          url: "/dashboard/tracking/progress",
-        },
-      ],
-    },
-    {
       title: "Finance",
       icon: TrendingUp,
       items: [
