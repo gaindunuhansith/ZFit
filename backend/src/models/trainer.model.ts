@@ -1,9 +1,9 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-
 export interface ITrainer {
   name: string;
   specialization: string;
+  experience?: number; // new field for experience in years
   status?: "active" | "inactive"; 
 }
 
@@ -17,6 +17,7 @@ const trainerSchema = new Schema<TrainerDocument>(
   {
     name: { type: String, required: true },
     specialization: { type: String, required: true },
+    experience: { type: Number, min: 0, default: 0 }, // added field
     status: { type: String, enum: ["active", "inactive"], default: "active" },
   },
   { timestamps: true, collection: "fitness_trainers" }

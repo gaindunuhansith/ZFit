@@ -178,6 +178,16 @@ const data = {
       ],
     },
     {
+      title: "Reservations",
+      icon: Calendar,
+      items: [
+        { title: "Bookings", url: "/dashboard/reservations/bookings" },
+        { title: "Classes", url: "/dashboard/reservations/classes" },
+        { title: "Trainers", url: "/dashboard/reservations/trainers" },
+        { title: "Facilities", url: "/dashboard/reservations/facilities" },
+      ],
+    },
+    {
       title: "Store",
       url: "/dashboard/store",
       icon: Store,

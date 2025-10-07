@@ -1,30 +1,38 @@
 import TrainerModel, { type TrainerDocument, type ITrainer } from "../models/trainer.model.js";
 import mongoose from "mongoose";
 
-// CREATE
+// ✅ CREATE TRAINER
 export const createTrainer = async (data: ITrainer): Promise<TrainerDocument> => {
-  return TrainerModel.create(data);
+  return await TrainerModel.create({
+    name: data.name,
+    specialization: data.specialization,
+    experience: data.experience ?? 0, // ensure default 0 if missing
+    status: data.status ?? "active",
+  });
 };
 
-// GET ALL
+// ✅ GET ALL TRAINERS
 export const getAllTrainers = async (): Promise<TrainerDocument[]> => {
-  return TrainerModel.find();
+  return await TrainerModel.find();
 };
 
-// GET BY ID
+// ✅ GET TRAINER BY ID
 export const getTrainerById = async (id: string): Promise<TrainerDocument | null> => {
-  if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Trainer ID");
-  return TrainerModel.findById(id);
+  if (!mongoose.isValidObjectId(id)) return null;
+  return await TrainerModel.findById(id);
 };
 
-// UPDATE
-export const updateTrainer = async (id: string, data: Partial<ITrainer>): Promise<TrainerDocument | null> => {
-  if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Trainer ID");
-  return TrainerModel.findByIdAndUpdate(id, data, { new: true });
+// ✅ UPDATE TRAINER
+export const updateTrainer = async (
+  id: string,
+  data: Partial<ITrainer>
+): Promise<TrainerDocument | null> => {
+  if (!mongoose.isValidObjectId(id)) return null;
+  return await TrainerModel.findByIdAndUpdate(id, data, { new: true });
 };
 
-// DELETE
+// ✅ DELETE TRAINER
 export const deleteTrainer = async (id: string): Promise<TrainerDocument | null> => {
-  if (!mongoose.Types.ObjectId.isValid(id)) throw new Error("Invalid Trainer ID");
-  return TrainerModel.findByIdAndDelete(id);
+  if (!mongoose.isValidObjectId(id)) return null;
+  return await TrainerModel.findByIdAndDelete(id);
 };

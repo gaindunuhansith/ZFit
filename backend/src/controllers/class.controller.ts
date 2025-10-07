@@ -14,6 +14,7 @@ const classSchema = z.object({
   status: z.enum(["active","inactive"]).optional()
 });
 
+
 // CREATE CLASS
 export const createClass = async (req: Request, res: Response, next: NextFunction) => {
   try {

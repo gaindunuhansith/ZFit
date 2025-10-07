@@ -3,19 +3,21 @@ import { z } from "zod";
 import mongoose from "mongoose";
 import * as BookingService from "../services/booking.service.js";
 
-// Zod schema
+// Zod schema updated with classType
 const bookingSchema = z.object({
   memberId: z.string().min(1),
   classId: z.string().min(1),
   trainerId: z.string().min(1),
   facilityId: z.string().min(1),
+  classType: z.string().min(1, "Class type is required"),
   scheduledDate: z.string().refine(d => !isNaN(Date.parse(d)), "Invalid date"),
-  status: z.enum(["pending","confirmed","cancelled","completed"]).optional()
+  fee: z.number().min(0, "Fee must be >= 0"),
+  status: z.enum(["pending","confirmed","cancelled","completed","rescheduled"]).optional()
 });
 
 type BookingInput = z.infer<typeof bookingSchema>;
 
-// Create
+// --- CREATE ---
 export const createBooking = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data: BookingInput = bookingSchema.parse(req.body);
@@ -26,12 +28,19 @@ export const createBooking = async (req: Request, res: Response, next: NextFunct
       }
     });
 
+    const scheduledDate = new Date(data.scheduledDate);
+    const cancellationDeadline = new Date(scheduledDate);
+    cancellationDeadline.setDate(scheduledDate.getDate() - 1);
+
     const booking = await BookingService.createBooking({
       memberId: new mongoose.Types.ObjectId(data.memberId),
       classId: new mongoose.Types.ObjectId(data.classId),
       trainerId: new mongoose.Types.ObjectId(data.trainerId),
       facilityId: new mongoose.Types.ObjectId(data.facilityId),
-      scheduledDate: new Date(data.scheduledDate),
+      classType: data.classType,
+      scheduledDate,
+      cancellationDeadline,
+      fee: data.fee,
       status: data.status || "confirmed"
     });
 
@@ -39,7 +48,7 @@ export const createBooking = async (req: Request, res: Response, next: NextFunct
   } catch (err) { next(err); }
 };
 
-// Get All
+// --- GET ALL ---
 export const getAllBookings = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const bookings = await BookingService.getAllBookings();
@@ -47,11 +56,12 @@ export const getAllBookings = async (req: Request, res: Response, next: NextFunc
   } catch (err) { next(err); }
 };
 
-// Get by ID
+// --- GET BY ID ---
 export const getBookingById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: "Invalid Booking ID" });
+    if (!id || !mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ success: false, message: "Invalid Booking ID" });
 
     const booking = await BookingService.getBookingById(id);
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
@@ -60,11 +70,12 @@ export const getBookingById = async (req: Request, res: Response, next: NextFunc
   } catch (err) { next(err); }
 };
 
-// Update
+// --- UPDATE ---
 export const updateBooking = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: "Invalid Booking ID" });
+    if (!id || !mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ success: false, message: "Invalid Booking ID" });
 
     const data: Partial<BookingInput> = bookingSchema.partial().parse(req.body) as Partial<BookingInput>;
 
@@ -73,12 +84,15 @@ export const updateBooking = async (req: Request, res: Response, next: NextFunct
     if (data.classId) updateData.classId = new mongoose.Types.ObjectId(data.classId);
     if (data.trainerId) updateData.trainerId = new mongoose.Types.ObjectId(data.trainerId);
     if (data.facilityId) updateData.facilityId = new mongoose.Types.ObjectId(data.facilityId);
+    if (data.classType) updateData.classType = data.classType;
     if (data.scheduledDate) {
-      updateData.scheduledDate = new Date(data.scheduledDate);
-      const cd = new Date(data.scheduledDate);
-      cd.setDate(cd.getDate() - 1);
+      const newDate = new Date(data.scheduledDate);
+      updateData.scheduledDate = newDate;
+      const cd = new Date(newDate);
+      cd.setDate(newDate.getDate() - 1);
       updateData.cancellationDeadline = cd;
     }
+    if (data.fee !== undefined) updateData.fee = data.fee;
     if (data.status) updateData.status = data.status;
 
     const booking = await BookingService.updateBooking(id, updateData);
@@ -88,11 +102,12 @@ export const updateBooking = async (req: Request, res: Response, next: NextFunct
   } catch (err) { next(err); }
 };
 
-// Delete
+// --- DELETE ---
 export const deleteBooking = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: "Invalid Booking ID" });
+    if (!id || !mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ success: false, message: "Invalid Booking ID" });
 
     const booking = await BookingService.deleteBooking(id);
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
@@ -101,11 +116,12 @@ export const deleteBooking = async (req: Request, res: Response, next: NextFunct
   } catch (err) { next(err); }
 };
 
-// Cancel
+// --- CANCEL ---
 export const cancelBooking = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: "Invalid Booking ID" });
+    if (!id || !mongoose.Types.ObjectId.isValid(id))
+      return res.status(400).json({ success: false, message: "Invalid Booking ID" });
 
     const booking = await BookingService.getBookingById(id);
     if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
@@ -115,12 +131,12 @@ export const cancelBooking = async (req: Request, res: Response, next: NextFunct
       return res.status(400).json({ success: false, message: "Cancellation deadline passed" });
     }
 
-    const cancelledBooking = await BookingService.updateBooking(id, { status: "cancelled" });
+    const cancelledBooking = await BookingService.updateBooking(id, { status: "cancelled", cancellationDeadline: now });
     res.status(200).json({ success: true, data: cancelledBooking, message: "Booking cancelled" });
   } catch (err) { next(err); }
 };
 
-// Reschedule
+// --- RESCHEDULE ---
 export const rescheduleBooking = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -143,7 +159,8 @@ export const rescheduleBooking = async (req: Request, res: Response, next: NextF
     const updatedBooking = await BookingService.updateBooking(id, {
       scheduledDate: newDate,
       cancellationDeadline: newDeadline,
-      status: "confirmed"
+      rescheduledDate: newDate,
+      status: "rescheduled"
     });
 
     res.status(200).json({ success: true, data: updatedBooking, message: "Booking rescheduled" });

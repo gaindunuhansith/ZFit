@@ -8,6 +8,7 @@ import type { ITrainer } from "../models/trainer.model.js";
 const trainerSchema = z.object({
   name: z.string().min(1),
   specialization: z.string().min(1),
+   experience: z.number().min(0, "Experience must be a positive number").optional(), 
   status: z.enum(["active", "inactive"]).optional(),
 });
 

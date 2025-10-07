@@ -78,6 +78,15 @@ const data = {
       url: "/memberDashboard/attendance",
       icon: Calendar,
     },
+    {
+      title: "Reservations",
+      url: "/memberDashboard/reservations/Bookings",
+      icon: Calendar,
+      items: [
+        { title: "My Bookings", url: "/memberDashboard/reservations/Bookings" },
+        { title: "Calendar", url: "/memberDashboard/reservations/calendar" },
+      ],
+    },
   ],
 }
 

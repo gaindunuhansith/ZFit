@@ -26,6 +26,13 @@ export default function MemberDashboardPage() {
       color: "text-blue-500"
     },
     {
+      title: "Reservations",
+      description: "Book, view, and manage your class reservations",
+      icon: Calendar,
+      href: "/memberDashboard/reservations/Bookings",
+      color: "text-emerald-500"
+    },
+    {
       title: "Browse Store",
       description: "Shop for supplements and equipment",
       icon: ShoppingBag,
