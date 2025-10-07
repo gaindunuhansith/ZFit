@@ -1,12 +1,27 @@
 import type { Request, Response, NextFunction } from 'express'
-import { generateMembershipsReport, generateMembershipPlansReport, generateMembersReport, generateStaffReport, generateManagersReport, type InventoryReportFilters, type UserReportFilters } from '../services/report.service.js'
+import { generateMembershipsReport, generateMembershipPlansReport, generateMembersReport, generateStaffReport, generateManagersReport, type InventoryReportFilters, type UserReportFilters, type MembershipReportFilters, type MembershipPlanReportFilters } from '../services/report.service.js'
 
 export const generateMembershipsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const pdfBuffer = await generateMembershipsReport()
+    // Extract filter parameters from query string
+    const searchTerm = req.query.searchTerm as string
+    const status = req.query.status as string
+    const planId = req.query.planId as string
+    
+    const filters = {
+      searchTerm: searchTerm || undefined,
+      status: status || undefined,
+      planId: planId || undefined
+    }
+
+    const pdfBuffer = await generateMembershipsReport(filters)
+
+    // Generate appropriate filename
+    const hasFilters = searchTerm || status || planId
+    const filename = hasFilters ? 'memberships-report-filtered.pdf' : 'memberships-report.pdf'
 
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=memberships-report.pdf')
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
     res.setHeader('Content-Length', pdfBuffer.length)
 
     res.send(pdfBuffer)
@@ -17,10 +32,23 @@ export const generateMembershipsReportHandler = async (req: Request, res: Respon
 
 export const generateMembershipPlansReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const pdfBuffer = await generateMembershipPlansReport()
+    // Extract filter parameters from query string
+    const searchTerm = req.query.searchTerm as string
+    const category = req.query.category as string
+    
+    const filters = {
+      searchTerm: searchTerm || undefined,
+      category: category || undefined
+    }
+
+    const pdfBuffer = await generateMembershipPlansReport(filters)
+
+    // Generate appropriate filename
+    const hasFilters = searchTerm || category
+    const filename = hasFilters ? 'membership-plans-report-filtered.pdf' : 'membership-plans-report.pdf'
 
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=membership-plans-report.pdf')
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
     res.setHeader('Content-Length', pdfBuffer.length)
 
     res.send(pdfBuffer)

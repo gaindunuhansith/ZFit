@@ -36,6 +36,17 @@ export interface UserReportFilters {
   status?: string | undefined
 }
 
+export interface MembershipReportFilters {
+  searchTerm?: string | undefined
+  status?: string | undefined
+  planId?: string | undefined
+}
+
+export interface MembershipPlanReportFilters {
+  searchTerm?: string | undefined
+  category?: string | undefined
+}
+
 /**
  * Apply filters to inventory items array
  */
@@ -491,12 +502,37 @@ export async function generateGenericReport(config: ReportConfig): Promise<Buffe
 /**
  * Generate memberships report
  */
-export async function generateMembershipsReport(): Promise<Buffer> {
+export async function generateMembershipsReport(filters?: MembershipReportFilters): Promise<Buffer> {
   // Get all memberships data
-  const memberships = await getAllMemberships()
+  let memberships = await getAllMemberships()
+
+  // Apply filters if provided
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      memberships = memberships.filter((membership: any) => 
+        membership.userId?.name?.toLowerCase().includes(searchLower) ||
+        membership.userId?.email?.toLowerCase().includes(searchLower) ||
+        membership.membershipPlanId?.name?.toLowerCase().includes(searchLower)
+      )
+    }
+
+    if (filters.status) {
+      memberships = memberships.filter((membership: any) => 
+        membership.status?.toLowerCase() === filters.status?.toLowerCase()
+      )
+    }
+
+    if (filters.planId) {
+      memberships = memberships.filter((membership: any) => 
+        membership.membershipPlanId?._id === filters.planId ||
+        membership.membershipPlanId === filters.planId
+      )
+    }
+  }
 
   const config: ReportConfig = {
-    title: 'Memberships Report',
+    title: filters?.searchTerm || filters?.status || filters?.planId ? 'Memberships Report (Filtered)' : 'Memberships Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -558,13 +594,31 @@ export async function generateMembershipsReport(): Promise<Buffer> {
 /**
  * Generate membership plans report
  */
-export async function generateMembershipPlansReport(): Promise<Buffer> {
+export async function generateMembershipPlansReport(filters?: MembershipPlanReportFilters): Promise<Buffer> {
   // Get all membership plans data
   const { getAllMembershipPlans } = await import('./membershipPlan.service.js')
-  const membershipPlans = await getAllMembershipPlans()
+  let membershipPlans = await getAllMembershipPlans()
+
+  // Apply filters if provided
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      membershipPlans = membershipPlans.filter((plan: any) => 
+        plan.name?.toLowerCase().includes(searchLower) ||
+        plan.description?.toLowerCase().includes(searchLower) ||
+        plan.category?.toLowerCase().includes(searchLower)
+      )
+    }
+
+    if (filters.category) {
+      membershipPlans = membershipPlans.filter((plan: any) => 
+        plan.category?.toLowerCase() === filters.category?.toLowerCase()
+      )
+    }
+  }
 
   const config: ReportConfig = {
-    title: 'Membership Plans Report',
+    title: filters?.searchTerm || filters?.category ? 'Membership Plans Report (Filtered)' : 'Membership Plans Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {
