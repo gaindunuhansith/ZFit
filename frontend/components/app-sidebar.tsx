@@ -182,10 +182,10 @@ const data = {
           title: "Suppliers",
           url: "/dashboard/inventory/suppliers",
         },
-        {
+       /* {
           title: "Transaction History",
           url: "/dashboard/inventory/transactions",
-        },
+        },*/
       ],
     },
   ],
