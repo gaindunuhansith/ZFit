@@ -1,5 +1,6 @@
 import InventoryItem from '../models/inventoryItem.schema.js';
-import { sendLowStockAlert } from '../util/sendMail.util.js';
+import { sendMail } from '../util/sendMail.util.js';
+import { getLowStockAlertTemplate } from '../util/lowStockTemplate.js';
 import { getAllManagers } from './user.service.js';
 import type { LowStockItem, LowStockAlertData } from '../util/lowStockTemplate.js';
 
@@ -68,7 +69,13 @@ export const checkLowStockItems = async () => {
                 managerName: manager.name || 'Manager'
             };
             
-            return sendLowStockAlert(manager.email, managerData);
+            const template = getLowStockAlertTemplate(managerData);
+            return sendMail({
+                to: manager.email,
+                subject: template.subject,
+                text: template.text,
+                html: template.html
+            });
         });
 
         const results = await Promise.allSettled(emailPromises);
@@ -208,7 +215,13 @@ export const checkItemLowStock = async (itemId: string) => {
                 managerName: manager.name || 'Manager'
             };
             
-            return sendLowStockAlert(manager.email, managerData);
+            const template = getLowStockAlertTemplate(managerData);
+            return sendMail({
+                to: manager.email,
+                subject: template.subject,
+                text: template.text,
+                html: template.html
+            });
         });
 
         const results = await Promise.allSettled(emailPromises);

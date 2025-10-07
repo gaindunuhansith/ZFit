@@ -1,6 +1,5 @@
 import resend from "../config/resend.js";
 import env from "../config/env.js";
-import { getLowStockAlertTemplate, type LowStockAlertData } from "./lowStockTemplate.js";
 
 type Params = {
     to: string,
@@ -24,25 +23,6 @@ export const sendMail = async ({ to, subject, text, html }: Params) => {
         text,
         html,
     }); 
-};
-
-export const sendLowStockAlert = async (to: string, data: LowStockAlertData) => {
-    try {
-        const emailTemplate = getLowStockAlertTemplate(data);
-        
-        const result = await sendMail({
-            to,
-            subject: emailTemplate.subject,
-            text: emailTemplate.text,
-            html: emailTemplate.html
-        });
-
-        console.log('Low stock alert email sent successfully:', result.data?.id);
-        return { success: true, messageId: result.data?.id };
-    } catch (error) {
-        console.error('Failed to send low stock alert email:', error);
-        throw new Error(`Failed to send low stock alert: ${(error as Error).message}`);
-    }
 };
 
 
