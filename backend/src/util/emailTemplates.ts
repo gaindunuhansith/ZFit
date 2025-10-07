@@ -484,7 +484,7 @@ export interface BankTransferApprovalData {
 
 export const getBankTransferApprovalTemplate = (data: BankTransferApprovalData) => ({
   subject: "Bank Transfer Payment Approved - ZFit Gym",
-  text: `Hi ${data.userName}, your bank transfer payment for ${data.membershipName} (${data.currency} ${data.amount}) has been approved. Transaction ID: ${data.transactionId}. Your membership has been activated.`,
+  text: `Hi ${data.userName}, your bank transfer payment for ${data.membershipName} (${data.currency} ${data.amount}) has been approved. Transaction ID: ${data.transactionId}. Your membership has been activated. Questions? Contact support@zfit.synerge.digital`,
   html: `
     <!DOCTYPE html>
     <html lang="en">
@@ -492,264 +492,150 @@ export const getBankTransferApprovalTemplate = (data: BankTransferApprovalData) 
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Bank Transfer Approved - ZFit Gym</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
       <style>
-        body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        * {
           margin: 0;
           padding: 0;
-          background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+          box-sizing: border-box;
+        }
+        body {
+          font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          background-color: #000000;
           color: #ffffff;
+          line-height: 1.5;
+          margin: 0;
+          padding: 40px 20px;
         }
         .container {
-          max-width: 650px;
+          max-width: 480px;
           margin: 0 auto;
-          background: linear-gradient(145deg, #2a2a2a 0%, #1e1e1e 100%);
-          border-radius: 12px;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-          overflow: hidden;
-        }
-        .email-body {
-          padding: 30px;
-        }
-        .header-section {
-          text-align: center;
-          padding: 20px 0;
-          border-bottom: 2px solid #404040;
-          position: relative;
-        }
-        .header-section::after {
-          content: '';
-          position: absolute;
-          bottom: -1px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 60px;
-          height: 2px;
-          background: linear-gradient(90deg, #AAFF69 0%, #7BC96F 100%);
-        }
-        .logo-area {
-          font-size: 28px;
-          font-weight: 800;
-          color: #AAFF69;
-          margin-bottom: 8px;
-          text-shadow: 0 2px 4px rgba(170, 255, 105, 0.3);
-          letter-spacing: 2px;
-        }
-        .status-icon {
-          font-size: 48px;
-          margin: 15px 0;
-          color: #10b981;
-          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-        }
-        .main-title {
-          font-size: 26px;
-          font-weight: 700;
-          margin: 12px 0;
-          color: #ffffff;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-        .greeting {
-          font-size: 18px;
-          color: #cccccc;
-          margin: 20px 0 12px 0;
-          font-weight: 400;
-        }
-        .message {
-          font-size: 16px;
-          line-height: 1.6;
-          color: #e0e0e0;
-          margin: 12px 0;
-          font-weight: 400;
-        }
-        .amount-box {
-          background: linear-gradient(135deg, #AAFF69 0%, #7BC96F 100%);
-          color: #000;
-          padding: 20px;
-          border-radius: 10px;
-          text-align: center;
-          margin: 20px 0;
-          font-weight: 700;
-          box-shadow: 0 4px 15px rgba(170, 255, 105, 0.2);
-          position: relative;
-          overflow: hidden;
-        }
-        .amount-box::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-          animation: shimmer 3s infinite;
-        }
-        @keyframes shimmer {
-          0% { left: -100%; }
-          100% { left: 100%; }
-        }
-        .amount-label {
-          font-size: 16px;
-          margin-bottom: 8px;
-          opacity: 0.9;
-        }
-        .amount-value {
-          font-size: 24px;
-          margin-top: 8px;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-        .details-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 20px 0;
-          background: linear-gradient(145deg, #1a1a1a 0%, #2a2a2a 100%);
-          border: 1px solid #404040;
+          background-color: #1a1a1a;
           border-radius: 8px;
           overflow: hidden;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
-        .details-table tr:nth-child(even) {
-          background: linear-gradient(145deg, #2a2a2a 0%, #252525 100%);
-        }
-        .details-table tr:nth-child(odd) {
-          background: linear-gradient(145deg, #252525 0%, #2a2a2a 100%);
-        }
-        .details-table td {
-          padding: 15px 20px;
-          border-bottom: 1px solid #333;
-          font-size: 15px;
-        }
-        .details-table .label {
-          color: #aaaaaa;
-          font-weight: 600;
-          width: 35%;
-          text-transform: uppercase;
-          font-size: 12px;
-          letter-spacing: 0.5px;
-        }
-        .details-table .value {
-          color: #ffffff;
-          font-weight: 500;
-        }
-        .cta-button {
-          display: inline-block;
-          padding: 16px 32px;
-          border-radius: 50px;
-          text-decoration: none;
-          font-weight: 700;
-          font-size: 16px;
+        .header {
+          padding: 40px 40px 30px;
           text-align: center;
+        }
+        .title {
+          font-size: 22px;
+          font-weight: 500;
+          color: #ffffff;
+          margin-bottom: 16px;
+        }
+        .content {
+          padding: 0 40px 40px;
+        }
+        .greeting {
+          font-size: 16px;
+          color: #ffffff;
+          margin-bottom: 16px;
+        }
+        .message {
+          font-size: 15px;
+          color: #cccccc;
+          margin-bottom: 32px;
+          line-height: 1.5;
+        }
+        .payment-info {
+          background-color: #2a2a2a;
+          padding: 20px;
+          border-radius: 6px;
           margin: 20px 0;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          background: linear-gradient(135deg, #AAFF69 0%, #7BC96F 100%);
-          color: #000;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-          position: relative;
-          overflow: hidden;
+          text-align: center;
         }
-        .cta-button::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-          transition: left 0.5s;
+        .access-button {
+          display: inline-block;
+          background-color: #AAFF69;
+          color: #000000;
+          text-decoration: none;
+          padding: 14px 28px;
+          border-radius: 6px;
+          font-weight: 500;
+          font-size: 15px;
+          margin-bottom: 32px;
+          transition: opacity 0.2s ease;
         }
-        .cta-button:hover::before {
-          left: 100%;
+        .access-button:hover {
+          opacity: 0.9;
         }
-        .highlight-box {
-          background: linear-gradient(145deg, #333 0%, #404040 100%);
-          border-left: 4px solid #AAFF69;
-          padding: 16px 20px;
-          margin: 20px 0;
-          border-radius: 0 8px 8px 0;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        .support {
+          font-size: 13px;
+          color: #999999;
+          text-align: center;
         }
-        .highlight-box strong {
-          color: #AAFF69;
-          font-weight: 700;
+        .support a {
+          color: #ffffff;
+          text-decoration: none;
+        }
+        .support a:hover {
+          text-decoration: underline;
         }
         .footer {
+          padding: 20px 40px;
           text-align: center;
-          padding: 20px;
-          background: linear-gradient(145deg, #1a1a1a 0%, #252525 100%);
-          border-top: 1px solid #404040;
-          font-size: 13px;
-          color: #888;
         }
-        .footer a {
-          color: #AAFF69;
-          text-decoration: none;
-          font-weight: 500;
+        .footer-text {
+          font-size: 11px;
+          color: #666666;
+          line-height: 1.4;
         }
-        .footer a:hover {
-          color: #7BC96F;
-          text-decoration: underline;
+        .footer-text:not(:last-child) {
+          margin-bottom: 6px;
+        }
+        @media only screen and (max-width: 480px) {
+          body {
+            padding: 20px 10px;
+          }
+          .container {
+            margin: 0;
+          }
+          .header, .content, .footer {
+            padding-left: 24px;
+            padding-right: 24px;
+          }
+          .title {
+            font-size: 20px;
+          }
         }
       </style>
     </head>
     <body>
       <div class="container">
-        <div class="email-body">
-          <div class="header-section">
-            <div class="logo-area">ZFit</div>
-            <div class="status-icon">✓</div>
-            <div class="main-title">Payment Approved</div>
-          </div>
-
-          <div class="greeting">Dear <strong style="color: #AAFF69;">${data.userName}</strong>,</div>
-
+        <div class="header">
+          <div class="title">Payment Approved</div>
+        </div>
+        
+        <div class="content">
+          <div class="greeting">Hi ${data.userName},</div>
+          
           <div class="message">
-            Your bank transfer payment has been successfully verified and approved. Your membership is now active and ready for use.
+            Your bank transfer payment has been successfully verified and approved. Your membership is now active.
           </div>
-
-          <div class="amount-box">
-            <div class="amount-label">${data.membershipName}</div>
-            <div class="amount-value">${data.currency} ${data.amount.toLocaleString()}</div>
+          
+          <div class="payment-info">
+            <div style="font-size: 18px; font-weight: 500; margin-bottom: 8px;">${data.membershipName}</div>
+            <div style="font-size: 16px; color: #AAFF69; font-weight: 500; margin-bottom: 8px;">${data.currency} ${data.amount.toLocaleString()}</div>
+            <div style="font-size: 13px; color: #999999;">Transaction: ${data.transactionId}</div>
+            <div style="font-size: 13px; color: #999999;">Approved: ${data.approvedDate}</div>
+            ${data.adminNotes ? `<div style="font-size: 13px; color: #999999; margin-top: 8px;">Note: ${data.adminNotes}</div>` : ''}
           </div>
-
-          <table class="details-table">
-            <tr>
-              <td class="label">Transaction ID</td>
-              <td class="value">${data.transactionId}</td>
-            </tr>
-            <tr>
-              <td class="label">Approval Date</td>
-              <td class="value">${data.approvedDate}</td>
-            </tr>
-            ${data.adminNotes ? `
-            <tr>
-              <td class="label">Admin Notes</td>
-              <td class="value">${data.adminNotes}</td>
-            </tr>
-            ` : ''}
-          </table>
-
-          <div class="highlight-box">
-            <strong>Next Steps:</strong> You can now access all gym facilities and start your fitness journey. Visit your dashboard to explore available classes and amenities.
+          
+          <div style="text-align: center; margin-bottom: 32px;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/memberDashboard/memberships/my-memberships" class="access-button">Access Dashboard</a>
           </div>
-
-          <div style="text-align: center;">
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/memberDashboard/memberships/my-memberships" class="cta-button">Access My Dashboard</a>
-          </div>
-
-          <div class="message" style="text-align: center; margin-top: 20px;">
-            Questions? Our support team is here to help at <a href="mailto:support@zfit.com" style="color: #AAFF69; font-weight: 600;">support@zfit.com</a>
+          
+          <div class="support">
+            Questions? Contact <a href="mailto:support@zfit.synerge.digital">support@zfit.synerge.digital</a>
           </div>
         </div>
-
+        
         <div class="footer">
-          <div style="margin-bottom: 10px; font-weight: 600;">&copy; ${new Date().getFullYear()} ZFit Gym Management System</div>
-          <div>
-            <a href="#">Privacy Policy</a> • <a href="#">Terms of Service</a> • <a href="#">Unsubscribe</a>
-          </div>
-          <div style="margin-top: 10px; font-size: 11px; color: #666;">
-            123 Fitness Street, Colombo, Sri Lanka
-          </div>
+          <div class="footer-text">&copy; ${new Date().getFullYear()} ZFit Gym Management System</div>
+          <div class="footer-text">18/2, Nawala Road, Rajagiriya, Colombo, Sri Lanka</div>
         </div>
       </div>
     </body>
@@ -759,7 +645,7 @@ export const getBankTransferApprovalTemplate = (data: BankTransferApprovalData) 
 
 export const getBankTransferDeclineTemplate = (data: BankTransferApprovalData) => ({
   subject: "Bank Transfer Payment Declined - ZFit Gym",
-  text: `Hi ${data.userName}, unfortunately your bank transfer payment for ${data.membershipName} (${data.currency} ${data.amount}) has been declined. ${data.adminNotes ? 'Reason: ' + data.adminNotes : ''} Please contact support for assistance.`,
+  text: `Hi ${data.userName}, unfortunately your bank transfer payment for ${data.membershipName} (${data.currency} ${data.amount}) has been declined. ${data.adminNotes ? 'Reason: ' + data.adminNotes : ''} Please contact support@zfit.synerge.digital for assistance.`,
   html: `
     <!DOCTYPE html>
     <html lang="en">
@@ -767,264 +653,150 @@ export const getBankTransferDeclineTemplate = (data: BankTransferApprovalData) =
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Bank Transfer Declined - ZFit Gym</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
       <style>
-        body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        * {
           margin: 0;
           padding: 0;
-          background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+          box-sizing: border-box;
+        }
+        body {
+          font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          background-color: #000000;
           color: #ffffff;
+          line-height: 1.5;
+          margin: 0;
+          padding: 40px 20px;
         }
         .container {
-          max-width: 650px;
+          max-width: 480px;
           margin: 0 auto;
-          background: linear-gradient(145deg, #2a2a2a 0%, #1e1e1e 100%);
-          border-radius: 12px;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-          overflow: hidden;
-        }
-        .email-body {
-          padding: 30px;
-        }
-        .header-section {
-          text-align: center;
-          padding: 20px 0;
-          border-bottom: 2px solid #404040;
-          position: relative;
-        }
-        .header-section::after {
-          content: '';
-          position: absolute;
-          bottom: -1px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 60px;
-          height: 2px;
-          background: linear-gradient(90deg, #AAFF69 0%, #7BC96F 100%);
-        }
-        .logo-area {
-          font-size: 28px;
-          font-weight: 800;
-          color: #AAFF69;
-          margin-bottom: 8px;
-          text-shadow: 0 2px 4px rgba(170, 255, 105, 0.3);
-          letter-spacing: 2px;
-        }
-        .status-icon {
-          font-size: 48px;
-          margin: 15px 0;
-          color: #ef4444;
-          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-        }
-        .main-title {
-          font-size: 26px;
-          font-weight: 700;
-          margin: 12px 0;
-          color: #ffffff;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-        .greeting {
-          font-size: 18px;
-          color: #cccccc;
-          margin: 20px 0 12px 0;
-          font-weight: 400;
-        }
-        .message {
-          font-size: 16px;
-          line-height: 1.6;
-          color: #e0e0e0;
-          margin: 12px 0;
-          font-weight: 400;
-        }
-        .amount-box {
-          background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-          color: #ffffff;
-          padding: 20px;
-          border-radius: 10px;
-          text-align: center;
-          margin: 20px 0;
-          font-weight: 700;
-          box-shadow: 0 4px 15px rgba(220, 38, 38, 0.2);
-          position: relative;
-          overflow: hidden;
-        }
-        .amount-box::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-          animation: shimmer 3s infinite;
-        }
-        @keyframes shimmer {
-          0% { left: -100%; }
-          100% { left: 100%; }
-        }
-        .amount-label {
-          font-size: 16px;
-          margin-bottom: 8px;
-          opacity: 0.9;
-        }
-        .amount-value {
-          font-size: 24px;
-          margin-top: 8px;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-        .details-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 20px 0;
-          background: linear-gradient(145deg, #1a1a1a 0%, #2a2a2a 100%);
-          border: 1px solid #404040;
+          background-color: #1a1a1a;
           border-radius: 8px;
           overflow: hidden;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
-        .details-table tr:nth-child(even) {
-          background: linear-gradient(145deg, #2a2a2a 0%, #252525 100%);
-        }
-        .details-table tr:nth-child(odd) {
-          background: linear-gradient(145deg, #252525 0%, #2a2a2a 100%);
-        }
-        .details-table td {
-          padding: 15px 20px;
-          border-bottom: 1px solid #333;
-          font-size: 15px;
-        }
-        .details-table .label {
-          color: #aaaaaa;
-          font-weight: 600;
-          width: 35%;
-          text-transform: uppercase;
-          font-size: 12px;
-          letter-spacing: 0.5px;
-        }
-        .details-table .value {
-          color: #ffffff;
-          font-weight: 500;
-        }
-        .cta-button {
-          display: inline-block;
-          padding: 16px 32px;
-          border-radius: 50px;
-          text-decoration: none;
-          font-weight: 700;
-          font-size: 16px;
+        .header {
+          padding: 40px 40px 30px;
           text-align: center;
-          margin: 20px 0;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        }
+        .title {
+          font-size: 22px;
+          font-weight: 500;
           color: #ffffff;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-          position: relative;
-          overflow: hidden;
+          margin-bottom: 16px;
         }
-        .cta-button::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-          transition: left 0.5s;
+        .content {
+          padding: 0 40px 40px;
         }
-        .cta-button:hover::before {
-          left: 100%;
+        .greeting {
+          font-size: 16px;
+          color: #ffffff;
+          margin-bottom: 16px;
         }
-        .highlight-box {
-          background: linear-gradient(145deg, #333 0%, #404040 100%);
-          border-left: 4px solid #ef4444;
-          padding: 16px 20px;
+        .message {
+          font-size: 15px;
+          color: #cccccc;
+          margin-bottom: 32px;
+          line-height: 1.5;
+        }
+        .payment-info {
+          background-color: #2a2a2a;
+          padding: 20px;
+          border-radius: 6px;
           margin: 20px 0;
-          border-radius: 0 8px 8px 0;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          text-align: center;
         }
-        .highlight-box strong {
-          color: #ef4444;
-          font-weight: 700;
+        .retry-button {
+          display: inline-block;
+          background-color: #AAFF69;
+          color: #000000;
+          text-decoration: none;
+          padding: 14px 28px;
+          border-radius: 6px;
+          font-weight: 500;
+          font-size: 15px;
+          margin-bottom: 32px;
+          transition: opacity 0.2s ease;
+        }
+        .retry-button:hover {
+          opacity: 0.9;
+        }
+        .support {
+          font-size: 13px;
+          color: #999999;
+          text-align: center;
+        }
+        .support a {
+          color: #ffffff;
+          text-decoration: none;
+        }
+        .support a:hover {
+          text-decoration: underline;
         }
         .footer {
+          padding: 20px 40px;
           text-align: center;
-          padding: 20px;
-          background: linear-gradient(145deg, #1a1a1a 0%, #252525 100%);
-          border-top: 1px solid #404040;
-          font-size: 13px;
-          color: #888;
         }
-        .footer a {
-          color: #AAFF69;
-          text-decoration: none;
-          font-weight: 500;
+        .footer-text {
+          font-size: 11px;
+          color: #666666;
+          line-height: 1.4;
         }
-        .footer a:hover {
-          color: #7BC96F;
-          text-decoration: underline;
+        .footer-text:not(:last-child) {
+          margin-bottom: 6px;
+        }
+        @media only screen and (max-width: 480px) {
+          body {
+            padding: 20px 10px;
+          }
+          .container {
+            margin: 0;
+          }
+          .header, .content, .footer {
+            padding-left: 24px;
+            padding-right: 24px;
+          }
+          .title {
+            font-size: 20px;
+          }
         }
       </style>
     </head>
     <body>
       <div class="container">
-        <div class="email-body">
-          <div class="header-section">
-            <div class="logo-area">ZFit</div>
-            <div class="status-icon">✗</div>
-            <div class="main-title">Payment Declined</div>
-          </div>
-
-          <div class="greeting">Dear <strong style="color: #AAFF69;">${data.userName}</strong>,</div>
-
+        <div class="header">
+          <div class="title">Payment Declined</div>
+        </div>
+        
+        <div class="content">
+          <div class="greeting">Hi ${data.userName},</div>
+          
           <div class="message">
-            We were unable to approve your bank transfer payment after careful review. Please see the details below for further information.
+            We were unable to approve your bank transfer payment after careful review. Please see the details below.
           </div>
-
-          <div class="amount-box">
-            <div class="amount-label">${data.membershipName}</div>
-            <div class="amount-value">${data.currency} ${data.amount.toLocaleString()}</div>
+          
+          <div class="payment-info">
+            <div style="font-size: 18px; font-weight: 500; margin-bottom: 8px;">${data.membershipName}</div>
+            <div style="font-size: 16px; color: #AAFF69; font-weight: 500; margin-bottom: 8px;">${data.currency} ${data.amount.toLocaleString()}</div>
+            <div style="font-size: 13px; color: #999999;">Transaction: ${data.transactionId}</div>
+            <div style="font-size: 13px; color: #999999;">Declined: ${data.approvedDate}</div>
+            ${data.adminNotes ? `<div style="font-size: 13px; color: #999999; margin-top: 8px;">Reason: ${data.adminNotes}</div>` : ''}
           </div>
-
-          <table class="details-table">
-            <tr>
-              <td class="label">Transaction ID</td>
-              <td class="value">${data.transactionId}</td>
-            </tr>
-            <tr>
-              <td class="label">Declined Date</td>
-              <td class="value">${data.approvedDate}</td>
-            </tr>
-            ${data.adminNotes ? `
-            <tr>
-              <td class="label">Reason</td>
-              <td class="value" style="color: #ef4444; font-weight: 600;">${data.adminNotes}</td>
-            </tr>
-            ` : ''}
-          </table>
-
-          <div class="highlight-box">
-            <strong>What to do next:</strong> Submit a new payment with a high-quality receipt image, or contact our support team for assistance with your membership registration.
+          
+          <div style="text-align: center; margin-bottom: 32px;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/memberDashboard/memberships/browse" class="retry-button">Submit New Payment</a>
           </div>
-
-          <div style="text-align: center;">
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/memberDashboard/memberships/browse" class="cta-button">Submit New Payment</a>
-          </div>
-
-          <div class="message" style="text-align: center; margin-top: 20px;">
-            Need assistance? Contact our team at <a href="mailto:support@zfit.com" style="color: #AAFF69; font-weight: 600;">support@zfit.com</a>
+          
+          <div class="support">
+            Need assistance? Contact <a href="mailto:support@zfit.synerge.digital">support@zfit.synerge.digital</a>
           </div>
         </div>
-
+        
         <div class="footer">
-          <div style="margin-bottom: 10px; font-weight: 600;">&copy; ${new Date().getFullYear()} ZFit Gym Management System</div>
-          <div>
-            <a href="#">Privacy Policy</a> • <a href="#">Terms of Service</a> • <a href="#">Unsubscribe</a>
-          </div>
-          <div style="margin-top: 10px; font-size: 11px; color: #666;">
-            123 Fitness Street, Colombo, Sri Lanka
-          </div>
+          <div class="footer-text">&copy; ${new Date().getFullYear()} ZFit Gym Management System</div>
+          <div class="footer-text">18/2, Nawala Road, Rajagiriya, Colombo, Sri Lanka</div>
         </div>
       </div>
     </body>
@@ -1656,8 +1428,8 @@ export interface CartPurchaseSuccessData {
 }
 
 export const getCartPurchaseSuccessTemplate = (data: CartPurchaseSuccessData) => ({
-  subject: "🛒 Order Confirmed - ZFit Store Purchase",
-  text: `Hi ${data.userName}, your order (#${data.orderNumber}) has been successfully placed! Total: ${data.currency} ${data.totalAmount}. Transaction ID: ${data.transactionId}. Your items will be available for pickup or delivery soon. Thank you for shopping with ZFit!`,
+  subject: "Order Confirmed - ZFit Store",
+  text: `Hi ${data.userName}, your order (#${data.orderNumber}) has been successfully placed! Total: ${data.currency} ${data.totalAmount}. Transaction ID: ${data.transactionId}. Your items will be available for pickup or delivery soon. Questions? Contact support@zfit.synerge.digital`,
   html: `
     <!DOCTYPE html>
     <html lang="en">
@@ -1665,339 +1437,159 @@ export const getCartPurchaseSuccessTemplate = (data: CartPurchaseSuccessData) =>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Order Confirmed - ZFit Store</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
       <style>
-        body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        * {
           margin: 0;
           padding: 0;
-          background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+          box-sizing: border-box;
+        }
+        body {
+          font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          background-color: #000000;
           color: #ffffff;
+          line-height: 1.5;
+          margin: 0;
+          padding: 40px 20px;
         }
         .container {
-          max-width: 650px;
+          max-width: 480px;
           margin: 0 auto;
-          background: linear-gradient(145deg, #2a2a2a 0%, #1f1f1f 100%);
-          border-radius: 20px;
+          background-color: #1a1a1a;
+          border-radius: 8px;
           overflow: hidden;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         }
-        .email-body {
-          padding: 0;
-        }
-        .header-section {
-          background: linear-gradient(135deg, #AAFF69 0%, #7BC96F 100%);
-          padding: 40px 30px;
+        .header {
+          padding: 40px 40px 30px;
           text-align: center;
-          position: relative;
-          overflow: hidden;
         }
-        .header-section::before {
-          content: '';
-          position: absolute;
-          top: -50%;
-          left: -50%;
-          width: 200%;
-          height: 200%;
-          background: repeating-linear-gradient(
-            45deg,
-            rgba(255,255,255,0.05) 0px,
-            rgba(255,255,255,0.05) 10px,
-            transparent 10px,
-            transparent 20px
-          );
-          animation: backgroundShift 20s linear infinite;
+        .title {
+          font-size: 22px;
+          font-weight: 500;
+          color: #ffffff;
+          margin-bottom: 16px;
         }
-        @keyframes backgroundShift {
-          0% { transform: translateX(-50px) translateY(-50px); }
-          100% { transform: translateX(0px) translateY(0px); }
-        }
-        .logo-area {
-          font-size: 36px;
-          font-weight: 900;
-          color: #000;
-          letter-spacing: -1px;
-          margin-bottom: 10px;
-          position: relative;
-          z-index: 2;
-          text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-        }
-        .celebration-icon {
-          font-size: 48px;
-          margin: 15px 0;
-          position: relative;
-          z-index: 2;
-          animation: bounce 2s ease-in-out infinite;
-        }
-        @keyframes bounce {
-          0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-          40% { transform: translateY(-10px); }
-          60% { transform: translateY(-5px); }
-        }
-        .main-title {
-          font-size: 28px;
-          font-weight: 800;
-          color: #000;
-          margin-bottom: 8px;
-          position: relative;
-          z-index: 2;
-          text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-        }
-        .content-section {
-          padding: 40px 30px;
+        .content {
+          padding: 0 40px 40px;
         }
         .greeting {
-          font-size: 18px;
-          color: #cccccc;
-          margin: 20px 0 12px 0;
-          font-weight: 400;
+          font-size: 16px;
+          color: #ffffff;
+          margin-bottom: 16px;
         }
         .message {
-          font-size: 16px;
-          line-height: 1.6;
-          color: #e0e0e0;
-          margin: 12px 0;
-          font-weight: 400;
+          font-size: 15px;
+          color: #cccccc;
+          margin-bottom: 32px;
+          line-height: 1.5;
         }
-        .order-summary {
-          background: linear-gradient(135deg, #AAFF69 0%, #7BC96F 100%);
-          color: #000;
-          padding: 25px;
-          border-radius: 15px;
-          margin: 25px 0;
-          box-shadow: 0 4px 15px rgba(170, 255, 105, 0.2);
-        }
-        .order-number {
-          font-size: 20px;
-          font-weight: 700;
-          text-align: center;
-          margin-bottom: 20px;
-          padding: 15px;
-          background: rgba(0,0,0,0.1);
-          border-radius: 10px;
-        }
-        .items-table {
-          width: 100%;
+        .order-info {
+          background-color: #2a2a2a;
+          padding: 20px;
+          border-radius: 6px;
           margin: 20px 0;
-          border-collapse: collapse;
-          background: rgba(255,255,255,0.1);
-          border-radius: 10px;
-          overflow: hidden;
         }
-        .items-table th {
-          background: rgba(0,0,0,0.2);
-          color: #000;
-          padding: 12px;
-          font-weight: 600;
-          text-align: left;
-        }
-        .items-table td {
-          padding: 12px;
-          border-bottom: 1px solid rgba(0,0,0,0.1);
-          color: #000;
-        }
-        .items-table tr:last-child td {
-          border-bottom: none;
-        }
-        .total-row {
-          background: rgba(0,0,0,0.1);
-          font-weight: 700;
-          font-size: 16px;
-        }
-        .details-table {
-          width: 100%;
-          margin: 25px 0;
-          border-collapse: collapse;
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 10px;
-          overflow: hidden;
-        }
-        .details-table td {
-          padding: 15px 20px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .details-table tr:last-child td {
-          border-bottom: none;
-        }
-        .label {
-          font-weight: 600;
-          color: #AAFF69;
-          width: 40%;
-        }
-        .value {
-          color: #ffffff;
-          font-weight: 500;
-        }
-        .cta-button {
+        .order-button {
           display: inline-block;
-          padding: 16px 32px;
-          border-radius: 50px;
+          background-color: #AAFF69;
+          color: #000000;
           text-decoration: none;
-          font-weight: 700;
-          font-size: 16px;
+          padding: 14px 28px;
+          border-radius: 6px;
+          font-weight: 500;
+          font-size: 15px;
+          margin-bottom: 32px;
+          transition: opacity 0.2s ease;
+        }
+        .order-button:hover {
+          opacity: 0.9;
+        }
+        .support {
+          font-size: 13px;
+          color: #999999;
           text-align: center;
-          margin: 20px 10px;
-          transition: all 0.3s ease;
-          background: linear-gradient(135deg, #AAFF69 0%, #7BC96F 100%);
-          color: #000;
-          box-shadow: 0 4px 15px rgba(170, 255, 105, 0.3);
         }
-        .cta-button:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(170, 255, 105, 0.4);
-        }
-        .cta-button-secondary {
-          background: linear-gradient(135deg, #404040 0%, #2a2a2a 100%);
+        .support a {
           color: #ffffff;
-          box-shadow: 0 4px 15px rgba(64, 64, 64, 0.3);
+          text-decoration: none;
         }
-        .cta-button-secondary:hover {
-          box-shadow: 0 6px 20px rgba(64, 64, 64, 0.4);
-        }
-        .next-steps {
-          background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
-          padding: 25px;
-          border-radius: 15px;
-          margin: 25px 0;
-          border: 1px solid #404040;
-        }
-        .next-steps-title {
-          font-size: 18px;
-          font-weight: 700;
-          color: #AAFF69;
-          margin-bottom: 15px;
-          display: flex;
-          align-items: center;
-        }
-        .next-steps-list {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-        .next-steps-list li {
-          padding: 8px 0;
-          color: #e0e0e0;
-          position: relative;
-          padding-left: 25px;
-        }
-        .next-steps-list li::before {
-          content: '✓';
-          position: absolute;
-          left: 0;
-          color: #AAFF69;
-          font-weight: bold;
+        .support a:hover {
+          text-decoration: underline;
         }
         .footer {
+          padding: 20px 40px;
           text-align: center;
-          padding: 20px;
-          background: linear-gradient(145deg, #1a1a1a 0%, #252525 100%);
-          border-top: 1px solid #404040;
-          font-size: 13px;
-          color: #888;
         }
-        .footer a {
-          color: #AAFF69;
-          text-decoration: none;
-          font-weight: 500;
+        .footer-text {
+          font-size: 11px;
+          color: #666666;
+          line-height: 1.4;
         }
-        .footer a:hover {
-          color: #7BC96F;
-          text-decoration: underline;
+        .footer-text:not(:last-child) {
+          margin-bottom: 6px;
+        }
+        @media only screen and (max-width: 480px) {
+          body {
+            padding: 20px 10px;
+          }
+          .container {
+            margin: 0;
+          }
+          .header, .content, .footer {
+            padding-left: 24px;
+            padding-right: 24px;
+          }
+          .title {
+            font-size: 20px;
+          }
         }
       </style>
     </head>
     <body>
       <div class="container">
-        <div class="email-body">
-          <div class="header-section">
-            <div class="logo-area">ZFit</div>
-            <div class="celebration-icon">🛒</div>
-            <div class="main-title">Order Confirmed!</div>
+        <div class="header">
+          <div class="title">Order Confirmed</div>
+        </div>
+        
+        <div class="content">
+          <div class="greeting">Hi ${data.userName},</div>
+          
+          <div class="message">
+            Your order has been successfully placed and is being processed. Thank you for shopping with ZFit Store!
           </div>
-
-          <div class="content-section">
-            <div class="greeting">Hi <strong style="color: #AAFF69;">${data.userName}</strong>,</div>
-
-            <div class="message">
-              Great news! Your order has been successfully placed and is being processed. Thank you for shopping with ZFit Store!
-            </div>
-
-            <div class="order-summary">
-              <div class="order-number">Order #${data.orderNumber}</div>
-              
-              <table class="items-table">
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th>Qty</th>
-                    <th>Price</th>
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${data.items.map(item => `
-                    <tr>
-                      <td>${item.itemName}</td>
-                      <td>${item.quantity}</td>
-                      <td>${data.currency} ${item.price.toFixed(2)}</td>
-                      <td>${data.currency} ${item.totalPrice.toFixed(2)}</td>
-                    </tr>
-                  `).join('')}
-                  <tr class="total-row">
-                    <td colspan="3"><strong>Total Amount</strong></td>
-                    <td><strong>${data.currency} ${data.totalAmount.toFixed(2)}</strong></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <table class="details-table">
-              <tr>
-                <td class="label">Order Date</td>
-                <td class="value">${data.orderDate}</td>
-              </tr>
-              <tr>
-                <td class="label">Transaction ID</td>
-                <td class="value">${data.transactionId}</td>
-              </tr>
-              <tr>
-                <td class="label">Payment Method</td>
-                <td class="value">${data.paymentMethod}</td>
-              </tr>
-            </table>
-
-            <div style="text-align: center; margin: 25px 0;">
-              <a href="${process.env.FRONTEND_APP_ORIGIN || 'http://localhost:3000'}/memberDashboard/orders" class="cta-button">
-                View Order Details
-              </a>
-              <a href="${process.env.FRONTEND_APP_ORIGIN || 'http://localhost:3000'}/memberDashboard/store" class="cta-button cta-button-secondary">
-                Continue Shopping
-              </a>
-            </div>
-
-            <div class="next-steps">
-              <div class="next-steps-title">What's Next?</div>
-              <ul class="next-steps-list">
-                <li>Your order is being prepared by our team</li>
-                <li>You'll receive updates on your order status</li>
-                <li>Items will be available for pickup/delivery soon</li>
-                <li>Contact support if you have any questions</li>
-              </ul>
-            </div>
-
-            <div class="message">
-              Thank you for being a valued member of the ZFit community. We appreciate your business!
-            </div>
+          
+          <div class="order-info">
+            <div style="font-size: 18px; font-weight: 500; margin-bottom: 8px;">Order #${data.orderNumber}</div>
+            <div style="font-size: 16px; color: #AAFF69; font-weight: 500; margin-bottom: 8px;">${data.currency} ${data.totalAmount.toFixed(2)}</div>
+            <div style="font-size: 14px; color: #999999; margin-bottom: 4px;">Order Date: ${data.orderDate}</div>
+            <div style="font-size: 13px; color: #999999; margin-bottom: 4px;">Transaction: ${data.transactionId}</div>
+            <div style="font-size: 13px; color: #999999;">Payment: ${data.paymentMethod}</div>
+            ${data.items && data.items.length > 0 ? `
+              <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #404040;">
+                <div style="font-size: 14px; color: #cccccc; margin-bottom: 8px;">Items:</div>
+                ${data.items.map(item => `
+                  <div style="font-size: 13px; color: #999999; margin-bottom: 4px;">
+                    ${item.itemName} × ${item.quantity} - ${data.currency} ${item.totalPrice.toFixed(2)}
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
           </div>
-
-          <div class="footer">
-            <div style="margin-bottom: 10px; font-weight: 600;">&copy; ${new Date().getFullYear()} ZFit Gym Management System</div>
-            <div>
-              <a href="#">Privacy Policy</a> • <a href="#">Terms of Service</a> • <a href="#">Contact Support</a>
-            </div>
-            <div style="margin-top: 10px; font-size: 11px; color: #666;">
-              123 Fitness Street, Colombo, Sri Lanka
-            </div>
+          
+          <div style="text-align: center; margin-bottom: 32px;">
+            <a href="${process.env.FRONTEND_APP_ORIGIN || 'http://localhost:3000'}/memberDashboard/orders" class="order-button">View Order Details</a>
           </div>
+          
+          <div class="support">
+            Questions? Contact <a href="mailto:support@zfit.synerge.digital">support@zfit.synerge.digital</a>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <div class="footer-text">&copy; ${new Date().getFullYear()} ZFit Gym Management System</div>
+          <div class="footer-text">18/2, Nawala Road, Rajagiriya, Colombo, Sri Lanka</div>
         </div>
       </div>
     </body>
@@ -2018,7 +1610,7 @@ export interface CartPurchaseFailureData {
 
 export const getCartPurchaseFailureTemplate = (data: CartPurchaseFailureData) => ({
   subject: "Order Payment Issue - ZFit Store",
-  text: `Hi ${data.userName}, we encountered an issue processing your order payment (#${data.orderNumber}) for ${data.currency} ${data.totalAmount}. Reason: ${data.failureReason}. Transaction ID: ${data.transactionId}. Please try again or contact support for assistance.`,
+  text: `Hi ${data.userName}, we encountered an issue processing your order payment (#${data.orderNumber}) for ${data.currency} ${data.totalAmount}. Reason: ${data.failureReason}. Transaction ID: ${data.transactionId}. Please try again or contact support@zfit.synerge.digital for assistance.`,
   html: `
     <!DOCTYPE html>
     <html lang="en">
@@ -2026,257 +1618,149 @@ export const getCartPurchaseFailureTemplate = (data: CartPurchaseFailureData) =>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Order Payment Issue - ZFit Store</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
       <style>
-        body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        * {
           margin: 0;
           padding: 0;
-          background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+          box-sizing: border-box;
+        }
+        body {
+          font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          background-color: #000000;
           color: #ffffff;
+          line-height: 1.5;
+          margin: 0;
+          padding: 40px 20px;
         }
         .container {
-          max-width: 650px;
+          max-width: 480px;
           margin: 0 auto;
-          background: linear-gradient(145deg, #2a2a2a 0%, #1f1f1f 100%);
-          border-radius: 20px;
+          background-color: #1a1a1a;
+          border-radius: 8px;
           overflow: hidden;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         }
-        .email-body {
-          padding: 0;
-        }
-        .header-section {
-          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-          padding: 40px 30px;
+        .header {
+          padding: 40px 40px 30px;
           text-align: center;
-          position: relative;
-          overflow: hidden;
         }
-        .logo-area {
-          font-size: 36px;
-          font-weight: 900;
-          color: #fff;
-          letter-spacing: -1px;
-          margin-bottom: 10px;
-          text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        .title {
+          font-size: 22px;
+          font-weight: 500;
+          color: #ffffff;
+          margin-bottom: 16px;
         }
-        .status-icon {
-          font-size: 48px;
-          margin: 15px 0;
-          animation: shake 0.5s ease-in-out infinite alternate;
-        }
-        @keyframes shake {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(5px); }
-        }
-        .main-title {
-          font-size: 28px;
-          font-weight: 800;
-          color: #fff;
-          margin-bottom: 8px;
-          text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-        }
-        .content-section {
-          padding: 40px 30px;
+        .content {
+          padding: 0 40px 40px;
         }
         .greeting {
-          font-size: 18px;
-          color: #cccccc;
-          margin: 20px 0 12px 0;
-          font-weight: 400;
+          font-size: 16px;
+          color: #ffffff;
+          margin-bottom: 16px;
         }
         .message {
-          font-size: 16px;
-          line-height: 1.6;
-          color: #e0e0e0;
-          margin: 12px 0;
-          font-weight: 400;
+          font-size: 15px;
+          color: #cccccc;
+          margin-bottom: 32px;
+          line-height: 1.5;
         }
-        .error-box {
-          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-          color: #fff;
+        .error-info {
+          background-color: #2a2a2a;
           padding: 20px;
-          border-radius: 10px;
-          text-align: center;
+          border-radius: 6px;
           margin: 20px 0;
-          font-weight: 600;
-          box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
-        }
-        .error-reason {
-          font-size: 16px;
-          margin-top: 10px;
-          font-style: italic;
-        }
-        .details-table {
-          width: 100%;
-          margin: 25px 0;
-          border-collapse: collapse;
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 10px;
-          overflow: hidden;
-        }
-        .details-table td {
-          padding: 15px 20px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .details-table tr:last-child td {
-          border-bottom: none;
-        }
-        .label {
-          font-weight: 600;
-          color: #AAFF69;
-          width: 40%;
-        }
-        .value {
-          color: #ffffff;
-          font-weight: 500;
-        }
-        .cta-button {
-          display: inline-block;
-          padding: 16px 32px;
-          border-radius: 50px;
-          text-decoration: none;
-          font-weight: 700;
-          font-size: 16px;
           text-align: center;
-          margin: 20px 10px;
-          transition: all 0.3s ease;
-          background: linear-gradient(135deg, #AAFF69 0%, #7BC96F 100%);
-          color: #000;
-          box-shadow: 0 4px 15px rgba(170, 255, 105, 0.3);
         }
-        .cta-button:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(170, 255, 105, 0.4);
+        .retry-button {
+          display: inline-block;
+          background-color: #AAFF69;
+          color: #000000;
+          text-decoration: none;
+          padding: 14px 28px;
+          border-radius: 6px;
+          font-weight: 500;
+          font-size: 15px;
+          margin-bottom: 32px;
+          transition: opacity 0.2s ease;
         }
-        .cta-button-secondary {
-          background: linear-gradient(135deg, #404040 0%, #2a2a2a 100%);
+        .retry-button:hover {
+          opacity: 0.9;
+        }
+        .support {
+          font-size: 13px;
+          color: #999999;
+          text-align: center;
+        }
+        .support a {
           color: #ffffff;
-          box-shadow: 0 4px 15px rgba(64, 64, 64, 0.3);
+          text-decoration: none;
         }
-        .cta-button-secondary:hover {
-          box-shadow: 0 6px 20px rgba(64, 64, 64, 0.4);
-        }
-        .help-section {
-          background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
-          padding: 25px;
-          border-radius: 15px;
-          margin: 25px 0;
-          border: 1px solid #404040;
-        }
-        .help-title {
-          font-size: 18px;
-          font-weight: 700;
-          color: #AAFF69;
-          margin-bottom: 15px;
-        }
-        .help-list {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-        .help-list li {
-          padding: 8px 0;
-          color: #e0e0e0;
-          position: relative;
-          padding-left: 25px;
-        }
-        .help-list li::before {
-          content: '•';
-          position: absolute;
-          left: 0;
-          color: #AAFF69;
-          font-weight: bold;
+        .support a:hover {
+          text-decoration: underline;
         }
         .footer {
+          padding: 20px 40px;
           text-align: center;
-          padding: 20px;
-          background: linear-gradient(145deg, #1a1a1a 0%, #252525 100%);
-          border-top: 1px solid #404040;
-          font-size: 13px;
-          color: #888;
         }
-        .footer a {
-          color: #AAFF69;
-          text-decoration: none;
-          font-weight: 500;
+        .footer-text {
+          font-size: 11px;
+          color: #666666;
+          line-height: 1.4;
         }
-        .footer a:hover {
-          color: #7BC96F;
-          text-decoration: underline;
+        .footer-text:not(:last-child) {
+          margin-bottom: 6px;
+        }
+        @media only screen and (max-width: 480px) {
+          body {
+            padding: 20px 10px;
+          }
+          .container {
+            margin: 0;
+          }
+          .header, .content, .footer {
+            padding-left: 24px;
+            padding-right: 24px;
+          }
+          .title {
+            font-size: 20px;
+          }
         }
       </style>
     </head>
     <body>
       <div class="container">
-        <div class="email-body">
-          <div class="header-section">
-            <div class="logo-area">ZFit</div>
-            <div class="status-icon">⚠️</div>
-            <div class="main-title">Payment Issue</div>
+        <div class="header">
+          <div class="title">Order Payment Issue</div>
+        </div>
+        
+        <div class="content">
+          <div class="greeting">Hi ${data.userName},</div>
+          
+          <div class="message">
+            We encountered an issue while processing your order payment. Don't worry - no charges have been made and your cart items are still saved.
           </div>
-
-          <div class="content-section">
-            <div class="greeting">Hi <strong style="color: #AAFF69;">${data.userName}</strong>,</div>
-
-            <div class="message">
-              We encountered an issue while processing your order payment. Don't worry - no charges have been made to your account and your cart items are still saved.
-            </div>
-
-            <div class="error-box">
-              <div>Order Payment Failed</div>
-              <div class="error-reason">${data.failureReason}</div>
-            </div>
-
-            <table class="details-table">
-              <tr>
-                <td class="label">Order Number</td>
-                <td class="value">#${data.orderNumber}</td>
-              </tr>
-              <tr>
-                <td class="label">Amount</td>
-                <td class="value">${data.currency} ${data.totalAmount.toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td class="label">Transaction ID</td>
-                <td class="value">${data.transactionId}</td>
-              </tr>
-            </table>
-
-            <div style="text-align: center; margin: 25px 0;">
-              <a href="${data.retryUrl}" class="cta-button">
-                Try Payment Again
-              </a>
-              <a href="${process.env.FRONTEND_APP_ORIGIN || 'http://localhost:3000'}/memberDashboard/cart" class="cta-button cta-button-secondary">
-                View Cart
-              </a>
-            </div>
-
-            <div class="help-section">
-              <div class="help-title">Common Solutions:</div>
-              <ul class="help-list">
-                <li>Check that your card details are correct</li>
-                <li>Ensure your card has sufficient funds</li>
-                <li>Try using a different payment method</li>
-                <li>Contact your bank if the issue persists</li>
-                <li>Reach out to our support team for assistance</li>
-              </ul>
-            </div>
-
-            <div class="message">
-              If you continue to experience issues, please don't hesitate to contact our support team. We're here to help!
-            </div>
+          
+          <div class="error-info">
+            <div style="font-size: 16px; font-weight: 500; margin-bottom: 8px;">Order #${data.orderNumber}</div>
+            <div style="font-size: 16px; color: #AAFF69; font-weight: 500; margin-bottom: 8px;">${data.currency} ${data.totalAmount.toFixed(2)}</div>
+            <div style="font-size: 14px; color: #999999; margin-bottom: 8px;">Reason: ${data.failureReason}</div>
+            <div style="font-size: 13px; color: #999999;">Transaction: ${data.transactionId}</div>
           </div>
-
-          <div class="footer">
-            <div style="margin-bottom: 10px; font-weight: 600;">&copy; ${new Date().getFullYear()} ZFit Gym Management System</div>
-            <div>
-              <a href="#">Privacy Policy</a> • <a href="#">Terms of Service</a> • <a href="#">Contact Support</a>
-            </div>
-            <div style="margin-top: 10px; font-size: 11px; color: #666;">
-              123 Fitness Street, Colombo, Sri Lanka
-            </div>
+          
+          <div style="text-align: center; margin-bottom: 32px;">
+            <a href="${data.retryUrl}" class="retry-button">Try Payment Again</a>
           </div>
+          
+          <div class="support">
+            Questions? Contact <a href="mailto:support@zfit.synerge.digital">support@zfit.synerge.digital</a>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <div class="footer-text">&copy; ${new Date().getFullYear()} ZFit Gym Management System</div>
+          <div class="footer-text">18/2, Nawala Road, Rajagiriya, Colombo, Sri Lanka</div>
         </div>
       </div>
     </body>
@@ -2520,10 +2004,10 @@ export const getRefundApprovalTemplate = (data: RefundApprovalData) => ({
               <a href="#">Privacy Policy</a> • <a href="#">Terms of Service</a> • <a href="#">Contact Support</a>
             </div>
             <div style="margin-top: 10px; font-size: 11px; color: #666;">
-              Questions? Our support team is here to help at <a href="mailto:support@zfit.com" style="color: #AAFF69; font-weight: 600;">support@zfit.com</a>
+              Questions? Our support team is here to help at <a href="mailto:support@zfit.synerge.digital" style="color: #AAFF69; font-weight: 600;">support@zfit.synerge.digital</a>
             </div>
             <div style="margin-top: 10px; font-size: 11px; color: #666;">
-              123 Fitness Street, Colombo, Sri Lanka
+              18/2, Nawala Road, Rajagiriya, Colombo, Sri Lanka
             </div>
           </div>
         </div>
@@ -2773,10 +2257,10 @@ export const getRefundDeclineTemplate = (data: RefundDeclineData) => ({
               <a href="#">Privacy Policy</a> • <a href="#">Terms of Service</a> • <a href="#">Contact Support</a>
             </div>
             <div style="margin-top: 10px; font-size: 11px; color: #666;">
-              Questions? Our support team is here to help at <a href="mailto:support@zfit.com" style="color: #AAFF69; font-weight: 600;">support@zfit.com</a>
+              Questions? Our support team is here to help at <a href="mailto:support@zfit.synerge.digital" style="color: #AAFF69; font-weight: 600;">support@zfit.synerge.digital</a>
             </div>
             <div style="margin-top: 10px; font-size: 11px; color: #666;">
-              123 Fitness Street, Colombo, Sri Lanka
+              18/2, Nawala Road, Rajagiriya, Colombo, Sri Lanka
             </div>
           </div>
         </div>
