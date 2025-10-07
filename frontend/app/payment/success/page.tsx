@@ -154,7 +154,7 @@ export default function PaymentSuccessPage() {
     }
     
     if (verification.status === 'pending') {
-      return <Loader2 className="h-16 w-16 text-blue-500 animate-spin" />
+      return <Loader2 className="h-16 w-16 text-green-500 animate-spin" />
     }
     
     return <AlertCircle className="h-16 w-16 text-red-500" />
@@ -255,30 +255,8 @@ export default function PaymentSuccessPage() {
           )}
 
           <div className="space-y-3">
-            {verification?.status === 'completed' && (
-              <div className="bg-black border border-green-500/75 p-3 rounded-lg">
-                <p className="text-white font-medium text-sm mb-1">
-                  ✅ Membership Activated!
-                </p>
-                <p className="text-gray-300 text-xs">
-                  Your membership is now active and ready to use. Check your email for confirmation details.
-                </p>
-              </div>
-            )}
             
-            {(verification?.status === 'pending' || loading) && (
-              <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
-                  <p className="text-blue-800 font-medium text-sm">
-                    Processing Payment
-                  </p>
-                </div>
-                <p className="text-blue-700 text-xs">
-                  Your payment is being processed. Please wait a moment and refresh if needed.
-                </p>
-              </div>
-            )}
+
 
             {!verification?.verified && !loading && (
               <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
@@ -323,7 +301,7 @@ export default function PaymentSuccessPage() {
                     className="w-full"
                   >
                     {loading ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin text-green-500" />
                     ) : (
                       <RefreshCw className="w-4 h-4 mr-2" />
                     )}
