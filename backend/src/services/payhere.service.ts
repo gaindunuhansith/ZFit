@@ -2,7 +2,7 @@ import env from '../config/env.js';
 import mongoose from 'mongoose';
 import { PayHereUtils } from '../util/payhere.util.js';
 import { createPaymentService, updatePaymentService } from './payment.services.js';
-import { createMembership } from './membership.service.js';
+import { createOrExtendMembership } from './membership.service.js';
 import { sendMail } from '../util/sendMail.util.js';
 import { getCartPurchaseSuccessTemplate, getCartPurchaseFailureTemplate, getMembershipPurchaseSuccessTemplate, getMembershipPurchaseFailureTemplate } from '../util/emailTemplates.js';
 import { getMembershipPlanById } from './membershipPlan.service.js';
@@ -237,23 +237,15 @@ export class PayHereService {
             
             if (paymentStatus === 'completed' && payment.type === 'membership' && payment.relatedId) {
                 try {
-                    console.log('Creating membership with data:', {
+                    console.log('Processing membership creation/extension for payment:', payment.transactionId);
+                    
+                    membership = await createOrExtendMembership({
                         userId: payment.userId.toString(),
                         membershipPlanId: payment.relatedId.toString(),
                         transactionId: payment.transactionId,
                         autoRenew: false,
                         notes: `Auto-created from payment ${payment.transactionId}`
                     });
-                    
-                    membership = await createMembership({
-                        userId: payment.userId.toString(),
-                        membershipPlanId: payment.relatedId.toString(),
-                        transactionId: payment.transactionId,
-                        autoRenew: false,
-                        notes: `Auto-created from payment ${payment.transactionId}`
-                    });
-                    
-                    console.log('Membership created successfully:', membership);
 
                     // Send success email notification
                     if (membership) {
@@ -277,12 +269,12 @@ export class PayHereService {
                                     membershipDuration: formatDuration(membershipPlan.durationInDays),
                                     amount: payment.amount,
                                     currency: payment.currency,
-                                    activationDate: new Date().toLocaleDateString('en-US', { 
+                                    activationDate: membership.startDate.toLocaleDateString('en-US', { 
                                         year: 'numeric', 
                                         month: 'long', 
                                         day: 'numeric' 
                                     }),
-                                    expiryDate: new Date(Date.now() + membershipPlan.durationInDays * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 
+                                    expiryDate: membership.endDate.toLocaleDateString('en-US', { 
                                         year: 'numeric', 
                                         month: 'long', 
                                         day: 'numeric' 
