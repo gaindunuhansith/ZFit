@@ -391,8 +391,7 @@ export class PayHereService {
                                 console.log('Payment record updated with order reference');
                             } catch (orderError) {
                                 console.error('Failed to create order for cart payment:', orderError);
-                                // Continue with payment processing even if order creation fails
-                                // This maintains backward compatibility for existing payments
+                        
                             }
 
                             // Prepare cart items for email
@@ -433,7 +432,7 @@ export class PayHereService {
                         } else {
                             console.log('No cart items found for user, sending basic success email');
                             
-                            // Send basic success email without cart details
+                            // Send success email without cart details
                             const emailData = {
                                 userName: user.name || 'Customer',
                                 userEmail: user.email,
@@ -554,9 +553,7 @@ export class PayHereService {
      * Process refund (if needed in future)
      */
     async processRefund(paymentId: string, amount: number, reason: string): Promise<any> {
-        // PayHere doesn't have direct refund API
-        // This would typically involve manual refund processing
-        // For now, we'll update the payment status
+
         try {
             const payment = await updatePaymentService(paymentId, {
                 status: 'refunded',
