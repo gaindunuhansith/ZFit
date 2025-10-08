@@ -50,6 +50,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -756,37 +757,46 @@ export default function RefundManagementPage() {
 
       {/* Create Refund Modal */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Create Refund Request</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Create Refund Request
+            </DialogTitle>
+            <DialogDescription className="text-base">
               Create a new refund request for a member.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* General Error Message */}
             {createFormErrors.general && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-600">{createFormErrors.general}</p>
               </div>
             )}
-            <div className="space-y-2">
-              <Label htmlFor="refund-payment">Transaction ID *</Label>
-              <Input
-                id="refund-payment"
-                placeholder="Enter transaction ID to refund"
-                value={createFormData.paymentId}
-                onChange={(e) => {
-                  setCreateFormData(prev => ({ ...prev, paymentId: e.target.value }));
-                  if (createFormErrors.paymentId) {
-                    setCreateFormErrors(prev => ({ ...prev, paymentId: '' }));
-                  }
-                }}
-                className={createFormErrors.paymentId ? 'border-red-500' : ''}
-              />
-              {createFormErrors.paymentId && (
-                <p className="text-sm text-red-600">{createFormErrors.paymentId}</p>
-              )}
-            </div>
+
+            {/* Form Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="refund-payment-id" className="text-sm font-medium">
+                  Payment ID <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="refund-payment-id"
+                  placeholder="Enter transaction ID"
+                  value={createFormData.paymentId}
+                  onChange={(e) => {
+                    setCreateFormData(prev => ({ ...prev, paymentId: e.target.value }));
+                    if (createFormErrors.paymentId) {
+                      setCreateFormErrors(prev => ({ ...prev, paymentId: '' }));
+                    }
+                  }}
+                  className={`transition-colors ${createFormErrors.paymentId ? 'border-red-500 focus:border-red-500' : 'focus:border-green-500'}`}
+                />
+                {createFormErrors.paymentId && (
+                  <p className="text-sm text-red-600">{createFormErrors.paymentId}</p>
+                )}
+              </div>
             <div className="space-y-2">
               <Label htmlFor="refund-user">Search User *</Label>
               <div className="relative">
@@ -817,63 +827,51 @@ export default function RefundManagementPage() {
                   }`}
                 />
                 {showUserDropdown && userSearchResults.length > 0 && (
-                  <div className="absolute z-50 w-full mt-1 bg-black border-2 border-green-400 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
-                    <div className="py-1">
+                  <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-64 overflow-y-auto">
+                    <div className="p-1">
                       {userSearchResults.map((user, index) => (
                         <div
                           key={user._id}
-                          className="px-4 py-3 hover:bg-gradient-to-r hover:from-green-900 hover:to-gray-800 cursor-pointer transition-all duration-200 border-b border-gray-700 last:border-b-0 group"
+                          className="px-3 py-2 hover:bg-accent cursor-pointer transition-colors rounded-sm border-b border-border last:border-b-0"
                           onClick={() => selectUser(user)}
                         >
                           <div className="flex items-center space-x-3">
                             {/* User Avatar/Initials */}
-                            <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:shadow-lg transition-shadow">
+                            <div className="flex-shrink-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold">
                               {user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                             </div>
 
                             {/* User Info */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center space-x-2">
-                                <p className="text-sm font-semibold text-white truncate group-hover:text-green-400 transition-colors">
+                                <p className="text-sm font-medium text-foreground truncate">
                                   {highlightText(user.name, userSearchTerm)}
                                 </p>
                                 <Badge
                                   variant={user.role === 'member' ? 'default' : user.role === 'staff' ? 'secondary' : 'outline'}
-                                  className={`text-xs px-2 py-0.5 font-medium ${
-                                    user.role === 'member'
-                                      ? 'bg-green-900 text-green-300 border-green-600 hover:bg-green-800'
-                                      : user.role === 'staff'
-                                      ? 'bg-emerald-900 text-emerald-300 border-emerald-600 hover:bg-emerald-800'
-                                      : 'bg-teal-900 text-teal-300 border-teal-600 hover:bg-teal-800'
-                                  }`}
+                                  className="text-xs px-1.5 py-0.5"
                                 >
                                   {user.role}
                                 </Badge>
                                 <Badge
                                   variant={user.status === 'active' ? 'default' : user.status === 'inactive' ? 'secondary' : 'destructive'}
-                                  className={`text-xs px-2 py-0.5 font-medium ${
-                                    user.status === 'active'
-                                      ? 'bg-green-900 text-green-300 border-green-600 hover:bg-green-800'
-                                      : user.status === 'inactive'
-                                      ? 'bg-orange-900 text-orange-300 border-orange-600 hover:bg-orange-800'
-                                      : 'bg-red-900 text-red-300 border-red-600 hover:bg-red-800'
-                                  }`}
+                                  className="text-xs px-1.5 py-0.5"
                                 >
                                   {user.status}
                                 </Badge>
                               </div>
-                              <p className="text-xs text-gray-300 truncate group-hover:text-green-400 transition-colors">
+                              <p className="text-xs text-muted-foreground truncate">
                                 {highlightText(user.email, userSearchTerm)}
                               </p>
                               {user.contactNo && (
-                                <p className="text-xs text-gray-400 truncate group-hover:text-emerald-400 transition-colors">
+                                <p className="text-xs text-muted-foreground truncate">
                                   📞 {highlightText(user.contactNo, userSearchTerm)}
                                 </p>
                               )}
                             </div>
 
                             {/* User ID */}
-                            <div className="flex-shrink-0 text-xs text-gray-500 font-mono bg-gray-800 px-2 py-1 rounded group-hover:bg-green-900 group-hover:text-green-300 transition-colors">
+                            <div className="flex-shrink-0 text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
                               {user._id.slice(-6)}
                             </div>
                           </div>
@@ -882,9 +880,9 @@ export default function RefundManagementPage() {
                     </div>
 
                     {/* Footer with result count */}
-                    <div className="px-4 py-3 bg-gradient-to-r from-gray-900 to-gray-800 border-t-2 border-green-400 rounded-b-xl">
-                      <p className="text-xs text-green-400 font-medium text-center">
-                        🎯 {userSearchResults.length} user{userSearchResults.length !== 1 ? 's' : ''} found
+                    <div className="px-3 py-2 bg-muted border-t border-border rounded-b-md">
+                      <p className="text-xs text-muted-foreground font-medium text-center">
+                        {userSearchResults.length} user{userSearchResults.length !== 1 ? 's' : ''} found
                       </p>
                     </div>
                   </div>
@@ -909,51 +907,60 @@ export default function RefundManagementPage() {
                 <p className="text-sm text-red-600">{createFormErrors.userId}</p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="original-amount">Original Amount *</Label>
-              <Input
-                id="original-amount"
-                type="number"
-                step="0.01"
-                placeholder="Enter original payment amount"
-                value={createFormData.originalAmount}
-                onChange={(e) => {
-                  setCreateFormData(prev => ({ ...prev, originalAmount: e.target.value }));
-                  if (createFormErrors.originalAmount) {
-                    setCreateFormErrors(prev => ({ ...prev, originalAmount: '' }));
-                  }
-                }}
-                className={createFormErrors.originalAmount ? 'border-red-500' : ''}
-              />
-              {createFormErrors.originalAmount && (
-                <p className="text-sm text-red-600">{createFormErrors.originalAmount}</p>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="create-original-amount" className="text-sm font-medium">
+                  Original Amount <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="create-original-amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="25000"
+                  value={createFormData.originalAmount}
+                  onChange={(e) => {
+                    setCreateFormData(prev => ({ ...prev, originalAmount: e.target.value }));
+                    if (createFormErrors.originalAmount) {
+                      setCreateFormErrors(prev => ({ ...prev, originalAmount: '' }));
+                    }
+                  }}
+                  className={`transition-colors ${createFormErrors.originalAmount ? 'border-red-500 focus:border-red-500' : 'focus:border-green-500'}`}
+                />
+                {createFormErrors.originalAmount && (
+                  <p className="text-sm text-red-600">{createFormErrors.originalAmount}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-refund-amount" className="text-sm font-medium">
+                  Refund Amount <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="create-refund-amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="12500"
+                  value={createFormData.refundAmount}
+                  onChange={(e) => {
+                    setCreateFormData(prev => ({ ...prev, refundAmount: e.target.value }));
+                    if (createFormErrors.refundAmount) {
+                      setCreateFormErrors(prev => ({ ...prev, refundAmount: '' }));
+                    }
+                  }}
+                  className={`transition-colors ${createFormErrors.refundAmount ? 'border-red-500 focus:border-red-500' : 'focus:border-green-500'}`}
+                />
+                {createFormErrors.refundAmount && (
+                  <p className="text-sm text-red-600">{createFormErrors.refundAmount}</p>
+                )}
+              </div>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="refund-amount">Refund Amount *</Label>
-              <Input
-                id="refund-amount"
-                type="number"
-                step="0.01"
-                placeholder="Enter refund amount"
-                value={createFormData.refundAmount}
-                onChange={(e) => {
-                  setCreateFormData(prev => ({ ...prev, refundAmount: e.target.value }));
-                  if (createFormErrors.refundAmount) {
-                    setCreateFormErrors(prev => ({ ...prev, refundAmount: '' }));
-                  }
-                }}
-                className={createFormErrors.refundAmount ? 'border-red-500' : ''}
-              />
-              {createFormErrors.refundAmount && (
-                <p className="text-sm text-red-600">{createFormErrors.refundAmount}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="refund-notes">Notes *</Label>
+              <Label htmlFor="create-notes" className="text-sm font-medium">
+                Notes <span className="text-red-500">*</span>
+              </Label>
               <Textarea
-                id="refund-notes"
-                placeholder="Additional notes about the refund..."
+                id="create-notes"
+                placeholder="Customer accidentally charged twice for premium membership upgrade"
                 rows={3}
                 value={createFormData.notes}
                 onChange={(e) => {
@@ -962,136 +969,178 @@ export default function RefundManagementPage() {
                     setCreateFormErrors(prev => ({ ...prev, notes: '' }));
                   }
                 }}
-                className={createFormErrors.notes ? 'border-red-500' : ''}
+                className={`transition-colors resize-none ${createFormErrors.notes ? 'border-red-500 focus:border-red-500' : 'focus:border-green-500'}`}
               />
               {createFormErrors.notes && (
                 <p className="text-sm text-red-600">{createFormErrors.notes}</p>
               )}
             </div>
           </div>
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+
+          <DialogFooter className="flex gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateModalOpen(false)}
+              className="px-6"
+            >
               Cancel
             </Button>
-            <Button onClick={handleCreateRefund}>
+            <Button
+              onClick={handleCreateRefund}
+              className="px-6"
+            >
               Create Refund Request
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Edit Refund Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Edit Refund Request</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              Edit Refund Request
+            </DialogTitle>
+            <DialogDescription className="text-base font-mono bg-muted px-3 py-2 rounded-md">
               Update refund details for {editingRefund?.refundId}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4">
+
+          <div className="space-y-6">
+            {/* General Error Message */}
             {editFormErrors.general && (
-              <div className="col-span-2 p-3 bg-red-50 border border-red-200 rounded-md">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-600">{editFormErrors.general}</p>
               </div>
             )}
-            <div className="space-y-2">
-              <Label htmlFor="edit-payment">Payment ID *</Label>
-              <Input
-                id="edit-payment"
-                placeholder="Enter payment ID to refund"
-                value={editFormData.paymentId}
-                onChange={(e) => {
-                  setEditFormData(prev => ({ ...prev, paymentId: e.target.value }));
-                  if (editFormErrors.paymentId) {
-                    setEditFormErrors(prev => ({ ...prev, paymentId: '' }));
-                  }
-                }}
-                className={editFormErrors.paymentId ? 'border-red-500' : ''}
-              />
-              {editFormErrors.paymentId && (
-                <p className="text-sm text-red-600">{editFormErrors.paymentId}</p>
-              )}
+
+            {/* Form Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-payment-id" className="text-sm font-medium">
+                  Payment ID <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="edit-payment-id"
+                  placeholder="Enter payment ID"
+                  value={editFormData.paymentId}
+                  onChange={(e) => {
+                    setEditFormData(prev => ({ ...prev, paymentId: e.target.value }));
+                    if (editFormErrors.paymentId) {
+                      setEditFormErrors(prev => ({ ...prev, paymentId: '' }));
+                    }
+                  }}
+                  className={`transition-colors ${editFormErrors.paymentId ? 'border-red-500 focus:border-red-500' : 'focus:border-green-500'}`}
+                />
+                {editFormErrors.paymentId && (
+                  <p className="text-sm text-red-600">{editFormErrors.paymentId}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-user-id" className="text-sm font-medium">
+                  User ID <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="edit-user-id"
+                  placeholder="Enter user ID"
+                  value={editFormData.userId}
+                  onChange={(e) => {
+                    setEditFormData(prev => ({ ...prev, userId: e.target.value }));
+                    if (editFormErrors.userId) {
+                      setEditFormErrors(prev => ({ ...prev, userId: '' }));
+                    }
+                  }}
+                  className={`transition-colors ${editFormErrors.userId ? 'border-red-500 focus:border-red-500' : 'focus:border-green-500'}`}
+                />
+                {editFormErrors.userId && (
+                  <p className="text-sm text-red-600">{editFormErrors.userId}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-original-amount" className="text-sm font-medium">
+                  Original Amount <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="edit-original-amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="25000"
+                  value={editFormData.originalAmount}
+                  onChange={(e) => {
+                    setEditFormData(prev => ({ ...prev, originalAmount: e.target.value }));
+                    if (editFormErrors.originalAmount) {
+                      setEditFormErrors(prev => ({ ...prev, originalAmount: '' }));
+                    }
+                  }}
+                  className={`transition-colors ${editFormErrors.originalAmount ? 'border-red-500 focus:border-red-500' : 'focus:border-green-500'}`}
+                />
+                {editFormErrors.originalAmount && (
+                  <p className="text-sm text-red-600">{editFormErrors.originalAmount}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-refund-amount" className="text-sm font-medium">
+                  Refund Amount <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="edit-refund-amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="12500"
+                  value={editFormData.refundAmount}
+                  onChange={(e) => {
+                    setEditFormData(prev => ({ ...prev, refundAmount: e.target.value }));
+                    if (editFormErrors.refundAmount) {
+                      setEditFormErrors(prev => ({ ...prev, refundAmount: '' }));
+                    }
+                  }}
+                  className={`transition-colors ${editFormErrors.refundAmount ? 'border-red-500 focus:border-red-500' : 'focus:border-green-500'}`}
+                />
+                {editFormErrors.refundAmount && (
+                  <p className="text-sm text-red-600">{editFormErrors.refundAmount}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-status" className="text-sm font-medium">
+                  Status <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={editFormData.status}
+                  onValueChange={(value: 'pending' | 'completed' | 'failed') => {
+                    setEditFormData(prev => ({ ...prev, status: value }));
+                    if (editFormErrors.status) {
+                      setEditFormErrors(prev => ({ ...prev, status: '' }));
+                    }
+                  }}
+                >
+                  <SelectTrigger className={`transition-colors ${editFormErrors.status ? 'border-red-500 focus:border-red-500' : 'focus:border-green-500'}`}>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                  </SelectContent>
+                </Select>
+                {editFormErrors.status && (
+                  <p className="text-sm text-red-600">{editFormErrors.status}</p>
+                )}
+              </div>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="edit-user">User ID *</Label>
-              <Input
-                id="edit-user"
-                placeholder="Enter user ID"
-                value={editFormData.userId}
-                onChange={(e) => {
-                  setEditFormData(prev => ({ ...prev, userId: e.target.value }));
-                  if (editFormErrors.userId) {
-                    setEditFormErrors(prev => ({ ...prev, userId: '' }));
-                  }
-                }}
-                className={editFormErrors.userId ? 'border-red-500' : ''}
-              />
-              {editFormErrors.userId && (
-                <p className="text-sm text-red-600">{editFormErrors.userId}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-original-amount">Original Amount *</Label>
-              <Input
-                id="edit-original-amount"
-                type="number"
-                step="0.01"
-                placeholder="Enter original payment amount"
-                value={editFormData.originalAmount}
-                onChange={(e) => {
-                  setEditFormData(prev => ({ ...prev, originalAmount: e.target.value }));
-                  if (editFormErrors.originalAmount) {
-                    setEditFormErrors(prev => ({ ...prev, originalAmount: '' }));
-                  }
-                }}
-                className={editFormErrors.originalAmount ? 'border-red-500' : ''}
-              />
-              {editFormErrors.originalAmount && (
-                <p className="text-sm text-red-600">{editFormErrors.originalAmount}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-refund-amount">Refund Amount *</Label>
-              <Input
-                id="edit-refund-amount"
-                type="number"
-                step="0.01"
-                placeholder="Enter refund amount"
-                value={editFormData.refundAmount}
-                onChange={(e) => {
-                  setEditFormData(prev => ({ ...prev, refundAmount: e.target.value }));
-                  if (editFormErrors.refundAmount) {
-                    setEditFormErrors(prev => ({ ...prev, refundAmount: '' }));
-                  }
-                }}
-                className={editFormErrors.refundAmount ? 'border-red-500' : ''}
-              />
-              {editFormErrors.refundAmount && (
-                <p className="text-sm text-red-600">{editFormErrors.refundAmount}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-status">Status *</Label>
-              <Select
-                value={editFormData.status}
-                onValueChange={(value: 'pending' | 'completed' | 'failed') => setEditFormData(prev => ({ ...prev, status: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2 col-span-2">
-              <Label htmlFor="edit-notes">Notes *</Label>
+              <Label htmlFor="edit-notes" className="text-sm font-medium">
+                Notes <span className="text-red-500">*</span>
+              </Label>
               <Textarea
                 id="edit-notes"
-                placeholder="Additional notes about the refund..."
+                placeholder="Customer accidentally charged twice for premium membership upgrade"
                 rows={3}
                 value={editFormData.notes}
                 onChange={(e) => {
@@ -1100,21 +1149,30 @@ export default function RefundManagementPage() {
                     setEditFormErrors(prev => ({ ...prev, notes: '' }));
                   }
                 }}
-                className={editFormErrors.notes ? 'border-red-500' : ''}
+                className={`transition-colors resize-none ${editFormErrors.notes ? 'border-red-500 focus:border-red-500' : 'focus:border-green-500'}`}
               />
               {editFormErrors.notes && (
                 <p className="text-sm text-red-600">{editFormErrors.notes}</p>
               )}
             </div>
           </div>
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+
+          <DialogFooter className="flex gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditModalOpen(false)}
+              className="px-6"
+            >
               Cancel
             </Button>
-            <Button onClick={handleEditRefund} disabled={editingRefund?.status === 'failed' || editingRefund?.status === 'completed'}>
+            <Button
+              onClick={handleEditRefund}
+              disabled={editingRefund?.status === 'failed' || editingRefund?.status === 'completed'}
+              className="px-6"
+            >
               Save Changes
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -59,15 +59,21 @@ export const createInvoiceService = async (
 
 export const getInvoicesService = async (userId?: string): Promise<IInvoice[]> => {
     if (userId) {
-        return await Invoice.find({ userId });
+        return await Invoice.find({ userId })
+            .populate('userId', 'name email contactNo')
+            .populate('paymentId', 'transactionId type method amount status createdAt');
     } else {
-        return await Invoice.find({});
+        return await Invoice.find({})
+            .populate('userId', 'name email contactNo')
+            .populate('paymentId', 'transactionId type method amount status createdAt');
     }
 };
 
 export const getInvoiceByIdService = async (id: string): Promise<IInvoice | null> => {
     if (!mongoose.Types.ObjectId.isValid(id)) return null;
-    return await Invoice.findById(id);
+    return await Invoice.findById(id)
+        .populate('userId', 'name email contactNo')
+        .populate('paymentId', 'transactionId type method amount status createdAt');
 };
 
 export const updateInvoiceService = async (

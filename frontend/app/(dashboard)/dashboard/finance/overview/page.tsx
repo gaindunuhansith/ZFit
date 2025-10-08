@@ -535,8 +535,8 @@ export default function PaymentManagementPage() {
             <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="membership">Membership</SelectItem>
             <SelectItem value="booking">Booking</SelectItem>
-            <SelectItem value="inventory">Orders</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
+            <SelectItem value="other">Orders</SelectItem>
+            <SelectItem value="inventory">Other</SelectItem>
           </SelectContent>
         </Select>
         <Select value={methodFilter} onValueChange={setMethodFilter}>

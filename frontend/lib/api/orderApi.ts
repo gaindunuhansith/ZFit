@@ -32,19 +32,17 @@ export const getMemberOrders = async (memberId: string): Promise<Order[]> => {
   }
 };
 
-export const checkoutCart = async (memberId: string): Promise<Order> => {
+export const getOrderById = async (orderId: string): Promise<Order> => {
   try {
-    const response = await apiRequest<Order>(`/orders/checkout/${memberId}`, {
-      method: "POST",
-    });
+    const response = await apiRequest<Order>(`/orders/${orderId}`);
 
     if (response.success && response.data) {
       return response.data;
     } else {
-      throw new Error(response.message || "Failed to checkout cart");
+      throw new Error(response.message || "Failed to fetch order");
     }
   } catch (error) {
-    console.error("Error checking out cart:", error);
+    console.error("Error fetching order:", error);
     throw error;
   }
 };

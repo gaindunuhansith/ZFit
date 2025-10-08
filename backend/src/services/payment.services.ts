@@ -3,10 +3,29 @@ import type { IPayment } from "../models/payment.model.js";
 import mongoose from "mongoose";
 import { createInvoiceService } from "./invoice.services.js";
 
+console.log('=== PAYMENT SERVICE LOADED WITH INVOICE CREATION ===');
+
+
 // Create a new payment
 export const createPaymentService = async (data: Partial<IPayment>) => {
     const payment = new Payment(data);
-    return await payment.save();
+    const savedPayment = await payment.save();
+    
+    console.log('Payment created:', savedPayment._id, 'Status:', savedPayment.status);
+    
+    // Automatically create invoice if payment is completed
+    if (savedPayment.status === 'completed') {
+        console.log('Creating invoice for completed payment:', savedPayment._id);
+        try {
+            await createInvoiceForPayment(savedPayment);
+            console.log('Invoice creation completed for payment:', savedPayment._id);
+        } catch (invoiceError) {
+            console.error('Failed to create invoice for payment:', invoiceError);
+            // Don't throw error for invoice creation failure - payment is still created
+        }
+    }
+    
+    return savedPayment;
 };
 
 // Get all payments for a user
@@ -30,7 +49,27 @@ export const updatePaymentService = async (id: string, data: Partial<IPayment>) 
     if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new Error('Invalid payment ID format');
     }
-    return await Payment.findByIdAndUpdate(id, data, { new: true }).populate('userId', 'name email contactNo role status');
+    
+    // Get the payment before updating to check current status
+    const existingPayment = await Payment.findById(id);
+    if (!existingPayment) {
+        throw new Error('Payment not found');
+    }
+    
+    const updatedPayment = await Payment.findByIdAndUpdate(id, data, { new: true }).populate('userId', 'name email contactNo role status');
+    
+    // Create invoice if payment status changed to completed
+    if (existingPayment.status !== 'completed' && data.status === 'completed' && updatedPayment) {
+        try {
+            await createInvoiceForPayment(updatedPayment);
+            console.log('Invoice created for updated payment:', updatedPayment._id);
+        } catch (invoiceError) {
+            console.error('Failed to create invoice for payment:', invoiceError);
+            // Don't throw error for invoice creation failure - payment is still updated
+        }
+    }
+    
+    return updatedPayment;
 };
 
 // Delete payment
@@ -65,6 +104,7 @@ export const processPaymentService = async (id: string, response: Record<string,
         try {
             // Create invoice automatically for completed payment
             await createInvoiceForPayment(updatedPayment!);
+            console.log('Invoice created for processed payment:', updatedPayment!._id);
         } catch (invoiceError) {
             console.error('Failed to create invoice for payment:', invoiceError);
             // Don't throw error for invoice creation failure - payment is still completed
@@ -149,6 +189,7 @@ export const getPendingPaymentStatsService = async (): Promise<{
 
 // Helper function to create invoice for completed payment
 const createInvoiceForPayment = async (payment: IPayment) => {
+    console.log('Starting invoice creation for payment:', payment._id);
     try {
         // Create invoice items based on payment type
         const invoiceItems = [{
@@ -186,6 +227,7 @@ const createInvoiceForPayment = async (payment: IPayment) => {
 
         // Create the invoice
         await createInvoiceService(invoiceData);
+        console.log('Invoice created successfully via createInvoiceService');
     } catch (error) {
         console.error('Error creating invoice for payment:', error);
         throw error;
