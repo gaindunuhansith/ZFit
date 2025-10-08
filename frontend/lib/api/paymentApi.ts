@@ -276,7 +276,7 @@ export const initiatePayHereRefund = async (refundData: PayHereRefundRequest): P
     if (response.message && response.message.includes('Refund processed (manual verification required)')) {
       // Return a mock successful response for manual verification cases
       return {
-        refundId: `manual-${Date.now()}`,
+        refundId: `${Date.now()}`,
         status: 'pending_verification',
         amount: refundData.amount,
         currency: 'LKR',

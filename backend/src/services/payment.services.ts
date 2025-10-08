@@ -119,11 +119,11 @@ export const deleteAllPaymentsService = async () => {
     return result;
 };
 
-// Cleanup old pending payments (older than specified days)
-export const cleanupPendingPaymentsService = async (daysOld: number = 30): Promise<{ deletedCount: number }> => {
+// Cleanup old pending payments (older than specified seconds)
+export const cleanupPendingPaymentsService = async (secondsOld: number = 30): Promise<{ deletedCount: number }> => {
     try {
         const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+        cutoffDate.setSeconds(cutoffDate.getSeconds() - secondsOld);
 
         const result = await Payment.deleteMany({
             status: 'pending',

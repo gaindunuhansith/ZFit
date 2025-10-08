@@ -212,32 +212,32 @@ export default function CartSuccessPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {paymentData && (
-            <div className="bg-secondary p-4 rounded-lg space-y-2">
+            <div className="bg-black p-4 rounded-lg space-y-2">
               <div className="flex justify-between">
-                <span className="font-medium text-foreground">Order ID:</span>
-                <span className="text-sm text-muted-foreground">{paymentData.orderId}</span>
+                <span className="font-medium text-white">Order ID:</span>
+                <span className="text-sm text-gray-300">{paymentData.orderId}</span>
               </div>
               {paymentData.paymentId && (
                 <div className="flex justify-between">
-                  <span className="font-medium text-foreground">Payment ID:</span>
-                  <span className="text-sm text-muted-foreground">{paymentData.paymentId}</span>
+                  <span className="font-medium text-white">Payment ID:</span>
+                  <span className="text-sm text-gray-300">{paymentData.paymentId}</span>
                 </div>
               )}
               {paymentData.amount && paymentData.currency && (
                 <div className="flex justify-between">
-                  <span className="font-medium text-foreground">Amount:</span>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="font-medium text-white">Amount:</span>
+                  <span className="text-sm text-gray-300">
                     {paymentData.currency} {paymentData.amount}
                   </span>
                 </div>
               )}
               {verification && (
                 <div className="flex justify-between">
-                  <span className="font-medium text-foreground">Status:</span>
+                  <span className="font-medium text-white">Status:</span>
                   <span className={`text-sm font-medium ${
-                    verification.status === 'completed' ? 'text-green-600' :
-                    verification.status === 'pending' ? 'text-blue-600' :
-                    'text-yellow-600'
+                    verification.status === 'completed' ? 'text-green-400' :
+                    verification.status === 'pending' ? 'text-blue-400' :
+                    'text-yellow-400'
                   }`}>
                     {verification.status.charAt(0).toUpperCase() + verification.status.slice(1)}
                   </span>
@@ -248,33 +248,33 @@ export default function CartSuccessPage() {
 
           <div className="space-y-3">
             {verification?.status === 'completed' && (
-              <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
-                <p className="text-green-800 font-medium text-sm mb-1">
+              <div className="bg-black border border-green-600 p-3 rounded-lg">
+                <p className="text-white font-medium text-sm mb-1">
                   ✅ Order Confirmed!
                 </p>
-                <p className="text-green-700 text-xs">
+                <p className="text-gray-300 text-xs">
                   Your order has been successfully placed! Check your email for order details and pickup/delivery information.
                 </p>
               </div>
             )}
             
             {(verification?.status === 'pending' || loading) && (
-              <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
-                <p className="text-blue-800 font-medium text-sm mb-1">
+              <div className="bg-black border border-green-600 p-3 rounded-lg">
+                <p className="text-white font-medium text-sm mb-1">
                   ⏳ Finalizing Order
                 </p>
-                <p className="text-blue-700 text-xs">
+                <p className="text-gray-300 text-xs">
                   We're completing your order processing. This will complete automatically in a moment.
                 </p>
               </div>
             )}
 
             {!verification?.verified && !loading && (
-              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
-                <p className="text-yellow-800 font-medium text-sm mb-1">
+              <div className="bg-black border border-yellow-600 p-3 rounded-lg">
+                <p className="text-white font-medium text-sm mb-1">
                   ⚠️ Verification Pending
                 </p>
-                <p className="text-yellow-700 text-xs">
+                <p className="text-gray-300 text-xs">
                   We're still confirming your payment. You can refresh or contact support if this persists.
                 </p>
               </div>

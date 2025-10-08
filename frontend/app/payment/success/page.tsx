@@ -259,13 +259,15 @@ export default function PaymentSuccessPage() {
 
 
             {!verification?.verified && !loading && (
-              <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
-                <p className="text-yellow-800 font-medium text-sm mb-1">
-                  ⚠️ Verification Pending
-                </p>
-                <p className="text-yellow-700 text-xs">
-                  We're still confirming your payment. You can refresh or contact support if this persists.
-                </p>
+              <div className="bg-black border border-green-600 p-4 rounded-lg">
+                <div>
+                  <p className="text-white font-medium text-sm mb-1">
+                    Verification Pending
+                  </p>
+                  <p className="text-gray-300 text-xs">
+                    We're still confirming your payment. You can refresh or contact support if this persists.
+                  </p>
+                </div>
               </div>
             )}
             

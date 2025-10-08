@@ -9,6 +9,8 @@ const startServer = async () => {
 
         await connectToMongoDB();
         
+        // Start the invoice scheduler for automated tasks
+        invoiceScheduler.start();
     })
 };
 
