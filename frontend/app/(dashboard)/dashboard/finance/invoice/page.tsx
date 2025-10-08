@@ -102,7 +102,9 @@ export default function InvoiceManagementPage() {
   const [error, setError] = useState<string | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null)
+  const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null)
   const [createFormErrors, setCreateFormErrors] = useState<{[key: string]: string}>({})
   const [editFormErrors, setEditFormErrors] = useState<{[key: string]: string}>({})
   const [paymentValidationLoading, setPaymentValidationLoading] = useState(false)
@@ -180,7 +182,7 @@ export default function InvoiceManagementPage() {
   const handleEditInvoice = (invoice: Invoice) => {
     setEditingInvoice(invoice)
     setEditFormData({
-      paymentId: invoice.paymentId,
+      paymentId: typeof invoice.paymentId === 'object' ? invoice.paymentId._id : invoice.paymentId,
       subtotal: invoice.subtotal.toString(),
       tax: invoice.tax.toString(),
       discount: invoice.discount.toString(),
@@ -191,6 +193,11 @@ export default function InvoiceManagementPage() {
     })
     setEditFormErrors({})
     setIsEditModalOpen(true)
+  }
+
+  const handleViewInvoice = (invoice: Invoice) => {
+    setViewingInvoice(invoice)
+    setIsViewModalOpen(true)
   }
 
   const handleDeleteInvoice = async (invoice: Invoice) => {
@@ -502,7 +509,9 @@ export default function InvoiceManagementPage() {
                 filteredInvoices.map((invoice) => (
                   <TableRow key={invoice._id}>
                     <TableCell className="font-medium">{invoice.number}</TableCell>
-                    <TableCell>{invoice.paymentId}</TableCell>
+                    <TableCell>
+                      {typeof invoice.paymentId === 'object' ? invoice.paymentId._id : invoice.paymentId}
+                    </TableCell>
                     <TableCell>LKR {invoice.total.toFixed(2)}</TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
@@ -514,6 +523,13 @@ export default function InvoiceManagementPage() {
                     <TableCell>{new Date(invoice.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewInvoice(invoice)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -932,6 +948,172 @@ export default function InvoiceManagementPage() {
             </Button>
             <Button onClick={handleEditSubmit}>
               Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Invoice Modal */}
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>View Invoice</DialogTitle>
+            <DialogDescription>
+              Invoice details and information
+            </DialogDescription>
+          </DialogHeader>
+          
+          {viewingInvoice && (
+            <div className="space-y-6">
+              {/* User Details Section */}
+              <div className="border rounded-lg p-4">
+                <h3 className="text-lg font-medium mb-3">Customer Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Name</label>
+                    <p className="text-sm text-muted-foreground">
+                      {typeof viewingInvoice.userId === 'object' ? viewingInvoice.userId.name : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Email</label>
+                    <p className="text-sm text-muted-foreground">
+                      {typeof viewingInvoice.userId === 'object' ? viewingInvoice.userId.email : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Contact Number</label>
+                    <p className="text-sm text-muted-foreground">
+                      {typeof viewingInvoice.userId === 'object' && viewingInvoice.userId.contactNo 
+                        ? viewingInvoice.userId.contactNo 
+                        : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Customer ID</label>
+                    <p className="text-sm text-muted-foreground">
+                      {typeof viewingInvoice.userId === 'object' ? viewingInvoice.userId._id : viewingInvoice.userId}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Details Section */}
+              <div className="border rounded-lg p-4">
+                <h3 className="text-lg font-medium mb-3">Payment Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Transaction ID</label>
+                    <p className="text-sm text-muted-foreground">
+                      {typeof viewingInvoice.paymentId === 'object' ? viewingInvoice.paymentId.transactionId : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Payment Method</label>
+                    <p className="text-sm text-muted-foreground">
+                      {typeof viewingInvoice.paymentId === 'object' ? viewingInvoice.paymentId.method : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Payment Type</label>
+                    <p className="text-sm text-muted-foreground">
+                      {typeof viewingInvoice.paymentId === 'object' ? viewingInvoice.paymentId.type : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Payment Status</label>
+                    <p className="text-sm text-muted-foreground">
+                      {typeof viewingInvoice.paymentId === 'object' ? viewingInvoice.paymentId.status : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Payment Amount</label>
+                    <p className="text-sm text-muted-foreground">
+                      {typeof viewingInvoice.paymentId === 'object' 
+                        ? `LKR ${viewingInvoice.paymentId.amount.toFixed(2)}`
+                        : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Payment Date</label>
+                    <p className="text-sm text-muted-foreground">
+                      {typeof viewingInvoice.paymentId === 'object' 
+                        ? new Date(viewingInvoice.paymentId.createdAt).toLocaleDateString()
+                        : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Invoice Details Section */}
+              <div className="border rounded-lg p-4">
+                <h3 className="text-lg font-medium mb-3">Invoice Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Invoice Number</label>
+                    <p className="text-sm text-muted-foreground">{viewingInvoice.number}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Payment ID</label>
+                    <p className="text-sm text-muted-foreground">
+                      {typeof viewingInvoice.paymentId === 'object' ? viewingInvoice.paymentId._id : viewingInvoice.paymentId}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Status</label>
+                    <div className="flex items-center space-x-2">
+                      {getStatusIcon(viewingInvoice.status)}
+                      {getStatusBadge(viewingInvoice.status)}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Generated Date</label>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(viewingInvoice.generatedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Due Date</label>
+                    <p className="text-sm text-muted-foreground">
+                      {viewingInvoice.dueDate ? new Date(viewingInvoice.dueDate).toLocaleDateString() : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Created Date</label>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(viewingInvoice.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border rounded-lg p-4">
+                <h3 className="text-lg font-medium mb-4">Invoice Breakdown</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>LKR {viewingInvoice.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tax:</span>
+                    <span>LKR {viewingInvoice.tax.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Discount:</span>
+                    <span>LKR {viewingInvoice.discount.toFixed(2)}</span>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between font-medium">
+                    <span>Total:</span>
+                    <span>LKR {viewingInvoice.total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-2 border-t pt-4">
+            <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
+              Close
             </Button>
           </div>
         </DialogContent>

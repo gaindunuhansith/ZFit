@@ -3,39 +3,6 @@ import puppeteer from 'puppeteer'
 import { getAllMemberships } from './membership.service.js'
 import { getPaymentsService } from './payment.services.js'
 
-/**
- * Generic Report Service for generating PDF reports
- *
- * Usage Examples:
- *
- * // For Users Report
- * const userConfig: ReportConfig = {
- *   title: 'Users Report',
- *   companyName: 'ZFit Gym Management System',
- *   columns: [
- *     { key: 'name', header: 'Name' },
- *     { key: 'email', header: 'Email' },
- *     { key: 'role', header: 'Role', type: 'status' },
- *     { key: 'createdAt', header: 'Created Date', type: 'date' }
- *   ],
- *   data: users
- * }
- *
- * // For Staff Report
- * const staffConfig: ReportConfig = {
- *   title: 'Staff Report',
- *   columns: [
- *     { key: 'name', header: 'Name' },
- *     { key: 'position', header: 'Position' },
- *     { key: 'salary', header: 'Salary', type: 'currency' },
- *     { key: 'hireDate', header: 'Hire Date', type: 'date' }
- *   },
- *   data: staff
- * }
- *
- * // Generate report
- * const pdfBuffer = await generateGenericReport(config)
- */
 
 export interface ReportColumn {
   key: string
@@ -303,6 +270,26 @@ function generateGenericHTML(config: ReportConfig): string {
           color: #000000;
         }
 
+        .status-completed {
+          background-color: #AAFF69;
+          color: #000000;
+        }
+
+        .status-pending {
+          background-color: #f59e0b;
+          color: #000000;
+        }
+
+        .status-failed {
+          background-color: #EF4444;
+          color: #ffffff;
+        }
+
+        .status-refunded {
+          background-color: #6c757d;
+          color: #ffffff;
+        }
+
         .auto-renew-badge {
           display: inline-flex;
           align-items: center;
@@ -335,6 +322,23 @@ function generateGenericHTML(config: ReportConfig): string {
           font-size: 12px;
           color: #666666;
           font-weight: 500;
+        }
+
+        .user-name-cell {
+          font-weight: 500;
+          color: #000000;
+        }
+
+        .currency-cell {
+          font-family: 'Inter', monospace;
+          text-align: center;
+          font-weight: 500;
+        }
+
+        .date-cell {
+          font-family: 'Inter', monospace;
+          font-size: 13px;
+          color: #000000;
         }
 
         ${customStyles}
@@ -1012,6 +1016,20 @@ export async function generateInvoicesReport(): Promise<Buffer> {
 export async function generatePaymentsReport(): Promise<Buffer> {
   const payments = await getPaymentsService('')
 
+  // Format the payments data for clean display
+  const formattedPayments = payments.map(payment => ({
+    transactionId: payment.transactionId || 'N/A',
+    userName: typeof payment.userId === 'object' && payment.userId !== null
+      ? (payment.userId as any).name || 'N/A'
+      : 'N/A',
+    amount: payment.amount || 0,
+    currency: payment.currency || 'LKR',
+    type: payment.type || 'N/A',
+    method: payment.method || 'N/A',
+    status: payment.status || 'N/A',
+    date: payment.date || payment.createdAt || new Date()
+  }))
+
   const config: ReportConfig = {
     title: 'Payments Report',
     companyName: 'ZFit Gym Management System',
@@ -1022,14 +1040,14 @@ export async function generatePaymentsReport(): Promise<Buffer> {
         className: 'transaction-id-cell'
       },
       {
-        key: 'userId',
-        header: 'User ID',
-        className: 'user-id-cell'
+        key: 'userName',
+        header: 'User Name',
+        className: 'user-name-cell'
       },
       {
         key: 'amount',
         header: 'Amount',
-        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+        formatter: (value) => `LKR ${Number(value)?.toFixed(2) || '0.00'}`
       },
       {
         key: 'currency',
@@ -1039,17 +1057,17 @@ export async function generatePaymentsReport(): Promise<Buffer> {
       {
         key: 'type',
         header: 'Type',
-        formatter: (value) => value ? value.replace('_', ' ').toUpperCase() : 'N/A'
+        formatter: (value) => value ? String(value).toUpperCase().replace('_', ' ') : 'N/A'
       },
       {
         key: 'method',
         header: 'Method',
-        formatter: (value) => value ? value.replace('_', ' ').toUpperCase() : 'N/A'
+        formatter: (value) => value ? String(value).toUpperCase().replace('_', ' ').replace('-', ' ') : 'N/A'
       },
       {
         key: 'status',
         header: 'Status',
-        formatter: (value) => `<span class="status-badge status-${value}">${value.toUpperCase()}</span>`
+        formatter: (value) => `<span class="status-badge status-${String(value).toLowerCase()}">${String(value).toUpperCase()}</span>`
       },
       {
         key: 'date',
@@ -1058,7 +1076,7 @@ export async function generatePaymentsReport(): Promise<Buffer> {
         className: 'date-cell'
       }
     ],
-    data: payments as any[]
+    data: formattedPayments as any[]
   }
 
   return generateGenericReport(config)

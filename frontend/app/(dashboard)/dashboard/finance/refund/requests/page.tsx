@@ -49,7 +49,7 @@ import {
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { getRefundRequests, approveRefundRequest, declineRefundRequest, deleteRefundRequest, getPendingRequestsCount, type RefundRequest } from "@/lib/api/refundRequestApi"
+import { getRefundRequests, approveRefundRequest, declineRefundRequest, deleteRefundRequest, getPendingRequestsCount, updateRefundRequest, type RefundRequest } from "@/lib/api/refundRequestApi"
 import { updatePayment, initiatePayHereRefund, type PayHereRefundRequest } from "@/lib/api/paymentApi"
 
 const getStatusIcon = (status: string) => {
@@ -88,6 +88,10 @@ export default function RefundRequestsManagementPage() {
   const [adminNotes, setAdminNotes] = useState("")
   const [pendingCount, setPendingCount] = useState(0)
   const [processingRequest, setProcessingRequest] = useState(false)
+  
+  // State for admin notes editing
+  const [editableAdminNotes, setEditableAdminNotes] = useState("")
+  const [isSavingNotes, setIsSavingNotes] = useState(false)
 
   // Fetch requests on component mount
   useEffect(() => {
@@ -128,7 +132,35 @@ export default function RefundRequestsManagementPage() {
 
   const handleViewDetails = (request: RefundRequest) => {
     setSelectedRequest(request)
+    setEditableAdminNotes(request.adminNotes || "")
     setIsViewModalOpen(true)
+  }
+
+  const handleSaveAdminNotes = async () => {
+    if (!selectedRequest) return
+
+    try {
+      setIsSavingNotes(true)
+      const updatedRequest = await updateRefundRequest(selectedRequest._id, {
+        adminNotes: editableAdminNotes
+      })
+
+      // Update the selected request and the requests list
+      setSelectedRequest(updatedRequest)
+      setRequests(prev => 
+        prev.map(req => 
+          req._id === updatedRequest._id ? updatedRequest : req
+        )
+      )
+
+      // Show success message (you could replace this with a toast notification)
+      alert('Admin notes updated successfully!')
+    } catch (error) {
+      console.error('Error saving admin notes:', error)
+      alert('Failed to save admin notes. Please try again.')
+    } finally {
+      setIsSavingNotes(false)
+    }
   }
 
   const handleProcessRequest = async (request: RefundRequest, action: "approve" | "decline") => {
@@ -391,26 +423,6 @@ export default function RefundRequestsManagementPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {request.status === 'pending' && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleProcessRequest(request, 'approve')}
-                                className="text-green-600 hover:text-green-700"
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleProcessRequest(request, 'decline')}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
                           <Button
                             variant="outline"
                             size="sm"
@@ -591,10 +603,30 @@ export default function RefundRequestsManagementPage() {
                 {/* Admin Notes */}
                 <div className="space-y-3">
                   <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">Admin Notes</h3>
-                  <div className="p-4 bg-muted/50 rounded-lg">
-                    <p className="text-sm whitespace-pre-wrap">
-                      {selectedRequest.adminNotes || 'No admin notes'}
-                    </p>
+                  <div className="space-y-3">
+                    <Textarea
+                      value={editableAdminNotes}
+                      onChange={(e) => setEditableAdminNotes(e.target.value)}
+                      placeholder="Add admin notes here..."
+                      className="min-h-[60px] resize-none"
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={handleSaveAdminNotes}
+                        disabled={isSavingNotes}
+                        size="sm"
+                        className="w-auto"
+                      >
+                        {isSavingNotes ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Save Notes'
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>

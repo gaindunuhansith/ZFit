@@ -9,6 +9,7 @@ import { getMembershipPlanById } from './membershipPlan.service.js';
 import UserModel from '../models/user.model.js';
 import Payment from '../models/payment.model.js';
 import InventoryItem from '../models/inventoryItem.schema.js';
+import Orderservice from './order.service.js';
 
 export interface PayHerePaymentRequest {
     userId: string;
@@ -255,6 +256,16 @@ export class PayHereService {
                     
                     console.log('Membership created successfully:', membership);
 
+                    // Update payment record to reference the created membership instead of the plan
+                    if (membership && membership._id) {
+                        await Payment.findByIdAndUpdate(
+                            payment._id,
+                            { relatedId: membership._id },
+                            { new: true }
+                        );
+                        console.log('Payment record updated with membership reference:', membership._id);
+                    }
+
                     // Send success email notification
                     if (membership) {
                         try {
@@ -370,6 +381,28 @@ export class PayHereService {
                         const cart = await CartModel.findOne({ memberId: payment.userId.toString() }).populate('items.itemId');
                         
                         if (cart && cart.items && cart.items.length > 0) {
+                            // Create order record for the purchase
+                            const orderService = new Orderservice();
+                            let order = null;
+                            
+                            try {
+                                console.log('Creating order for cart payment...');
+                                order = await orderService.checkout(payment.userId.toString());
+                                console.log('Order created successfully:', order?._id);
+                                
+                                // Update payment record with order reference
+                                await Payment.findByIdAndUpdate(
+                                    payment._id,
+                                    { relatedId: order?._id },
+                                    { new: true }
+                                );
+                                console.log('Payment record updated with order reference');
+                            } catch (orderError) {
+                                console.error('Failed to create order for cart payment:', orderError);
+                                // Continue with payment processing even if order creation fails
+                                // This maintains backward compatibility for existing payments
+                            }
+
                             // Prepare cart items for email
                             const cartItems = cart.items.map((item: any) => ({
                                 itemName: item.itemId.name || 'Unknown Item',
@@ -403,23 +436,8 @@ export class PayHereService {
                             });
                             console.log('Cart purchase success email sent to:', user.email);
 
-                            // Clear the user's cart after successful payment
-                            await CartModel.findOneAndDelete({ memberId: payment.userId.toString() });
-                            console.log('Cart cleared for user after successful purchase');
-
-                            // TODO: Update inventory stock quantities here
-                            for (const item of cart.items) {
-                                try {
-                                    await InventoryItem.findByIdAndUpdate(
-                                        item.itemId._id,
-                                        { $inc: { stock: -item.quantity } },
-                                        { new: true }
-                                    );
-                                    console.log(`Reduced stock for item ${(item.itemId as any).name || 'Unknown'} by ${item.quantity}`);
-                                } catch (stockError) {
-                                    console.error(`Failed to update stock for item ${item.itemId._id}:`, stockError);
-                                }
-                            }
+                            // Note: Cart clearing and stock updates are now handled by OrderService.checkout()
+                            console.log('Order created, cart cleared, and stock updated by OrderService');
                         } else {
                             console.log('No cart items found for user, sending basic success email');
                             

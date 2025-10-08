@@ -28,6 +28,8 @@ import {
 } from "lucide-react"
 import { getPaymentsByUserId, getUserById } from "@/lib/api/paymentApi"
 import { Payment, User as UserType } from "@/lib/api/paymentApi"
+import { getOrderById, Order } from "@/lib/api/orderApi"
+import { membershipApi, Membership } from "@/lib/api/membershipApi"
 
 export default function PaymentHistoryPage() {
   const router = useRouter()
@@ -47,6 +49,9 @@ export default function PaymentHistoryPage() {
   // Detail modal states
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
+  const [relatedData, setRelatedData] = useState<Order | Membership | null>(null)
+  const [loadingRelatedData, setLoadingRelatedData] = useState(false)
+  const [relatedDataError, setRelatedDataError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -180,10 +185,7 @@ export default function PaymentHistoryPage() {
   }
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount)
+    return `LKR ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   const formatDate = (date: string) => {
@@ -202,9 +204,9 @@ export default function PaymentHistoryPage() {
       ...filteredPayments.map(payment => [
         formatDate(payment.createdAt),
         payment.transactionId || 'N/A',
-        // Extract user name properly from populated user object
+        // Extract user ID properly from populated user object
         typeof payment.userId === 'object' && payment.userId !== null 
-          ? (payment.userId as any).name || 'N/A'
+          ? (payment.userId as { _id: string })._id || 'N/A'
           : payment.userId || 'N/A',
         payment.amount.toString(),
         payment.currency || 'LKR',
@@ -223,9 +225,56 @@ export default function PaymentHistoryPage() {
     window.URL.revokeObjectURL(url)
   }
 
-  const handleViewDetails = (payment: Payment) => {
+  const handleViewDetails = async (payment: Payment) => {
     setSelectedPayment(payment)
     setShowDetailModal(true)
+    setRelatedData(null)
+    setLoadingRelatedData(true)
+    setRelatedDataError(null)
+
+    try {
+      // Fetch related data based on payment type
+      if (payment.type === 'membership' && payment.relatedId) {
+        try {
+          const membershipResponse = await membershipApi.getMembershipById(payment.relatedId)
+          if (membershipResponse.success && membershipResponse.data) {
+            setRelatedData(membershipResponse.data)
+          } else {
+            setRelatedDataError('Membership details not found')
+          }
+        } catch (apiError: any) {
+          console.error('Membership API error:', apiError)
+          // Handle 404 or any other error gracefully
+          if (apiError?.message?.includes('404') || apiError?.message?.includes('not found')) {
+            setRelatedDataError('Referenced membership no longer exists')
+          } else {
+            setRelatedDataError('Membership details not available')
+          }
+        }
+      } else if ((payment.type === 'inventory' || payment.type === 'other') && payment.relatedId) {
+        try {
+          const orderResponse = await getOrderById(payment.relatedId)
+          if (orderResponse) {
+            setRelatedData(orderResponse)
+          } else {
+            setRelatedDataError('Order details not found')
+          }
+        } catch (apiError: any) {
+          console.error('Order API error:', apiError)
+          // Handle 404 or any other error gracefully
+          if (apiError?.message?.includes('404') || apiError?.message?.includes('not found')) {
+            setRelatedDataError('Referenced order no longer exists')
+          } else {
+            setRelatedDataError('Order details not available')
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching related data:', error)
+      setRelatedDataError('Unable to load related data')
+    } finally {
+      setLoadingRelatedData(false)
+    }
   }
 
   // Payment Details Modal Component
@@ -245,9 +294,9 @@ export default function PaymentHistoryPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Transaction Information */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Transaction ID</label>
                 <p className="text-sm font-mono bg-muted p-2 rounded">{selectedPayment.transactionId}</p>
@@ -260,82 +309,252 @@ export default function PaymentHistoryPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Status</label>
-                <div className="flex items-center space-x-2 mt-1">
-                  {getStatusIcon(selectedPayment.status)}
-                  <Badge variant={getStatusBadgeVariant(selectedPayment.status)}>
-                    {selectedPayment.status}
-                  </Badge>
+            {/* Payment Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Status & Method */}
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</label>
+                  <div className="flex items-center space-x-2">
+                    {getStatusIcon(selectedPayment.status)}
+                    <Badge variant={getStatusBadgeVariant(selectedPayment.status)} className="capitalize">
+                      {selectedPayment.status}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment Method</label>
+                  <p className="text-sm font-medium capitalize">{selectedPayment.method.replace('-', ' ')}</p>
                 </div>
               </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Payment Method</label>
-                <p className="text-sm capitalize">{selectedPayment.method}</p>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Type</label>
-                <div className="flex items-center space-x-2 mt-1">
-                  {getTypeIcon(selectedPayment.type)}
-                  <span className="text-sm capitalize">{selectedPayment.type === 'other' ? 'inventory' : selectedPayment.type}</span>
+              {/* Type & Date */}
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</label>
+                  <div className="flex items-center space-x-2">
+                    {getTypeIcon(selectedPayment.type)}
+                    <span className="text-sm font-medium capitalize">
+                      {selectedPayment.type === 'other' ? 'inventory' : selectedPayment.type}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Date</label>
-                <p className="text-sm">{formatDate(selectedPayment.createdAt)}</p>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</label>
+                  <p className="text-sm font-medium">{formatDate(selectedPayment.createdAt)}</p>
+                </div>
               </div>
             </div>
 
             {/* Additional Information */}
-            {selectedPayment.gatewayTransactionId && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Gateway Transaction ID</label>
-                <p className="text-sm font-mono bg-muted p-2 rounded">{selectedPayment.gatewayTransactionId}</p>
-              </div>
-            )}
+            {(selectedPayment.gatewayTransactionId || selectedPayment.failureReason || selectedPayment.refundedAmount > 0) && (
+              <div className="space-y-2 pt-2 border-t">
+                {selectedPayment.gatewayTransactionId && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Gateway Transaction ID</label>
+                    <p className="text-sm font-mono bg-muted p-2 rounded border">{selectedPayment.gatewayTransactionId}</p>
+                  </div>
+                )}
 
-            {selectedPayment.failureReason && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Failure Reason</label>
-                <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{selectedPayment.failureReason}</p>
-              </div>
-            )}
+                {selectedPayment.failureReason && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Failure Reason</label>
+                    <p className="text-sm text-red-600 bg-red-50 p-2 rounded-lg border border-red-200">{selectedPayment.failureReason}</p>
+                  </div>
+                )}
 
-            {selectedPayment.refundedAmount > 0 && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Refunded Amount</label>
-                  <p className="text-sm font-bold text-red-600">{formatCurrency(selectedPayment.refundedAmount)}</p>
-                </div>
-                {selectedPayment.refundReason && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Refund Reason</label>
-                    <p className="text-sm">{selectedPayment.refundReason}</p>
+                {selectedPayment.refundedAmount > 0 && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Refund Information</label>
+                    <div className="bg-muted p-2 rounded-lg border space-y-1">
+                      <p className="text-sm">
+                        <span className="font-medium">Refunded Amount:</span> {formatCurrency(selectedPayment.refundedAmount)}
+                      </p>
+                      {selectedPayment.refundReason && (
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium">Reason:</span> {selectedPayment.refundReason}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Development Note */}
-            <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-start space-x-2">
-                <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center mt-0.5">
-                  <span className="text-white text-xs font-bold">i</span>
+            {/* Membership/Inventory Details */}
+            {selectedPayment && (selectedPayment.type === 'membership' || selectedPayment.type === 'inventory' || selectedPayment.type === 'other') && (
+              <div className="space-y-3 pt-3 border-t">
+                <div className="flex items-center space-x-2">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                    {selectedPayment.type === 'membership' ? 'Membership Details' : 'Order Details'}
+                  </h4>
+                  <div className="flex-1 h-px bg-border"></div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-blue-800 mb-1">Development Note</p>
-                  <p className="text-sm text-blue-700">
-                    Membership and inventory item details will be added when the store is complete.
-                    This will include detailed information about purchased memberships, specific inventory items,
-                    quantities, and related product information.
-                  </p>
+                
+                {loadingRelatedData ? (
+                  <div className="flex items-center justify-center py-3">
+                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <span className="ml-2 text-sm text-muted-foreground">Loading details...</span>
+                  </div>
+                ) : relatedData ? (
+                  selectedPayment.type === 'membership' ? (
+                    // Membership Details
+                    <div className="space-y-3">
+                      {/* Membership Plan & Price */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-lg">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Membership Plan</label>
+                          <p className="text-sm font-semibold">
+                            {typeof (relatedData as Membership).membershipPlanId === 'object' && (relatedData as Membership).membershipPlanId
+                              ? ((relatedData as Membership).membershipPlanId as { name: string }).name
+                              : 'N/A'
+                            }
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Plan Price</label>
+                          <p className="text-lg font-bold text-green-600">
+                            {typeof (relatedData as Membership).membershipPlanId === 'object' && (relatedData as Membership).membershipPlanId
+                              ? `LKR ${((relatedData as Membership).membershipPlanId as { price: number }).price.toLocaleString()}`
+                              : 'N/A'
+                            }
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Membership Period */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Start Date</label>
+                          <p className="text-sm font-medium">{new Date((relatedData as Membership).startDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">End Date</label>
+                          <p className="text-sm font-medium">{new Date((relatedData as Membership).endDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}</p>
+                        </div>
+                      </div>
+
+                      {/* Membership Status & Settings */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</label>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant={(relatedData as Membership).status === 'active' ? 'default' : 'secondary'} className="capitalize">
+                              {(relatedData as Membership).status}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Auto Renew</label>
+                          <p className="text-sm font-medium">{(relatedData as Membership).autoRenew ? 'Enabled' : 'Disabled'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    // Order/Inventory Details
+                    <div className="space-y-3">
+                      {/* Order Summary */}
+                      <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                        <div className="space-y-1">
+                          <h5 className="text-sm font-semibold">Purchased Items</h5>
+                          <p className="text-xs text-muted-foreground">Order details and pricing</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {(relatedData as Order).items.length} item{(relatedData as Order).items.length !== 1 ? 's' : ''}
+                        </Badge>
+                      </div>
+
+                      {/* Items List */}
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {(relatedData as Order).items.map((item, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg border">
+                            <div className="flex-1 space-y-1">
+                              <p className="text-sm font-medium">{item.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Quantity: {item.quantity} × LKR {item.price.toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-semibold text-green-600">
+                                LKR {(item.price * item.quantity).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Order Total & Status */}
+                      <div className="border-t pt-3 space-y-2">
+                        <div className="flex justify-between items-center p-2 bg-green-50 rounded-lg border border-green-200">
+                          <span className="text-sm font-semibold text-green-800">Order Total</span>
+                          <span className="text-lg font-bold text-green-600">
+                            LKR {(relatedData as Order).totalPrice.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Order Status</span>
+                          <Badge variant={(relatedData as Order).status === 'completed' ? 'default' : 'secondary'} className="capitalize">
+                            {(relatedData as Order).status}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                ) : relatedDataError ? (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
+                    <AlertCircle className="w-4 h-4 text-red-500 mx-auto mb-1" />
+                    <p className="text-sm text-red-700">{relatedDataError}</p>
+                  </div>
+                ) : !selectedPayment.relatedId ? (
+                  <div className="p-3 bg-muted/50 rounded-lg text-center">
+                    <p className="text-sm text-muted-foreground">
+                      {selectedPayment.type === 'membership' 
+                        ? 'Membership details not available' 
+                        : selectedPayment.type === 'inventory' || selectedPayment.type === 'other'
+                        ? 'No order details associated with this payment'
+                        : 'Order details not available'
+                      }
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-muted/50 rounded-lg text-center">
+                    <p className="text-sm text-muted-foreground">
+                      {selectedPayment.type === 'membership' 
+                        ? 'Membership details not available' 
+                        : 'Order details not available'
+                      }
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Development Note - Only show if no related data */}
+            {(!selectedPayment || (selectedPayment.type !== 'membership' && selectedPayment.type !== 'inventory' && selectedPayment.type !== 'other')) && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center mt-0.5">
+                    <span className="text-white text-xs font-bold">i</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-blue-800 mb-1">Development Note</p>
+                    <p className="text-sm text-blue-700">
+                      Membership and inventory item details will be added when the store is complete.
+                      This will include detailed information about purchased memberships, specific inventory items,
+                      quantities, and related product information.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           <DialogFooter>

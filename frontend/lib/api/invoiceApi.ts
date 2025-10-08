@@ -55,10 +55,27 @@ export interface InvoiceItem {
   tax: number
 }
 
+export interface PopulatedUser {
+  _id: string
+  name: string
+  email: string
+  contactNo?: string
+}
+
+export interface PopulatedPayment {
+  _id: string
+  transactionId: string
+  type: string
+  method: string
+  amount: number
+  status: string
+  createdAt: string
+}
+
 export interface Invoice {
   _id: string
-  paymentId: string
-  userId: string
+  paymentId: string | PopulatedPayment
+  userId: string | PopulatedUser
   number: string
   items?: InvoiceItem[]
   subtotal: number

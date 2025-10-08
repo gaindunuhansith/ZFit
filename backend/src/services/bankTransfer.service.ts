@@ -3,6 +3,7 @@ import type { IBankTransferPayment } from "../models/bankTransfer.model.js";
 import Payment from "../models/payment.model.js";
 import type { IPayment } from "../models/payment.model.js";
 import { createPaymentService } from "./payment.services.js";
+import { createMembership } from './membership.service.js';
 import mongoose from "mongoose";
 
 // Create a new bank transfer payment
@@ -114,12 +115,47 @@ export const approveBankTransferPaymentService = async (id: string, adminId: str
         type: 'membership', // Assuming bank transfers are for memberships
         status: 'completed', // Bank transfers are completed when approved
         method: 'bank-transfer',
-        relatedId: bankTransfer.membershipId,
+        relatedId: bankTransfer.membershipId, // Initially set to membership plan ID
         transactionId: bankTransfer.transferId || `BT-${bankTransfer._id}-${Date.now()}`, // Use the bank transfer ID or fallback to old format
         date: new Date()
     };
 
-    await createPaymentService(paymentData);
+    const createdPayment = await createPaymentService(paymentData);
+
+    // Create membership from the bank transfer
+    let membership = null;
+    try {
+        console.log('Creating membership for bank transfer with data:', {
+            userId: bankTransfer.userId.toString(),
+            membershipPlanId: bankTransfer.membershipId.toString(),
+            transactionId: createdPayment.transactionId,
+            autoRenew: false,
+            notes: `Auto-created from bank transfer payment ${createdPayment.transactionId}`
+        });
+        
+        membership = await createMembership({
+            userId: bankTransfer.userId.toString(),
+            membershipPlanId: bankTransfer.membershipId.toString(),
+            transactionId: createdPayment.transactionId,
+            autoRenew: false,
+            notes: `Auto-created from bank transfer payment ${createdPayment.transactionId}`
+        });
+        
+        console.log('Membership created successfully for bank transfer:', membership);
+
+        // Update payment record to reference the created membership instead of the plan
+        if (membership && membership._id) {
+            await Payment.findByIdAndUpdate(
+                createdPayment._id,
+                { relatedId: membership._id },
+                { new: true }
+            );
+            console.log('Bank transfer payment record updated with membership reference:', membership._id);
+        }
+    } catch (membershipError) {
+        console.error('Failed to create membership for bank transfer:', membershipError);
+        // Don't fail the approval if membership creation fails - log the error instead
+    }
 
     return updatedBankTransfer;
 };

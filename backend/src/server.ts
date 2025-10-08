@@ -8,9 +8,6 @@ const startServer = async () => {
         console.log("Server is running http://localhost:5000");
 
         await connectToMongoDB();
-
-        // Start invoice automation scheduler
-        invoiceScheduler.start();
         
     })
 };
