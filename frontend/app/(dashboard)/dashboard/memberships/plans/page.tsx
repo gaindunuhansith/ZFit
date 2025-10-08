@@ -102,7 +102,16 @@ export default function MembershipPlansPage() {
 
   const handleDownloadReport = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/reports/membership-plans/pdf`, {
+      // Build query parameters based on current filters
+      const queryParams = new URLSearchParams()
+      
+      if (searchTerm) {
+        queryParams.append('searchTerm', searchTerm)
+      }
+      
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/reports/membership-plans/pdf${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+      
+      const response = await fetch(url, {
         method: 'GET',
       })
 
@@ -111,13 +120,17 @@ export default function MembershipPlansPage() {
       }
 
       const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
+      const downloadUrl = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url
-      a.download = 'membership-plans-report.pdf'
+      a.href = downloadUrl
+      
+      // Use filtered filename if filters are applied
+      const filename = searchTerm ? 'membership-plans-report-filtered.pdf' : 'membership-plans-report.pdf'
+      a.download = filename
+      
       document.body.appendChild(a)
       a.click()
-      window.URL.revokeObjectURL(url)
+      window.URL.revokeObjectURL(downloadUrl)
       document.body.removeChild(a)
     } catch (error) {
       console.error('Error downloading report:', error)

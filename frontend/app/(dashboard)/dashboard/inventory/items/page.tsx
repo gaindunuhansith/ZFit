@@ -14,7 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Edit, Trash2, Package, Search, ShoppingCart, Settings, Calendar } from 'lucide-react'
+import { Plus, Edit, Trash2, Package, Search, ShoppingCart, Settings, Calendar, Download } from 'lucide-react'
 import { itemApiService, type Item } from '@/lib/api/itemApi'
 import { categoryApiService, type Category } from '@/lib/api/categoryApi'
 import { ItemFormModal, type ItemFormData, type UpdateItemFormData } from '@/components/ItemFormModal'
@@ -194,6 +194,48 @@ export default function ItemsPage() {
     return type === 'sellable' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
   }
 
+  const handleGenerateReport = async () => {
+    try {
+      // Build query parameters based on current filters
+      const queryParams = new URLSearchParams()
+      
+      if (searchTerm) {
+        queryParams.append('searchTerm', searchTerm)
+      }
+      
+      if (activeTab !== 'all') {
+        if (activeTab === 'sellable' || activeTab === 'equipment') {
+          queryParams.append('type', activeTab)
+        } else {
+          // It's a category ID
+          queryParams.append('categoryId', activeTab)
+        }
+      }
+      
+      const url = `http://localhost:5000/api/v1/reports/inventory-items/pdf${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+      const response = await fetch(url)
+      
+      if (!response.ok) throw new Error('Failed to generate report')
+      
+      const blob = await response.blob()
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      
+      // Include filter info in filename if filters are applied
+      const filterSuffix = (searchTerm || activeTab !== 'all') ? '-filtered' : ''
+      link.download = `inventory-items-report${filterSuffix}-${new Date().toISOString().split('T')[0]}.pdf`
+      
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(downloadUrl)
+    } catch (error) {
+      console.error('Error generating report:', error)
+      setError('Failed to generate inventory items report')
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -234,6 +276,10 @@ export default function ItemsPage() {
           <p className="text-muted-foreground">Manage your gym inventory items</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button onClick={handleGenerateReport} variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Export Report
+          </Button>
           <Button onClick={handleAddItem} className="bg-primary hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-2" />
             Add Item
