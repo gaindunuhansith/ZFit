@@ -221,7 +221,7 @@ export default function RefundRequestsManagementPage() {
 
         // If refund is successful without redirect, approve the request
         if (refundResponse.status === 'completed' || refundResponse.status === 'success' || refundResponse.status === 'pending_verification') {
-          await approveRefundRequest(request._id, `PayHere refund processed - ${refundResponse.refundId}${refundResponse.status === 'pending_verification' ? ' (Manual verification required)' : ''}`)
+          await approveRefundRequest(request._id, `PayHere refund processed - ${refundResponse.refundId}`)
           
           // Update payment status to 'refunded'
           await updatePayment(paymentId, { status: 'refunded' })
@@ -235,10 +235,7 @@ export default function RefundRequestsManagementPage() {
           setPendingCount(newCount)
           
           // Show success message
-          const message = refundResponse.status === 'pending_verification' 
-            ? 'Refund initiated successfully. Manual verification required by PayHere.'
-            : 'Refund processed successfully via PayHere'
-          alert(message)
+          alert('Refund processed successfully via PayHere')
         } else {
           throw new Error('Refund processing failed')
         }

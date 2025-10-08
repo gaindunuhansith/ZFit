@@ -27,9 +27,9 @@ router.post('/scheduler/check-overdue', authenticate, async (req: Request, res: 
 
 router.post('/scheduler/cleanup-payments', authenticate, async (req: Request, res: Response) => {
     try {
-        const { daysOld = 30 } = req.body;
-        await invoiceScheduler.triggerPaymentCleanup(daysOld);
-        res.json({ success: true, message: `Payment cleanup completed for payments older than ${daysOld} days` });
+        const { secondsOld = 30 } = req.body;
+        await invoiceScheduler.triggerPaymentCleanup(secondsOld);
+        res.json({ success: true, message: `Payment cleanup completed for payments older than ${secondsOld} seconds` });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to cleanup pending payments' });
     }

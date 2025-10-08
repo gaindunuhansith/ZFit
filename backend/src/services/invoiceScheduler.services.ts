@@ -78,11 +78,11 @@ export const getInvoiceStatistics = async () => {
 };
 
 /**
- * Cleanup old pending payments (older than 30 days by default)
+ * Cleanup old pending payments (older than 30 seconds by default)
  */
-export const cleanupOldPendingPayments = async (daysOld: number = 30): Promise<void> => {
+export const cleanupOldPendingPayments = async (secondsOld: number = 30): Promise<void> => {
     try {
-        const result = await cleanupPendingPaymentsService(daysOld);
+        const result = await cleanupPendingPaymentsService(secondsOld);
     } catch (error) {
         console.error('Error during pending payment cleanup:', error);
     }

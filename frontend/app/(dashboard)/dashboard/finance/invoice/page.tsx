@@ -171,18 +171,20 @@ export default function InvoiceManagementPage() {
     fetchInvoices()
   }, [])
 
-  const filteredInvoices = invoices.filter(invoice => {
-    const searchLower = searchTerm.toLowerCase()
-    const matchesSearch = invoice.number?.toLowerCase().includes(searchLower) ||
-                         invoice.status?.toLowerCase().includes(searchLower)
-    const matchesStatus = statusFilter === "all" || invoice.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  const filteredInvoices = invoices
+    .filter(invoice => invoice !== null && invoice !== undefined) // Filter out null/undefined invoices
+    .filter(invoice => {
+      const searchLower = searchTerm.toLowerCase()
+      const matchesSearch = invoice.number?.toLowerCase().includes(searchLower) ||
+                           invoice.status?.toLowerCase().includes(searchLower)
+      const matchesStatus = statusFilter === "all" || invoice.status === statusFilter
+      return matchesSearch && matchesStatus
+    })
 
   const handleEditInvoice = (invoice: Invoice) => {
     setEditingInvoice(invoice)
     setEditFormData({
-      paymentId: typeof invoice.paymentId === 'object' ? invoice.paymentId._id : invoice.paymentId,
+      paymentId: invoice.paymentId && typeof invoice.paymentId === 'object' ? invoice.paymentId._id : (invoice.paymentId || ''),
       subtotal: invoice.subtotal.toString(),
       tax: invoice.tax.toString(),
       discount: invoice.discount.toString(),
@@ -510,7 +512,9 @@ export default function InvoiceManagementPage() {
                   <TableRow key={invoice._id}>
                     <TableCell className="font-medium">{invoice.number}</TableCell>
                     <TableCell>
-                      {typeof invoice.paymentId === 'object' ? invoice.paymentId._id : invoice.paymentId}
+                      {invoice.paymentId && typeof invoice.paymentId === 'object' && invoice.paymentId.transactionId 
+                        ? invoice.paymentId.transactionId 
+                        : (typeof invoice.paymentId === 'string' ? invoice.paymentId : 'Payment Not Found')}
                     </TableCell>
                     <TableCell>LKR {invoice.total.toFixed(2)}</TableCell>
                     <TableCell>
@@ -972,19 +976,19 @@ export default function InvoiceManagementPage() {
                   <div>
                     <label className="text-sm font-medium">Name</label>
                     <p className="text-sm text-muted-foreground">
-                      {typeof viewingInvoice.userId === 'object' ? viewingInvoice.userId.name : 'N/A'}
+                      {viewingInvoice.userId && typeof viewingInvoice.userId === 'object' ? viewingInvoice.userId.name : 'N/A'}
                     </p>
                   </div>
                   <div>
                     <label className="text-sm font-medium">Email</label>
                     <p className="text-sm text-muted-foreground">
-                      {typeof viewingInvoice.userId === 'object' ? viewingInvoice.userId.email : 'N/A'}
+                      {viewingInvoice.userId && typeof viewingInvoice.userId === 'object' ? viewingInvoice.userId.email : 'N/A'}
                     </p>
                   </div>
                   <div>
                     <label className="text-sm font-medium">Contact Number</label>
                     <p className="text-sm text-muted-foreground">
-                      {typeof viewingInvoice.userId === 'object' && viewingInvoice.userId.contactNo 
+                      {viewingInvoice.userId && typeof viewingInvoice.userId === 'object' && viewingInvoice.userId.contactNo 
                         ? viewingInvoice.userId.contactNo 
                         : 'N/A'}
                     </p>
@@ -992,7 +996,7 @@ export default function InvoiceManagementPage() {
                   <div>
                     <label className="text-sm font-medium">Customer ID</label>
                     <p className="text-sm text-muted-foreground">
-                      {typeof viewingInvoice.userId === 'object' ? viewingInvoice.userId._id : viewingInvoice.userId}
+                      {viewingInvoice.userId && typeof viewingInvoice.userId === 'object' ? viewingInvoice.userId._id : (viewingInvoice.userId || 'N/A')}
                     </p>
                   </div>
                 </div>
@@ -1005,13 +1009,13 @@ export default function InvoiceManagementPage() {
                   <div>
                     <label className="text-sm font-medium">Transaction ID</label>
                     <p className="text-sm text-muted-foreground">
-                      {typeof viewingInvoice.paymentId === 'object' ? viewingInvoice.paymentId.transactionId : 'N/A'}
+                      {viewingInvoice.paymentId && typeof viewingInvoice.paymentId === 'object' ? viewingInvoice.paymentId.transactionId : 'N/A'}
                     </p>
                   </div>
                   <div>
                     <label className="text-sm font-medium">Payment Method</label>
                     <p className="text-sm text-muted-foreground">
-                      {typeof viewingInvoice.paymentId === 'object' ? viewingInvoice.paymentId.method : 'N/A'}
+                      {viewingInvoice.paymentId && typeof viewingInvoice.paymentId === 'object' ? viewingInvoice.paymentId.method : 'N/A'}
                     </p>
                   </div>
                   <div>
@@ -1056,7 +1060,7 @@ export default function InvoiceManagementPage() {
                   <div>
                     <label className="text-sm font-medium">Payment ID</label>
                     <p className="text-sm text-muted-foreground">
-                      {typeof viewingInvoice.paymentId === 'object' ? viewingInvoice.paymentId._id : viewingInvoice.paymentId}
+                      {viewingInvoice.paymentId && typeof viewingInvoice.paymentId === 'object' ? viewingInvoice.paymentId._id : (viewingInvoice.paymentId || 'N/A')}
                     </p>
                   </div>
                   <div>

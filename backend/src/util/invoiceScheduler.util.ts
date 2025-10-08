@@ -20,11 +20,11 @@ class InvoiceScheduler {
             await checkAndUpdateOverdueInvoices();
         }, 24 * 60 * 60 * 1000); // 24 hours
 
-        // Cleanup old pending payments weekly (every 7 days)
+        // Cleanup old pending payments every 30 seconds
         this.paymentCleanupInterval = setInterval(async () => {
             
-            await cleanupOldPendingPayments(30); // 30 days old
-        }, 7 * 24 * 60 * 60 * 1000); // 7 days
+            await cleanupOldPendingPayments(30); // 30 seconds old
+        }, 30 * 1000); // 30 seconds
 
         // Run initial checks on startup
         setTimeout(async () => {
@@ -64,8 +64,8 @@ class InvoiceScheduler {
     /**
      * Manually trigger payment cleanup (for testing)
      */
-    async triggerPaymentCleanup(daysOld: number = 30): Promise<void> {
-        await cleanupOldPendingPayments(daysOld);
+    async triggerPaymentCleanup(secondsOld: number = 30): Promise<void> {
+        await cleanupOldPendingPayments(secondsOld);
     }
 }
 

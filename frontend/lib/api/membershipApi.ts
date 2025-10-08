@@ -32,7 +32,10 @@ const apiRequest = async <T>(
 
     return data
   } catch (error) {
-    console.error('API request failed:', error)
+    // Don't log 404 errors as they're expected when referenced data no longer exists
+    if (!(error instanceof Error) || !error.message?.includes('404')) {
+      console.error('API request failed:', error)
+    }
     throw error
   }
 }

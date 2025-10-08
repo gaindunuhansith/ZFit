@@ -243,11 +243,11 @@ export default function PaymentHistoryPage() {
             setRelatedDataError('Membership details not found')
           }
         } catch (apiError: any) {
-          console.error('Membership API error:', apiError)
           // Handle 404 or any other error gracefully
           if (apiError?.message?.includes('404') || apiError?.message?.includes('not found')) {
             setRelatedDataError('Referenced membership no longer exists')
           } else {
+            console.error('Membership API error:', apiError)
             setRelatedDataError('Membership details not available')
           }
         }
@@ -260,11 +260,11 @@ export default function PaymentHistoryPage() {
             setRelatedDataError('Order details not found')
           }
         } catch (apiError: any) {
-          console.error('Order API error:', apiError)
           // Handle 404 or any other error gracefully
           if (apiError?.message?.includes('404') || apiError?.message?.includes('not found')) {
             setRelatedDataError('Referenced order no longer exists')
           } else {
+            console.error('Order API error:', apiError)
             setRelatedDataError('Order details not available')
           }
         }
