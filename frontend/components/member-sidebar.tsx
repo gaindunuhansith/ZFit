@@ -9,7 +9,6 @@ import {
   Calendar,
   ShoppingCart,
   CreditCard,
-  Package,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -74,11 +73,6 @@ const data = {
       title: "Shopping Cart",
       url: "/memberDashboard/cart",
       icon: ShoppingCart,
-    },
-    {
-      title: "Order History",
-      url: "/memberDashboard/orders",
-      icon: Package,
     },
     {
       title: "Attendance",

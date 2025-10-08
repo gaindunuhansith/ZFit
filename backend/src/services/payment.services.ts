@@ -3,7 +3,6 @@ import type { IPayment } from "../models/payment.model.js";
 import mongoose from "mongoose";
 import { createInvoiceService } from "./invoice.services.js";
 
-console.log('=== PAYMENT SERVICE LOADED WITH INVOICE CREATION ===');
 
 
 // Create a new payment
