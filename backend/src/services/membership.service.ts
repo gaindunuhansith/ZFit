@@ -108,6 +108,78 @@ export const createMembership = async (data: CreateMembershipParams) => {
     return populatedMembership;
 };
 
+export const createOrExtendMembership = async (data: CreateMembershipParams) => {
+    // Verify user exists
+    const user = await UserModel.findById(data.userId);
+    AppAssert(user, NOT_FOUND, "User not found");
+
+    // Verify membership plan exists
+    const membershipPlan = await MembershipPlanModel.findById(data.membershipPlanId);
+    AppAssert(membershipPlan, NOT_FOUND, "Membership plan not found");
+
+    // Check if user already has an active membership for the same plan
+    const existingMembership = await MembershipModel.findOne({
+        userId: data.userId,
+        membershipPlanId: data.membershipPlanId,
+        status: 'active',
+        endDate: { $gt: new Date() }
+    });
+
+    if (existingMembership) {
+        // Extend existing membership
+        console.log('Found existing active membership for the same plan, extending duration...');
+        
+        const newEndDate = new Date(existingMembership.endDate);
+        newEndDate.setDate(newEndDate.getDate() + membershipPlan.durationInDays);
+        
+        const extendedMembership = await MembershipModel.findByIdAndUpdate(
+            existingMembership._id,
+            { 
+                endDate: newEndDate,
+                notes: `Extended by ${membershipPlan.durationInDays} days from payment ${data.transactionId || 'N/A'}. Previous note: ${existingMembership.notes || 'None'}`
+            },
+            { new: true }
+        ).populate('userId', 'name email').populate('membershipPlanId', 'name price currency durationInDays category');
+
+        console.log('Membership extended successfully:', {
+            membershipId: extendedMembership?._id,
+            previousEndDate: existingMembership.endDate,
+            newEndDate: newEndDate,
+            addedDays: membershipPlan.durationInDays
+        });
+
+        AppAssert(extendedMembership, INTERNAL_SERVER_ERROR, "Failed to extend membership");
+        return extendedMembership;
+    } else {
+        // Create new membership
+        console.log('No existing active membership found for this plan, creating new membership...');
+        
+        const startDate = data.startDate || new Date();
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + membershipPlan.durationInDays);
+
+        const membership = await MembershipModel.create({
+            userId: data.userId,
+            membershipPlanId: data.membershipPlanId,
+            startDate,
+            endDate,
+            transactionId: data.transactionId,
+            autoRenew: data.autoRenew || false,
+            notes: data.notes || `Created from payment ${data.transactionId || 'N/A'}`
+        });
+
+        AppAssert(membership, INTERNAL_SERVER_ERROR, "Failed to create membership");
+
+        // Return with populated data
+        const populatedMembership = await MembershipModel.findById(membership._id)
+            .populate('userId', 'name email')
+            .populate('membershipPlanId', 'name price currency durationInDays category');
+
+        console.log('New membership created successfully:', populatedMembership);
+        return populatedMembership;
+    }
+};
+
 export const updateMembership = async (membershipId: string, updateData: UpdateMembershipParams) => {
     const membership = await MembershipModel.findById(membershipId);
     AppAssert(membership, NOT_FOUND, "Membership not found");

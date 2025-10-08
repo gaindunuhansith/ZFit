@@ -145,18 +145,35 @@ export default function StockManagementPage() {
 
   const handleGenerateReport = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/v1/reports/stock-levels/pdf')
+      // Build query parameters based on current filters
+      const queryParams = new URLSearchParams()
+      
+      if (searchTerm) {
+        queryParams.append('searchTerm', searchTerm)
+      }
+      
+      // You can add more filter parameters here as needed
+      // if (categoryFilter) queryParams.append('categoryId', categoryFilter)
+      // if (lowStockOnly) queryParams.append('lowStockOnly', 'true')
+      
+      const url = `http://localhost:5000/api/v1/reports/stock-levels/pdf${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+      const response = await fetch(url)
+      
       if (!response.ok) throw new Error('Failed to generate report')
       
       const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
+      const downloadUrl = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
-      link.href = url
-      link.download = `stock-levels-report-${new Date().toISOString().split('T')[0]}.pdf`
+      link.href = downloadUrl
+      
+      // Include filter info in filename if filters are applied
+      const filterSuffix = searchTerm ? `-filtered` : ''
+      link.download = `stock-levels-report${filterSuffix}-${new Date().toISOString().split('T')[0]}.pdf`
+      
       document.body.appendChild(link)
       link.click()
       link.remove()
-      window.URL.revokeObjectURL(url)
+      window.URL.revokeObjectURL(downloadUrl)
     } catch (error) {
       console.error('Error generating report:', error)
       setError('Failed to generate stock levels report')

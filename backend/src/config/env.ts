@@ -11,7 +11,6 @@ config({ path: `.env.${process.env.NODE_ENV || 'development'}.local` });
 //exporting the environmental variables
 export default cleanEnv(process.env, {
     NODE_ENV: str(),
-    EMAIL_MODE: str({ default: 'development' }),
     MongoDB_URI: str(),
     PORT: port(),
     BACKEND_APP_ORIGIN: str(),
