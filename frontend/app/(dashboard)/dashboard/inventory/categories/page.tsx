@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Plus, Edit, Trash2, Package, Search, FileText } from 'lucide-react'
+import { Plus, Edit, Trash2, Package, Search, Download } from 'lucide-react'
 import { categoryApiService } from '@/lib/api/categoryApi'
 import type { CategoryData, Category } from '@/lib/api/categoryApi'
 import { CategoryFormModal, CategoryFormData, UpdateCategoryFormData } from '@/components/CategoryFormModal'
@@ -183,13 +183,13 @@ export default function CategoriesPage() {
           <p className="text-muted-foreground">Manage inventory categories</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleGenerateReport}>
-            <FileText className="h-4 w-4 mr-2" />
-            Generate Report
-          </Button>
-          <Button onClick={handleAddCategory} className="bg-primary hover:bg-primary/90">
+          <Button onClick={handleAddCategory}>
             <Plus className="h-4 w-4 mr-2" />
             Add Category
+          </Button>
+          <Button variant="outline" onClick={handleGenerateReport}>
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
           </Button>
         </div>
       </div>

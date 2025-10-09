@@ -276,13 +276,13 @@ export default function ItemsPage() {
           <p className="text-muted-foreground">Manage your gym inventory items</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={handleGenerateReport} variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export Report
-          </Button>
-          <Button onClick={handleAddItem} className="bg-primary hover:bg-primary/90">
+          <Button onClick={handleAddItem}>
             <Plus className="h-4 w-4 mr-2" />
             Add Item
+          </Button>
+          <Button onClick={handleGenerateReport} variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
           </Button>
         </div>
       </div>
