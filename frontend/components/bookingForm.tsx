@@ -1,143 +1,140 @@
-// components/BookingForm.tsx
 "use client";
-import { useState, useEffect } from "react";
-import { ClassItem, Trainer, Facility } from "@/services/bookingApi";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 
 export interface BookingFormInput {
   classId: string;
   trainerId: string;
   facilityId: string;
+  classType: string;
   scheduledDate: string;
-  scheduledTime: string;
+  fee: number;
 }
 
-interface BookingFormProps {
-  onSubmit: (data: BookingFormInput) => void;
+interface ClassItem { _id: string; name: string; classTypes: string[]; price: number; }
+interface Trainer { _id: string; name: string; }
+interface Facility { _id: string; name: string; }
+
+interface Props {
+  onSubmit: (form: BookingFormInput) => void;
+  defaultValues?: Partial<BookingFormInput>;
 }
 
-export default function BookingForm({ onSubmit }: BookingFormProps) {
+export default function BookingForm({ onSubmit, defaultValues }: Props) {
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [form, setForm] = useState<BookingFormInput>({
-    classId: "",
-    trainerId: "",
-    facilityId: "",
-    scheduledDate: "",
-    scheduledTime: "",
+    classId: defaultValues?.classId || "",
+    trainerId: defaultValues?.trainerId || "",
+    facilityId: defaultValues?.facilityId || "",
+    classType: defaultValues?.classType || "",
+    scheduledDate: defaultValues?.scheduledDate || "",
+    fee: defaultValues?.fee || 0,
   });
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/v1/bookings/classes").then(res => res.json()).then(data => setClasses(data.data || []));
-    fetch("http://localhost:5000/api/v1/bookings/trainers").then(res => res.json()).then(data => setTrainers(data.data || []));
-    fetch("http://localhost:5000/api/v1/bookings/facilities").then(res => res.json()).then(data => setFacilities(data.data || []));
+    (async () => {
+      try {
+        const [clsRes, trnRes, facRes] = await Promise.all([
+          fetch("http://localhost:5000/api/v1/classes"),
+          fetch("http://localhost:5000/api/v1/trainers"),
+          fetch("http://localhost:5000/api/v1/facilities"),
+        ]);
+        const [cls, trn, fac] = await Promise.all([clsRes.json(), trnRes.json(), facRes.json()]);
+        setClasses(cls.data || []);
+        setTrainers(trn.data || []);
+        setFacilities(fac.data || []);
+      } catch (err) {
+        console.error("Failed to fetch data", err);
+      }
+    })();
   }, []);
 
-  const validate = () => {
-    const err: Record<string, string> = {};
-    const selectedClass = classes.find(c => c._id === form.classId);
-    if (!form.classId) err.classId = "Select class";
-    // Class validations
-    if (selectedClass) {
-      if (typeof selectedClass.maxCapacity === "number") {
-        if (selectedClass.maxCapacity <= 0) err.classId = "Seats must be > 0";
-        if (selectedClass.maxCapacity > 20) err.classId = "Seats cannot exceed 20";
-      }
-      if (typeof selectedClass.duration === "number" && selectedClass.duration < 40) {
-        err.classId = "Duration must be ≥ 40 minutes";
-      }
-      if (typeof selectedClass.price === "number" && selectedClass.price <= 0) {
-        err.classId = "Fee must be > 0";
-      }
-    }
-
-    const selectedTrainer = trainers.find(t => t._id === form.trainerId);
-    if (!form.trainerId) err.trainerId = "Select trainer";
-    if (selectedTrainer && typeof (selectedTrainer as any).experience === "number" && (selectedTrainer as any).experience <= 0) {
-      err.trainerId = "Trainer experience must be > 0";
-    }
-
-    const selectedFacility = facilities.find(f => f._id === form.facilityId);
-    if (!form.facilityId) err.facilityId = "Select facility";
-    const equipmentCount = selectedFacility ? ("equipmentCount" in selectedFacility ? (selectedFacility as any).equipmentCount : (selectedFacility.equipments?.length ?? 0)) : 0;
-    if (selectedFacility && equipmentCount < 0) {
-      err.facilityId = "Equipment count cannot be negative";
-    }
-
-    if (!form.scheduledDate) err.scheduledDate = "Select date";
-    if (!form.scheduledTime) err.scheduledTime = "Select time";
-    const scheduled = new Date(`${form.scheduledDate}T${form.scheduledTime}`);
-    if (isFinite(scheduled.getTime()) && scheduled <= new Date()) err.scheduledDate = "Booking must be in future";
-
-    setErrors(err);
-    return Object.keys(err).length === 0;
+  const handleClassChange = (id: string) => {
+    const selected = classes.find(c => c._id === id);
+    setForm(prev => ({
+      ...prev,
+      classId: id,
+      classType: selected?.classTypes[0] || "",
+      fee: selected?.price || 0
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
     onSubmit(form);
   };
 
   return (
-    <Card>
-      <CardHeader><CardTitle>Book a Class</CardTitle></CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label>Class</Label>
-            <select value={form.classId} onChange={e => setForm({ ...form, classId: e.target.value })} className="w-full border rounded px-3 py-2">
-              <option value="">Select Class</option>
-              {classes.map(c => <option key={c._id} value={c._id}>{c.name} (Seats: {c.maxCapacity})</option>)}
-            </select>
-            {form.classId && <p className="text-xs text-muted-foreground mt-1">Selected Class ID: {form.classId}</p>}
-            {errors.classId && <p className="text-red-500 text-sm">{errors.classId}</p>}
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label>Class</Label>
+        <Select value={form.classId} onValueChange={handleClassChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select class" />
+          </SelectTrigger>
+          <SelectContent>
+            {classes.map(c => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
 
-          <div>
-            <Label>Trainer</Label>
-            <select value={form.trainerId} onChange={e => setForm({ ...form, trainerId: e.target.value })} className="w-full border rounded px-3 py-2">
-              <option value="">Select Trainer</option>
-              {trainers.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
-            </select>
-            {form.trainerId && <p className="text-xs text-muted-foreground mt-1">Selected Trainer ID: {form.trainerId}</p>}
-            {errors.trainerId && <p className="text-red-500 text-sm">{errors.trainerId}</p>}
-          </div>
+      <div>
+        <Label>Class Type</Label>
+        <Select value={form.classType} onValueChange={v => setForm({...form, classType: v})}>
+          <SelectTrigger><SelectValue placeholder="Select class type" /></SelectTrigger>
+          <SelectContent>
+            {classes.find(c => c._id === form.classId)?.classTypes.map(ct => <SelectItem key={ct} value={ct}>{ct}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
 
-          <div>
-            <Label>Facility</Label>
-            <select value={form.facilityId} onChange={e => setForm({ ...form, facilityId: e.target.value })} className="w-full border rounded px-3 py-2">
-              <option value="">Select Facility</option>
-              {facilities.map(f => <option key={f._id} value={f._id}>{f.name}</option>)}
-            </select>
-            {form.facilityId && <p className="text-xs text-muted-foreground mt-1">Selected Facility ID: {form.facilityId}</p>}
-            {errors.facilityId && <p className="text-red-500 text-sm">{errors.facilityId}</p>}
-          </div>
+      <div>
+        <Label>Trainer</Label>
+        <Select value={form.trainerId} onValueChange={v => setForm({...form, trainerId: v})}>
+          <SelectTrigger><SelectValue placeholder="Select trainer" /></SelectTrigger>
+          <SelectContent>
+            {trainers.map(t => <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Date</Label>
-              <Input type="date" value={form.scheduledDate} onChange={(e) => setForm({ ...form, scheduledDate: (e.target as HTMLInputElement).value })} />
-              {errors.scheduledDate && <p className="text-red-500 text-sm">{errors.scheduledDate}</p>}
-              {form.scheduledDate && (
-                <p className="text-xs text-muted-foreground mt-1">Cancellation deadline: {new Date(`${form.scheduledDate}T00:00:00`).toISOString().slice(0,16).replace("T"," ")}</p>
-              )}
-            </div>
-            <div>
-              <Label>Time</Label>
-              <Input type="time" value={form.scheduledTime} onChange={(e) => setForm({ ...form, scheduledTime: (e.target as HTMLInputElement).value })} />
-              {errors.scheduledTime && <p className="text-red-500 text-sm">{errors.scheduledTime}</p>}
-            </div>
-          </div>
+      <div>
+        <Label>Facility</Label>
+        <Select value={form.facilityId} onValueChange={v => setForm({...form, facilityId: v})}>
+          <SelectTrigger><SelectValue placeholder="Select facility" /></SelectTrigger>
+          <SelectContent>
+            {facilities.map(f => <SelectItem key={f._id} value={f._id}>{f.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
 
-          <Button type="submit">Book Class</Button>
-        </form>
-      </CardContent>
-    </Card>
+      <div>
+        <Label>Date</Label>
+        <Input type="date" value={form.scheduledDate.split("T")[0] || ""} onChange={e => {
+          const time = form.scheduledDate.split("T")[1] || "00:00";
+          setForm({...form, scheduledDate: `${e.target.value}T${time}`});
+        }} />
+      </div>
+
+      <div>
+        <Label>Time</Label>
+        <Input type="time" value={form.scheduledDate.split("T")[1]?.slice(0,5) || ""} onChange={e => {
+          const datePart = form.scheduledDate.split("T")[0] || new Date().toISOString().split("T")[0];
+          setForm({...form, scheduledDate: `${datePart}T${e.target.value}`});
+        }} />
+      </div>
+
+      <div>
+        <Label>Fee</Label>
+        <Input type="number" value={form.fee} readOnly className="bg-gray-100" />
+      </div>
+
+      <Button type="submit" className="w-full">{defaultValues ? "Update Booking" : "Book Class"}</Button>
+    </form>
   );
 }

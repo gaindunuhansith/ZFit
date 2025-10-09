@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -17,9 +16,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 type Trainer = {
   _id: string;
@@ -31,233 +29,219 @@ type Trainer = {
 };
 
 export default function ManageTrainersPage() {
-  const [rows, setRows] = useState<Trainer[]>([]);
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [filteredTrainers, setFilteredTrainers] = useState<Trainer[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Trainer | null>(null);
-  const [form, setForm] = useState<Partial<Trainer>>({
-    name: "",
-    specialization: "",
-    experience: 1,
-    status: "active",
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [search, setSearch] = useState("");
+  const [form, setForm] = useState<Partial<Trainer>>({});
+  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
 
-  // Load trainers
-  async function loadTrainers() {
-    try {
-      const res = await fetch("http://localhost:5000/api/v1/trainers");
-      const json = await res.json();
-      setRows(json.data || []);
-    } catch (err) {
-      console.error("Error fetching trainers:", err);
-    }
-  }
-
+  // Fetch trainers
   useEffect(() => {
-    void loadTrainers();
+    fetch("http://localhost:5000/api/v1/trainers")
+      .then((res) => res.json())
+      .then((data) => {
+        setTrainers(data.data || []);
+        setFilteredTrainers(data.data || []);
+      })
+      .catch((err) => console.error("Error fetching trainers:", err));
   }, []);
 
-  function validate(): boolean {
-    const e: Record<string, string> = {};
-    if (!form.name) e.name = "Name is required";
-    if ((form.experience ?? 0) < 0) e.experience = "Experience must be 0 or more";
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
+  // Filter & search logic
+  useEffect(() => {
+    let results = trainers;
 
-  async function submit() {
-    if (!validate()) return;
+    if (searchTerm.trim()) {
+      results = results.filter(
+        (t) =>
+          t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (t.specialization?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+      );
+    }
 
-    const payload = {
-      name: form.name,
-      specialization: form.specialization,
-      experience: form.experience,
-      status: form.status,
-      createdAt: editing ? form.createdAt : new Date().toISOString(),
-    };
+    if (statusFilter !== "all") {
+      results = results.filter((t) => t.status?.toLowerCase() === statusFilter);
+    }
 
+    setFilteredTrainers(results);
+  }, [searchTerm, statusFilter, trainers]);
+
+  // Open dialog for Add/Edit
+  const handleOpen = (t?: Trainer) => {
+    setEditing(t || null);
+    setForm(t || {});
+    setOpen(true);
+  };
+
+  // Save trainer
+  const handleSave = async () => {
     try {
-      if (editing) {
-        await fetch(`http://localhost:5000/api/v1/trainers/${editing._id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      } else {
-        await fetch("http://localhost:5000/api/v1/trainers", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+      const url = editing
+        ? `http://localhost:5000/api/v1/trainers/${editing._id}`
+        : "http://localhost:5000/api/v1/trainers";
+      const method = editing ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          createdAt: editing ? form.createdAt : new Date().toISOString(),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        if (editing) {
+          setTrainers((prev) =>
+            prev.map((tr) => (tr._id === editing._id ? data.data : tr))
+          );
+        } else {
+          setTrainers((prev) => [...prev, data.data]);
+        }
+        setOpen(false);
       }
-
-      setOpen(false);
-      setEditing(null);
-      setForm({ name: "", specialization: "", experience: 1, status: "active" });
-
-      // Force reload after small delay (to ensure backend sync)
-      await loadTrainers();
-      setTimeout(loadTrainers, 300);
     } catch (err) {
       console.error("Error saving trainer:", err);
     }
-  }
+  };
 
-  async function remove(id: string) {
+  // Delete trainer
+  const handleDelete = async (id: string) => {
     try {
-      await fetch(`http://localhost:5000/api/v1/trainers/${id}`, {
+      const res = await fetch(`http://localhost:5000/api/v1/trainers/${id}`, {
         method: "DELETE",
       });
-      await loadTrainers();
+      const data = await res.json();
+      if (data.success) {
+        setTrainers((prev) => prev.filter((t) => t._id !== id));
+      }
     } catch (err) {
       console.error("Error deleting trainer:", err);
     }
-  }
-
-  // Filtered & searched trainers
-  const filteredRows = rows
-    .filter((t) => statusFilter === "all" || t.status === statusFilter)
-    .filter(
-      (t) =>
-        t.name.toLowerCase().includes(search.toLowerCase()) ||
-        (t.specialization?.toLowerCase().includes(search.toLowerCase()) ?? false)
-    );
+  };
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4">
+      {/* Header with search, filter, add button */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <h1 className="text-2xl font-bold">Manage Trainers</h1>
-
-        <Input
-          placeholder="Search by name or specialization..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-        />
-
-        <select
-          className="border rounded px-2 py-1"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "inactive")}
-        >
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-
-        <Button
-          onClick={() => {
-            setForm({ name: "", specialization: "", experience: 1, status: "active" });
-            setEditing(null);
-            setOpen(true);
-          }}
-        >
-          + Add Trainer
-        </Button>
+        <div className="flex items-center gap-3">
+          <Input
+            placeholder="🔍 Search by name or specialization..."
+            className="w-56"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <Select
+            value={statusFilter}
+            onValueChange={setStatusFilter}
+          >
+            <SelectTrigger className="w-40 bg-card text-foreground border border-border rounded-md focus:ring-2 focus:ring-primary">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={() => handleOpen()}>+ Add Trainer</Button>
+        </div>
       </div>
 
       {/* Trainer Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Trainer List</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Specialization</TableHead>
-                <TableHead>Experience</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created Date</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredRows.map((t) => (
+      <div className="rounded-lg border shadow-sm overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Specialization</TableHead>
+              <TableHead>Experience</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Created Date</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredTrainers.length > 0 ? (
+              filteredTrainers.map((t) => (
                 <TableRow key={t._id}>
                   <TableCell>{t.name}</TableCell>
                   <TableCell>{t.specialization}</TableCell>
                   <TableCell>{t.experience}</TableCell>
-                  <TableCell>{t.status}</TableCell>
-                  <TableCell>{new Date(t.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        t.status === "active"
+                          ? "bg-green-500 text-white"
+                          : t.status === "inactive"
+                          ? "bg-gray-400 text-white"
+                          : "bg-yellow-500 text-white"
+                      }`}
+                    >
+                      {t.status}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(t.createdAt).toLocaleDateString()}
+                  </TableCell>
                   <TableCell className="space-x-2">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setEditing(t);
-                        setForm({
-                          name: t.name,
-                          specialization: t.specialization,
-                          experience: t.experience,
-                          status: t.status,
-                          createdAt: t.createdAt,
-                        });
-                        setOpen(true);
-                      }}
-                    >
-                      Edit
+                    <Button variant="ghost" size="sm" onClick={() => handleOpen(t)}>
+                      ✏️
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => remove(t._id)}
-                    >
-                      Delete
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(t._id)}>
+                      🗑️
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-6">
+                  No trainers found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-      {/* Add/Edit Dialog */}
+      {/* Add/Edit Trainer Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Trainer" : "Add Trainer"}</DialogTitle>
-            <p className="text-sm text-gray-500">
-              Fill out the details below to {editing ? "update" : "create"} a trainer profile.
-            </p>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Name</Label>
-              <Input
-                value={form.name || ""}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
-              {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
-            </div>
-            <div>
-              <Label>Specialization</Label>
-              <Input
-                value={form.specialization || ""}
-                onChange={(e) => setForm({ ...form, specialization: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Experience (years)</Label>
-              <Input
-                type="number"
-                value={form.experience ?? 1}
-                onChange={(e) => setForm({ ...form, experience: Number(e.target.value) })}
-              />
-              {errors.experience && (
-                <p className="text-red-500 text-sm">{errors.experience}</p>
-              )}
+            <Input
+              placeholder="Name"
+              value={form.name || ""}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
+            <Input
+              placeholder="Specialization"
+              value={form.specialization || ""}
+              onChange={(e) => setForm({ ...form, specialization: e.target.value })}
+            />
+            <Input
+              type="number"
+              placeholder="Experience"
+              min={0}
+              value={form.experience || 0}
+              onChange={(e) => setForm({ ...form, experience: Number(e.target.value) })}
+            />
+            <Input
+              placeholder="Status"
+              value={form.status || ""}
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+            />
+            <div className="flex justify-end space-x-2">
+              <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button onClick={handleSave}>{editing ? "Update" : "Save"}</Button>
             </div>
           </div>
-          <DialogFooter>
-            <Button onClick={submit}>{editing ? "Update" : "Create"}</Button>
-            <Button variant="secondary" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

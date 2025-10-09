@@ -1,39 +1,66 @@
-// components/BookingTable.tsx
 "use client";
-import { Booking } from "@/services/bookingApi";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 
-interface BookingTableProps {
-  bookings: Booking[];
-  onEdit: (booking: Booking) => void;
-  onDelete: (booking: Booking) => void;
+export interface Booking {
+  _id: string;
+  classId: { _id: string; name: string } | string;
+  trainerId: { _id: string; name: string } | string;
+  facilityId: { _id: string; name: string } | string;
+  classType: string;
+  fee: number;
+  scheduledDate: string;
+  status: string;
 }
 
-export default function BookingTable({ bookings, onEdit, onDelete }: BookingTableProps) {
+interface Props {
+  bookings: Booking[];
+  onReschedule: (b: Booking) => void;
+  onCancel: (b: Booking) => void;
+}
+
+export default function BookingTable({ bookings, onReschedule, onCancel }: Props) {
+  const formatDate = (iso?: string) => iso ? new Date(iso).toLocaleDateString() : "N/A";
+  const formatTime = (iso?: string) => iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "N/A";
+  const getName = (item: any) => typeof item === "object" ? item.name : "N/A";
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Class</TableHead>
+          <TableHead>Type</TableHead>
           <TableHead>Trainer</TableHead>
           <TableHead>Facility</TableHead>
+          <TableHead>Fee (LKR)</TableHead>
           <TableHead>Date</TableHead>
           <TableHead>Time</TableHead>
+          <TableHead>Status</TableHead>
           <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {bookings.map((b) => (
+        {bookings.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={9} className="text-center py-4 text-gray-500">No bookings found.</TableCell>
+          </TableRow>
+        ) : bookings.map(b => (
           <TableRow key={b._id}>
-            <TableCell className="font-mono text-xs">{b.classId}</TableCell>
-            <TableCell className="font-mono text-xs">{b.trainerId}</TableCell>
-            <TableCell className="font-mono text-xs">{b.facilityId}</TableCell>
-            <TableCell>{b.date}</TableCell>
-            <TableCell>{b.time}</TableCell>
+            <TableCell>{getName(b.classId)}</TableCell>
+            <TableCell>{b.classType}</TableCell>
+            <TableCell>{getName(b.trainerId)}</TableCell>
+            <TableCell>{getName(b.facilityId)}</TableCell>
+            <TableCell>{b.fee?.toLocaleString() || "0"}</TableCell>
+            <TableCell>{formatDate(b.scheduledDate)}</TableCell>
+            <TableCell>{formatTime(b.scheduledDate)}</TableCell>
+            <TableCell className="capitalize">{b.status}</TableCell>
             <TableCell className="space-x-2">
-              <Button size="sm" onClick={() => onEdit(b)}>✏️ Edit</Button>
-              <Button size="sm" variant="destructive" onClick={() => onDelete(b)}>🗑️ Delete</Button>
+              {b.status !== "cancelled" && b.status !== "completed" && (
+                <>
+                  <Button size="sm" onClick={() => onReschedule(b)}>🔄 Reschedule</Button>
+                  <Button size="sm" variant="destructive" onClick={() => onCancel(b)}>❌ Cancel</Button>
+                </>
+              )}
             </TableCell>
           </TableRow>
         ))}
