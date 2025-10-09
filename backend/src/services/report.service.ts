@@ -263,8 +263,8 @@ function generateGenericHTML(config: ReportConfig): string {
         thead th {
           color: #000000;
           font-weight: 600;
-          font-size: 14px;
-          padding: 16px 12px;
+          font-size: 12px;
+          padding: 12px 8px;
           text-align: left;
           text-transform: uppercase;
           letter-spacing: 0.5px;
@@ -284,9 +284,9 @@ function generateGenericHTML(config: ReportConfig): string {
         }
 
         tbody td {
-          padding: 14px 12px;
+          padding: 10px 8px;
           color: #000000;
-          font-size: 14px;
+          font-size: 11px;
           vertical-align: middle;
         }
 
@@ -298,11 +298,12 @@ function generateGenericHTML(config: ReportConfig): string {
         .user-name {
           font-weight: 500;
           color: #000000;
+          font-size: 11px;
           margin-bottom: 2px;
         }
 
         .user-email {
-          font-size: 12px;
+          font-size: 10px;
           color: #666666;
         }
 
@@ -314,20 +315,21 @@ function generateGenericHTML(config: ReportConfig): string {
         .plan-name {
           font-weight: 500;
           color: #000000;
+          font-size: 11px;
           margin-bottom: 2px;
         }
 
         .plan-price {
-          font-size: 12px;
+          font-size: 10px;
           color: #666666;
         }
 
         .status-badge {
           display: inline-flex;
           align-items: center;
-          padding: 4px 8px;
+          padding: 3px 6px;
           border-radius: 6px;
-          font-size: 11px;
+          font-size: 9px;
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.5px;
@@ -376,9 +378,9 @@ function generateGenericHTML(config: ReportConfig): string {
         .auto-renew-badge {
           display: inline-flex;
           align-items: center;
-          padding: 4px 8px;
+          padding: 3px 6px;
           border-radius: 6px;
-          font-size: 11px;
+          font-size: 9px;
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.5px;
@@ -396,13 +398,13 @@ function generateGenericHTML(config: ReportConfig): string {
 
         .date-cell {
           font-family: 'Inter', monospace;
-          font-size: 13px;
+          font-size: 11px;
           color: #000000;
         }
 
         .transaction-id {
           font-family: 'Inter', monospace;
-          font-size: 12px;
+          font-size: 10px;
           color: #666666;
           font-weight: 500;
         }
@@ -1225,12 +1227,24 @@ export async function generateInvoicesReport(): Promise<Buffer> {
       {
         key: 'paymentId',
         header: 'Payment ID',
-        className: 'payment-id-cell'
+        className: 'payment-id-cell',
+        formatter: (value, row) => {
+          if (typeof value === 'object' && value !== null) {
+            return (value as any)._id?.toString() || 'N/A';
+          }
+          return value?.toString() || 'N/A';
+        }
       },
       {
         key: 'userId',
-        header: 'User ID',
-        className: 'user-id-cell'
+        header: 'User Name',
+        className: 'user-name-cell',
+        formatter: (value, row) => {
+          if (typeof value === 'object' && value !== null) {
+            return (value as any).name || 'N/A';
+          }
+          return 'N/A';
+        }
       },
       {
         key: 'subtotal',
@@ -1251,11 +1265,6 @@ export async function generateInvoicesReport(): Promise<Buffer> {
         key: 'total',
         header: 'Total Amount',
         formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
-      },
-      {
-        key: 'status',
-        header: 'Status',
-        formatter: (value) => `<span class="status-badge status-${value}">${value.toUpperCase()}</span>`
       },
       {
         key: 'dueDate',
@@ -1289,7 +1298,6 @@ export async function generatePaymentsReport(): Promise<Buffer> {
       ? (payment.userId as any).name || 'N/A'
       : 'N/A',
     amount: payment.amount || 0,
-    currency: payment.currency || 'LKR',
     type: payment.type || 'N/A',
     method: payment.method || 'N/A',
     status: payment.status || 'N/A',
@@ -1314,11 +1322,6 @@ export async function generatePaymentsReport(): Promise<Buffer> {
         key: 'amount',
         header: 'Amount',
         formatter: (value) => `LKR ${Number(value)?.toFixed(2) || '0.00'}`
-      },
-      {
-        key: 'currency',
-        header: 'Currency',
-        className: 'currency-cell'
       },
       {
         key: 'type',
@@ -1365,19 +1368,10 @@ export async function generateRefundRequestsReport(): Promise<Buffer> {
         className: 'request-id-cell'
       },
       {
-        key: 'userId.name',
+        key: 'userName',
         header: 'User Name',
-        className: 'user-name-cell'
-      },
-      {
-        key: 'userId.email',
-        header: 'User Email',
-        className: 'user-email-cell'
-      },
-      {
-        key: 'paymentId.transactionId',
-        header: 'Transaction ID',
-        className: 'transaction-id-cell'
+        className: 'user-name-cell',
+        formatter: (value, row) => (row as any)?.userId?.name || 'N/A'
       },
       {
         key: 'requestedAmount',
@@ -1385,9 +1379,9 @@ export async function generateRefundRequestsReport(): Promise<Buffer> {
         formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
       },
       {
-        key: 'paymentId.amount',
+        key: 'originalAmount',
         header: 'Original Amount',
-        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+        formatter: (value, row) => `LKR ${(row as any)?.paymentId?.amount?.toFixed(2) || '0.00'}`
       },
       {
         key: 'status',
