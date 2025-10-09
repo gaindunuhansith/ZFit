@@ -1347,3 +1347,72 @@ export async function generatePaymentsReport(): Promise<Buffer> {
 
   return generateGenericReport(config)
 }
+
+/**
+ * Generate Refund Requests Report
+ */
+export async function generateRefundRequestsReport(): Promise<Buffer> {
+  const { getRefundRequestsService } = await import('./refundRequest.services.js')
+  const refundRequests = await getRefundRequestsService()
+
+  const config: ReportConfig = {
+    title: 'Refund Requests Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'requestId',
+        header: 'Request ID',
+        className: 'request-id-cell'
+      },
+      {
+        key: 'userId.name',
+        header: 'User Name',
+        className: 'user-name-cell'
+      },
+      {
+        key: 'userId.email',
+        header: 'User Email',
+        className: 'user-email-cell'
+      },
+      {
+        key: 'paymentId.transactionId',
+        header: 'Transaction ID',
+        className: 'transaction-id-cell'
+      },
+      {
+        key: 'requestedAmount',
+        header: 'Requested Amount',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'paymentId.amount',
+        header: 'Original Amount',
+        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        formatter: (value) => `<span class="status-badge status-${value}">${value.toUpperCase()}</span>`
+      },
+      {
+        key: 'notes',
+        header: 'Notes',
+        className: 'notes-cell'
+      },
+      {
+        key: 'adminNotes',
+        header: 'Admin Notes',
+        className: 'admin-notes-cell'
+      },
+      {
+        key: 'createdAt',
+        header: 'Request Date',
+        type: 'date',
+        className: 'date-cell'
+      }
+    ],
+    data: refundRequests as any[]
+  }
+
+  return generateGenericReport(config)
+}

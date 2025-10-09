@@ -294,3 +294,18 @@ export const generateRefundsReportHandler = async (req: Request, res: Response, 
     next(error)
   }
 }
+
+export const generateRefundRequestsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { generateRefundRequestsReport } = await import('../services/report.service.js')
+    const pdfBuffer = await generateRefundRequestsReport()
+
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', 'attachment; filename=refund-requests-report.pdf')
+    res.setHeader('Content-Length', pdfBuffer.length)
+
+    res.send(pdfBuffer)
+  } catch (error) {
+    next(error)
+  }
+}

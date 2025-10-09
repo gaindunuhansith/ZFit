@@ -19,6 +19,24 @@ export const generateRefundsReport = async (): Promise<Blob> => {
 }
 
 /**
+ * Generate refund requests report PDF
+ */
+export const generateRefundRequestsReport = async (): Promise<Blob> => {
+  const response = await fetch(`${API_BASE_URL}/reports/refund-requests/pdf`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to generate refund requests report')
+  }
+
+  return response.blob()
+}
+
+/**
  * Generate invoices report PDF
  */
 export const generateInvoicesReport = async (): Promise<Blob> => {

@@ -51,6 +51,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { getRefundRequests, approveRefundRequest, declineRefundRequest, deleteRefundRequest, getPendingRequestsCount, updateRefundRequest, type RefundRequest } from "@/lib/api/refundRequestApi"
 import { updatePayment, initiatePayHereRefund, type PayHereRefundRequest } from "@/lib/api/paymentApi"
+import { generateRefundRequestsReport } from "@/lib/api/reportApi"
 
 const getStatusIcon = (status: string) => {
   switch (status) {
@@ -295,6 +296,25 @@ export default function RefundRequestsManagementPage() {
     }
   }
 
+  const handleGenerateReport = async () => {
+    try {
+      const reportBlob = await generateRefundRequestsReport()
+
+      // Create a download link and trigger download
+      const url = window.URL.createObjectURL(reportBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Zfit_Refund_${new Date().toISOString().split('T')[0]}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error generating report:', error)
+      // TODO: Show error toast
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -306,6 +326,10 @@ export default function RefundRequestsManagementPage() {
           </p>
         </div>
         <div className="flex space-x-2">
+          <Button onClick={handleGenerateReport}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Generate Report
+          </Button>
           <Button onClick={() => router.push('/dashboard/finance/refund')}>
             <Plus className="mr-2 h-4 w-4" />
             Create Refund
