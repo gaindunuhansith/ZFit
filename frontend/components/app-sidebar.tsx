@@ -97,25 +97,7 @@ const data = {
         },
       ],
     },
-    {
-      title: "Analytics",
-      url: "/dashboard/analytics",
-      icon: BarChart3,
-      items: [
-        {
-          title: "Membership Trends",
-          url: "/dashboard/analytics/membership",
-        },
-        {
-          title: "Revenue Reports",
-          url: "/dashboard/analytics/revenue",
-        },
-        {
-          title: "Attendance Stats",
-          url: "/dashboard/analytics/attendance",
-        },
-      ],
-    },
+   
     {
       title: "Tracking & Progress",
       url: "/dashboard/tracking",

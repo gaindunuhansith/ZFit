@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
   RefreshCw,
+  Download,
   Search,
   Filter,
   AlertCircle,
@@ -569,13 +570,13 @@ export default function RefundManagementPage() {
           </div>
         </div>
         <div className="flex space-x-2">
-          <Button onClick={handleGenerateReport}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Generate Report
+          <Button onClick={() => setIsCreateModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Refund
           </Button>
-          <Button variant="outline" onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create
+          <Button variant="outline" onClick={handleGenerateReport}>
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
           </Button>
         </div>
       </div>

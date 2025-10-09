@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
+  Download,
   RefreshCw,
   Search,
   AlertCircle,
@@ -351,13 +352,13 @@ export default function RefundRequestsManagementPage() {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button onClick={handleGenerateReport}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Generate Report
-          </Button>
           <Button onClick={() => router.push('/dashboard/finance/refund')}>
-            <Plus className="mr-2 h-4 w-4" />
+          
             Create Refund
+          </Button>
+          <Button variant="outline" onClick={handleGenerateReport}>
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
           </Button>
         </div>
       </div>

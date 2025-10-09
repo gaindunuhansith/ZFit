@@ -170,6 +170,26 @@ export default function MembersPage() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="flex items-center space-x-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search members by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
+
       {/* Members Table */}
       <Card>
         <CardHeader>
@@ -182,23 +202,6 @@ export default function MembersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-4">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
-
-          <div className="mb-4">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search members by name or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-          </div>
 
           <Table>
             <TableHeader>

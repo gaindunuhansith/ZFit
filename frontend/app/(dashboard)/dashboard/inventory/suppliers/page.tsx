@@ -12,7 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { Plus, Edit, Trash2, Truck, Search, FileText } from 'lucide-react'
+import { Plus, Edit, Trash2, Truck, Search, Download } from 'lucide-react'
 import { supplierApiService } from '@/lib/api/supplierApi'
 import type { SupplierData } from '@/lib/api/supplierApi'
 import { SupplierFormModal, SupplierFormData, UpdateSupplierFormData } from '@/components/SupplierFormModal'
@@ -173,13 +173,13 @@ export default function SuppliersPage() {
           <p className="text-muted-foreground">Manage inventory suppliers</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleGenerateReport}>
-            <FileText className="h-4 w-4 mr-2" />
-            Generate Report
-          </Button>
           <Button onClick={handleAddSupplier}>
             <Plus className="h-4 w-4 mr-2" />
             Add Supplier
+          </Button>
+          <Button variant="outline" onClick={handleGenerateReport}>
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
           </Button>
         </div>
       </div>

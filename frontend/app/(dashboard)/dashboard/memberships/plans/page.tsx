@@ -201,16 +201,36 @@ export default function MembershipPlansPage() {
           <p className="text-muted-foreground">Manage gym membership plans</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleDownloadReport}>
-            <Download className="h-4 w-4 mr-2" />
-            Download Report
-          </Button>
           <Button onClick={handleAddMembershipPlan}>
             <Plus className="h-4 w-4 mr-2" />
             Add Plan
           </Button>
+          <Button variant="outline" onClick={handleDownloadReport}>
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
+          </Button>
         </div>
       </div>
+
+      {/* Search Bar */}
+      <div className="flex items-center space-x-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search membership plans..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
 
       {/* Membership Plans Table */}
       <Card>
@@ -224,24 +244,6 @@ export default function MembershipPlansPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-4">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
-
-          {/* Search Bar */}
-          <div className="flex items-center space-x-2 mb-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search membership plans..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
 
           <Table>
             <TableHeader>

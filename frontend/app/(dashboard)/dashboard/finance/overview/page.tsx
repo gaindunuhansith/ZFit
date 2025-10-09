@@ -6,7 +6,7 @@ import {
   CreditCard,
   MoreHorizontal,
   Search,
-  RefreshCw,
+  Download,
   Eye,
   Trash2,
 } from "lucide-react"
@@ -514,9 +514,9 @@ export default function PaymentManagementPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={handleGenerateReport}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Generate Report
+          <Button variant="outline" onClick={handleGenerateReport}>
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
           </Button>
           <Button variant="destructive" onClick={handleDeleteAllPayments}>
             <Trash2 className="mr-2 h-4 w-4" />

@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Search, Package, FileText, AlertTriangle } from 'lucide-react'
+import { Search, Package, Download, AlertTriangle } from 'lucide-react'
 import { itemApiService } from '@/lib/api/itemApi'
 import { format } from 'date-fns'
 
@@ -210,8 +210,8 @@ export default function StockManagementPage() {
           <p className="text-muted-foreground">Monitor and manage inventory stock levels</p>
         </div>
         <Button variant="outline" onClick={handleGenerateReport}>
-          <FileText className="h-4 w-4 mr-2" />
-          Generate Report
+          <Download className="h-4 w-4 mr-2" />
+          Download Report
         </Button>
       </div>
 
