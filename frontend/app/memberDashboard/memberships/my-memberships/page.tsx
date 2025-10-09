@@ -268,10 +268,7 @@ export default function MyMembershipsPage() {
             View and manage your gym memberships
           </p>
         </div>
-        <Button onClick={fetchMemberships} variant="outline" size="sm">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
-        </Button>
+        
       </div>
 
       
