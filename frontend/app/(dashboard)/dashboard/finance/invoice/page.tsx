@@ -392,12 +392,37 @@ export default function InvoiceManagementPage() {
 
   const handleGenerateReport = async () => {
     try {
-      const blob = await generateInvoicesReport()
+      // Prepare filter parameters to match current frontend filtering
+      const filterParams = new URLSearchParams()
+      
+      if (searchTerm) {
+        filterParams.append('searchTerm', searchTerm)
+      }
+      
+      if (statusFilter && statusFilter !== 'all') {
+        filterParams.append('status', statusFilter)
+      }
+
+      // Make API request with filter parameters
+      const response = await fetch(`/api/v1/reports/invoices/pdf?${filterParams.toString()}`)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.style.display = 'none'
       a.href = url
-      a.download = `ZFit_Invoices_Report_${new Date().toISOString().split('T')[0]}.pdf`
+      
+      // Generate filename based on whether filters are applied
+      const hasFilters = searchTerm || (statusFilter && statusFilter !== 'all')
+      const filename = hasFilters 
+        ? `ZFit_Invoices_Report_Filtered_${new Date().toISOString().split('T')[0]}.pdf`
+        : `ZFit_Invoices_Report_${new Date().toISOString().split('T')[0]}.pdf`
+      
+      a.download = filename
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
