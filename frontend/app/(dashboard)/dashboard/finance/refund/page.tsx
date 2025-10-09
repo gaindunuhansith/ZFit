@@ -17,6 +17,7 @@ import {
   Plus,
   Edit,
   Trash2,
+  ArrowLeft,
 } from "lucide-react"
 
 import {
@@ -551,11 +552,21 @@ export default function RefundManagementPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Refund Management</h2>
-          <p className="text-muted-foreground">
-            Process and track refund requests from your members.
-          </p>
+        <div className="flex items-center gap-4">
+          <Button
+            onClick={() => router.push('/dashboard/finance/refund/requests')}
+            variant="outline"
+            size="sm"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Refund Requests
+          </Button>
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Refund Management</h2>
+            <p className="text-muted-foreground">
+              Process and track refund requests from your members.
+            </p>
+          </div>
         </div>
         <div className="flex space-x-2">
           <Button onClick={handleGenerateReport}>
