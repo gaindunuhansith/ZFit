@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import { generateMembershipsReport, generateMembershipPlansReport, generateMembersReport, generateStaffReport, generateManagersReport, type InventoryReportFilters, type UserReportFilters, type MembershipReportFilters, type MembershipPlanReportFilters } from '../services/report.service.js'
+import { generateMembershipsReport, generateMembershipPlansReport, generateMembersReport, generateStaffReport, generateManagersReport, generatePaymentsReport, generateInventoryItemsReport, generateStockLevelsReport, generateSuppliersReport, generateCategoriesReport, generateRefundsReport, generateInvoicesReport, type InventoryReportFilters, type UserReportFilters, type MembershipReportFilters, type MembershipPlanReportFilters, type PaymentReportFilters } from '../services/report.service.js'
 
 export const generateMembershipsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -140,8 +140,6 @@ export const generateManagersReportHandler = async (req: Request, res: Response,
 
 export const generateInventoryItemsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { generateInventoryItemsReport } = await import('../services/report.service.js')
-    
     // Extract filter parameters from query string (GET) or request body (POST)
     const isPostRequest = req.method === 'POST'
     const source = isPostRequest ? req.body : req.query
@@ -175,8 +173,6 @@ export const generateInventoryItemsReportHandler = async (req: Request, res: Res
 
 export const generateStockLevelsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { generateStockLevelsReport } = await import('../services/report.service.js')
-    
     // Extract filter parameters from query string (GET) or request body (POST)
     const isPostRequest = req.method === 'POST'
     const source = isPostRequest ? req.body : req.query
@@ -209,8 +205,6 @@ export const generateStockLevelsReportHandler = async (req: Request, res: Respon
 
 export const generateSuppliersReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { generateSuppliersReport } = await import('../services/report.service.js')
-    
     // Extract filter parameters from query string
     const filters = {
       searchTerm: req.query.searchTerm as string
@@ -230,8 +224,6 @@ export const generateSuppliersReportHandler = async (req: Request, res: Response
 
 export const generateCategoriesReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { generateCategoriesReport } = await import('../services/report.service.js')
-    
     // Extract filter parameters from query string
     const filters = {
       searchTerm: req.query.searchTerm as string,
@@ -252,7 +244,6 @@ export const generateCategoriesReportHandler = async (req: Request, res: Respons
 
 export const generateInvoicesReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { generateInvoicesReport } = await import('../services/report.service.js')
     const pdfBuffer = await generateInvoicesReport()
 
     res.setHeader('Content-Type', 'application/pdf')
@@ -267,22 +258,44 @@ export const generateInvoicesReportHandler = async (req: Request, res: Response,
 
 export const generatePaymentsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { generatePaymentsReport } = await import('../services/report.service.js')
-    const pdfBuffer = await generatePaymentsReport()
+    console.log('Payment report request received with query:', req.query)
+    
+    // Extract filter parameters from query string
+    const searchTerm = req.query.searchTerm as string
+    const status = req.query.status as string
+    const type = req.query.type as string
+    const method = req.query.method as string
+    
+    const filters = {
+      searchTerm: searchTerm || undefined,
+      status: status || undefined,
+      type: type || undefined,
+      method: method || undefined
+    }
+
+    console.log('Processed filters:', filters)
+
+    const pdfBuffer = await generatePaymentsReport(filters)
+
+    // Generate appropriate filename
+    const hasFilters = searchTerm || status || type || method
+    const filename = hasFilters ? 'payments-report-filtered.pdf' : 'payments-report.pdf'
+
+    console.log('Payment report generated successfully, filename:', filename)
 
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=payments-report.pdf')
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
     res.setHeader('Content-Length', pdfBuffer.length)
 
     res.send(pdfBuffer)
   } catch (error) {
+    console.error('Error generating payment report:', error)
     next(error)
   }
 }
 
 export const generateRefundsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { generateRefundsReport } = await import('../services/report.service.js')
     const pdfBuffer = await generateRefundsReport()
 
     res.setHeader('Content-Type', 'application/pdf')

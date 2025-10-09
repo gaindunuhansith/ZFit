@@ -2,6 +2,7 @@
 import puppeteer from 'puppeteer'
 import { getAllMemberships } from './membership.service.js'
 import { getPaymentsService } from './payment.services.js'
+import { getRefundRequestsService } from './refundRequest.services.js'
 
 export interface ReportColumn {
   key: string
@@ -43,6 +44,13 @@ export interface MembershipReportFilters {
 export interface MembershipPlanReportFilters {
   searchTerm?: string | undefined
   category?: string | undefined
+}
+
+export interface PaymentReportFilters {
+  searchTerm?: string | undefined
+  status?: string | undefined
+  type?: string | undefined
+  method?: string | undefined
 }
 
 /**
@@ -1279,10 +1287,89 @@ export async function generateInvoicesReport(): Promise<Buffer> {
 /**
  * Generate Payments Report
  */
-export async function generatePaymentsReport(): Promise<Buffer> {
-  const payments = await getPaymentsService('')
+export async function generatePaymentsReport(filters?: PaymentReportFilters): Promise<Buffer> {
+  console.log('Starting payment report generation with filters:', filters)
+  
+  let payments = await getPaymentsService('')
+  console.log('Fetched payments count:', payments.length)
+
+  // Get refund requests to calculate effective payment status (matching frontend logic)
+  let refundRequests: any[] = []
+  try {
+    refundRequests = await getRefundRequestsService()
+    console.log('Fetched refund requests count:', refundRequests.length)
+  } catch (error) {
+    console.warn('Could not fetch refund requests for payment status calculation:', error)
+    refundRequests = []
+  }
+
+  // Helper function to get effective payment status (matching frontend logic exactly)
+  const getEffectivePaymentStatus = (payment: any) => {
+    const hasApprovedRefund = refundRequests.some((refund: any) => {
+      const refundPaymentId = typeof refund.paymentId === 'string' 
+        ? refund.paymentId 
+        : refund.paymentId?._id || refund.paymentId
+      return refundPaymentId === payment._id && refund.status === 'approved'
+    })
+    
+    return hasApprovedRefund ? 'refunded' : payment.status
+  }
+
+  // Apply filters if provided (matching frontend logic exactly)
+  if (filters) {
+    console.log('Applying filters to payments...')
+    
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      const beforeFilter = payments.length
+      payments = payments.filter((payment: any) => 
+        payment.transactionId?.toLowerCase().includes(searchLower) ||
+        payment._id?.toString().toLowerCase().includes(searchLower)
+      )
+      console.log(`Search filter applied: ${beforeFilter} -> ${payments.length} payments`)
+    }
+
+    if (filters.status && filters.status !== 'all') {
+      const beforeFilter = payments.length
+      payments = payments.filter((payment: any) => 
+        getEffectivePaymentStatus(payment) === filters.status
+      )
+      console.log(`Status filter applied: ${beforeFilter} -> ${payments.length} payments`)
+    }
+
+    if (filters.type && filters.type !== 'all') {
+      const beforeFilter = payments.length
+      payments = payments.filter((payment: any) => 
+        payment.type === filters.type
+      )
+      console.log(`Type filter applied: ${beforeFilter} -> ${payments.length} payments`)
+    }
+
+    if (filters.method && filters.method !== 'all') {
+      const beforeFilter = payments.length
+      payments = payments.filter((payment: any) => 
+        payment.method === filters.method
+      )
+      console.log(`Method filter applied: ${beforeFilter} -> ${payments.length} payments`)
+    }
+  }
+  
+  console.log('Final filtered payments count:', payments.length)
+
+  // Helper function to get effective payment status (reuse the function defined above)
+  const getEffectivePaymentStatusForReport = (payment: any) => {
+    const hasApprovedRefund = refundRequests.some((refund: any) => {
+      const refundPaymentId = typeof refund.paymentId === 'string' 
+        ? refund.paymentId 
+        : refund.paymentId?._id || refund.paymentId
+      return refundPaymentId === payment._id && refund.status === 'approved'
+    })
+    
+    return hasApprovedRefund ? 'refunded' : payment.status
+  }
 
   // Format the payments data for clean display
+  console.log('Formatting payments data for report...')
   const formattedPayments = payments.map(payment => ({
     transactionId: payment.transactionId || 'N/A',
     userName: typeof payment.userId === 'object' && payment.userId !== null
@@ -1292,12 +1379,13 @@ export async function generatePaymentsReport(): Promise<Buffer> {
     currency: payment.currency || 'LKR',
     type: payment.type || 'N/A',
     method: payment.method || 'N/A',
-    status: payment.status || 'N/A',
+    status: getEffectivePaymentStatusForReport(payment) || 'N/A',
     date: payment.date || payment.createdAt || new Date()
   }))
+  console.log('Formatted payments count:', formattedPayments.length)
 
   const config: ReportConfig = {
-    title: 'Payments Report',
+    title: filters?.searchTerm || filters?.status || filters?.type || filters?.method ? 'Payments Report (Filtered)' : 'Payments Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -1345,5 +1433,6 @@ export async function generatePaymentsReport(): Promise<Buffer> {
     data: formattedPayments as any[]
   }
 
+  console.log('Generating PDF report...')
   return generateGenericReport(config)
 }
