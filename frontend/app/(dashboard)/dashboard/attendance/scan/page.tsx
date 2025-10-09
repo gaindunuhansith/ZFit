@@ -110,9 +110,7 @@ export default function QRScannerPage() {
             Scan member QR codes to check attendance
           </p>
         </div>
-        <Badge variant="secondary" className="text-sm">
-          {isScanning ? 'Scanning...' : 'Ready'}
-        </Badge>
+       
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
