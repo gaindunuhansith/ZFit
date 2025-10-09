@@ -465,13 +465,13 @@ export default function InvoiceManagementPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={handleGenerateReport}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Generate Report
-          </Button>
           <Button onClick={handleCreateInvoice}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="h-4 w-4 mr-2" />
             Create Invoice
+          </Button>
+          <Button variant="outline" onClick={handleGenerateReport}>
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
           </Button>
         </div>
       </div>
