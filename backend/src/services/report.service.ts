@@ -1275,27 +1275,12 @@ export async function generateInvoicesReport(filters?: InvoiceReportFilters): Pr
       {
         key: 'paymentId',
         header: 'Payment ID',
-        className: 'payment-id-cell',
-        formatter: (value) => {
-          if (typeof value === 'object' && value !== null) {
-            return (value as any)._id?.toString() || 'N/A';
-          }
-          return value?.toString() || 'N/A';
-        }
+        className: 'payment-id-cell'
       },
       {
         key: 'userId',
         header: 'User Name',
-
-        className: 'user-name-cell',
-        formatter: (value) => {
-          if (typeof value === 'object' && value !== null) {
-            return (value as any).name || 'N/A';
-          }
-          return 'N/A';
-        }
-
-        
+        className: 'user-name-cell'
       },
       {
         key: 'subtotal',
