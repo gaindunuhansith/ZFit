@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import { generateMembershipsReport, generateMembershipPlansReport, generateMembersReport, generateStaffReport, generateManagersReport, generatePaymentsReport, generateInventoryItemsReport, generateStockLevelsReport, generateSuppliersReport, generateCategoriesReport, generateRefundsReport, generateInvoicesReport, type InventoryReportFilters, type UserReportFilters, type MembershipReportFilters, type MembershipPlanReportFilters, type PaymentReportFilters, type InvoiceReportFilters } from '../services/report.service.js'
+import { generateMembershipsReport, generateMembershipPlansReport, generateMembersReport, generateStaffReport, generateManagersReport, generatePaymentsReport, generateInventoryItemsReport, generateStockLevelsReport, generateSuppliersReport, generateCategoriesReport, generateRefundsReport, generateInvoicesReport, generateRefundRequestsReport, type InventoryReportFilters, type UserReportFilters, type MembershipReportFilters, type MembershipPlanReportFilters, type PaymentReportFilters, type InvoiceReportFilters, type RefundRequestReportFilters } from '../services/report.service.js'
 
 export const generateMembershipsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -318,15 +318,28 @@ export const generateRefundsReportHandler = async (req: Request, res: Response, 
 
 export const generateRefundRequestsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { generateRefundRequestsReport } = await import('../services/report.service.js')
-    const pdfBuffer = await generateRefundRequestsReport()
+    // Extract filter parameters from query string
+    const searchTerm = req.query.searchTerm as string
+    const status = req.query.status as string
+    
+    const filters = {
+      searchTerm: searchTerm || undefined,
+      status: status || undefined
+    }
+
+    const pdfBuffer = await generateRefundRequestsReport(filters)
+
+    // Generate appropriate filename
+    const hasFilters = searchTerm || status
+    const filename = hasFilters ? 'refund-requests-report-filtered.pdf' : 'refund-requests-report.pdf'
 
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=refund-requests-report.pdf')
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
     res.setHeader('Content-Length', pdfBuffer.length)
 
     res.send(pdfBuffer)
   } catch (error) {
+    console.error('Error generating refund requests report:', error)
     next(error)
   }
 }
