@@ -59,6 +59,11 @@ export interface InvoiceReportFilters {
   status?: string | undefined
 }
 
+export interface RefundRequestReportFilters {
+  searchTerm?: string | undefined
+  status?: string | undefined
+}
+
 /**
  * Apply filters to inventory items array
  */
@@ -1474,12 +1479,53 @@ export async function generatePaymentsReport(filters?: PaymentReportFilters): Pr
 /**
  * Generate Refund Requests Report
  */
-export async function generateRefundRequestsReport(): Promise<Buffer> {
-  const { getRefundRequestsService } = await import('./refundRequest.services.js')
-  const refundRequests = await getRefundRequestsService()
+export async function generateRefundRequestsReport(filters?: RefundRequestReportFilters): Promise<Buffer> {
+  let refundRequests = await getRefundRequestsService()
+
+  // Apply filters if provided (matching frontend logic exactly)
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      refundRequests = refundRequests.filter((request: any) => {
+        const userName = typeof request.userId === 'object' ? request.userId?.name : ''
+        const userEmail = typeof request.userId === 'object' ? request.userId?.email : ''
+        
+        return request.requestId?.toLowerCase().includes(searchLower) ||
+               userName?.toLowerCase().includes(searchLower) ||
+               userEmail?.toLowerCase().includes(searchLower) ||
+               request.notes?.toLowerCase().includes(searchLower) ||
+               request.status?.toLowerCase().includes(searchLower)
+      })
+    }
+
+    if (filters.status && filters.status !== 'all') {
+      refundRequests = refundRequests.filter((request: any) => 
+        request.status === filters.status
+      )
+    }
+  }
+
+  // Format the refund requests data for clean display
+  const formattedRefundRequests = refundRequests.map(request => ({
+    requestId: request.requestId || 'N/A',
+    userName: typeof request.userId === 'object' && request.userId !== null
+      ? (request.userId as any).name || 'N/A'
+      : 'N/A',
+    userEmail: typeof request.userId === 'object' && request.userId !== null
+      ? (request.userId as any).email || 'N/A'
+      : 'N/A',
+    requestedAmount: request.requestedAmount || 0,
+    originalAmount: typeof request.paymentId === 'object' && request.paymentId !== null
+      ? (request.paymentId as any).amount || 0
+      : 0,
+    status: request.status || 'N/A',
+    notes: request.notes || 'N/A',
+    adminNotes: request.adminNotes || 'N/A',
+    createdAt: request.createdAt || new Date()
+  }))
 
   const config: ReportConfig = {
-    title: 'Refund Requests Report',
+    title: filters?.searchTerm || filters?.status ? 'Refund Requests Report (Filtered)' : 'Refund Requests Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -1490,23 +1536,27 @@ export async function generateRefundRequestsReport(): Promise<Buffer> {
       {
         key: 'userName',
         header: 'User Name',
-        className: 'user-name-cell',
-        formatter: (value, row) => (row as any)?.userId?.name || 'N/A'
+        className: 'user-name-cell'
+      },
+      {
+        key: 'userEmail',
+        header: 'User Email',
+        className: 'user-email-cell'
       },
       {
         key: 'requestedAmount',
         header: 'Requested Amount',
-        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+        formatter: (value) => `LKR ${Number(value)?.toFixed(2) || '0.00'}`
       },
       {
         key: 'originalAmount',
         header: 'Original Amount',
-        formatter: (value, row) => `LKR ${(row as any)?.paymentId?.amount?.toFixed(2) || '0.00'}`
+        formatter: (value) => `LKR ${Number(value)?.toFixed(2) || '0.00'}`
       },
       {
         key: 'status',
         header: 'Status',
-        formatter: (value) => `<span class="status-badge status-${value}">${value.toUpperCase()}</span>`
+        formatter: (value) => `<span class="status-badge status-${String(value).toLowerCase()}">${String(value).toUpperCase()}</span>`
       },
       {
         key: 'notes',
@@ -1525,7 +1575,7 @@ export async function generateRefundRequestsReport(): Promise<Buffer> {
         className: 'date-cell'
       }
     ],
-    data: refundRequests as any[]
+    data: formattedRefundRequests as any[]
   }
 
   return generateGenericReport(config)

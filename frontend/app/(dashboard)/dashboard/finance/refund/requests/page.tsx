@@ -298,13 +298,38 @@ export default function RefundRequestsManagementPage() {
 
   const handleGenerateReport = async () => {
     try {
-      const reportBlob = await generateRefundRequestsReport()
+      // Prepare filter parameters to match current frontend filtering
+      const filterParams = new URLSearchParams()
+      
+      if (searchTerm) {
+        filterParams.append('searchTerm', searchTerm)
+      }
+      
+      if (statusFilter && statusFilter !== 'all') {
+        filterParams.append('status', statusFilter)
+      }
+
+      // Make API request with filter parameters
+      const response = await fetch(`/api/v1/reports/refund-requests/pdf?${filterParams.toString()}`)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const reportBlob = await response.blob()
 
       // Create a download link and trigger download
       const url = window.URL.createObjectURL(reportBlob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `Zfit_Refund_${new Date().toISOString().split('T')[0]}.pdf`
+      
+      // Generate filename based on whether filters are applied
+      const hasFilters = searchTerm || (statusFilter && statusFilter !== 'all')
+      const filename = hasFilters 
+        ? `Zfit_Refund_Requests_Filtered_${new Date().toISOString().split('T')[0]}.pdf`
+        : `Zfit_Refund_Requests_${new Date().toISOString().split('T')[0]}.pdf`
+      
+      link.download = filename
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
