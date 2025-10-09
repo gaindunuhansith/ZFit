@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import { generateMembershipsReport, generateMembershipPlansReport, generateMembersReport, generateStaffReport, generateManagersReport, generatePaymentsReport, generateInventoryItemsReport, generateStockLevelsReport, generateSuppliersReport, generateCategoriesReport, generateRefundsReport, generateInvoicesReport, type InventoryReportFilters, type UserReportFilters, type MembershipReportFilters, type MembershipPlanReportFilters, type PaymentReportFilters } from '../services/report.service.js'
+import { generateMembershipsReport, generateMembershipPlansReport, generateMembersReport, generateStaffReport, generateManagersReport, generatePaymentsReport, generateInventoryItemsReport, generateStockLevelsReport, generateSuppliersReport, generateCategoriesReport, generateRefundsReport, generateInvoicesReport, type InventoryReportFilters, type UserReportFilters, type MembershipReportFilters, type MembershipPlanReportFilters, type PaymentReportFilters, type InvoiceReportFilters } from '../services/report.service.js'
 
 export const generateMembershipsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -244,22 +244,34 @@ export const generateCategoriesReportHandler = async (req: Request, res: Respons
 
 export const generateInvoicesReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const pdfBuffer = await generateInvoicesReport()
+    // Extract filter parameters from query string
+    const searchTerm = req.query.searchTerm as string
+    const status = req.query.status as string
+    
+    const filters = {
+      searchTerm: searchTerm || undefined,
+      status: status || undefined
+    }
+
+    const pdfBuffer = await generateInvoicesReport(filters)
+
+    // Generate appropriate filename
+    const hasFilters = searchTerm || status
+    const filename = hasFilters ? 'invoices-report-filtered.pdf' : 'invoices-report.pdf'
 
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'attachment; filename=invoices-report.pdf')
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
     res.setHeader('Content-Length', pdfBuffer.length)
 
     res.send(pdfBuffer)
   } catch (error) {
+    console.error('Error generating invoice report:', error)
     next(error)
   }
 }
 
 export const generatePaymentsReportHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log('Payment report request received with query:', req.query)
-    
     // Extract filter parameters from query string
     const searchTerm = req.query.searchTerm as string
     const status = req.query.status as string
@@ -273,15 +285,11 @@ export const generatePaymentsReportHandler = async (req: Request, res: Response,
       method: method || undefined
     }
 
-    console.log('Processed filters:', filters)
-
     const pdfBuffer = await generatePaymentsReport(filters)
 
     // Generate appropriate filename
     const hasFilters = searchTerm || status || type || method
     const filename = hasFilters ? 'payments-report-filtered.pdf' : 'payments-report.pdf'
-
-    console.log('Payment report generated successfully, filename:', filename)
 
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
