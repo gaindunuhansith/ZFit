@@ -53,7 +53,7 @@ import {
 } from "@/components/ui/dialog"
 import { getPayments, type Payment, deletePayment, deleteAllPayments } from "@/lib/api/paymentApi"
 import { getRefundRequests, type RefundRequest } from "@/lib/api/refundRequestApi"
-import { generatePaymentsReport } from "@/lib/api/reportApi"
+
 
 const getStatusBadge = (status: string) => {
   const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -206,15 +206,49 @@ export default function PaymentManagementPage() {
 
   const handleGenerateReport = async () => {
     try {
-      const blob = await generatePaymentsReport()
-      const url = window.URL.createObjectURL(blob)
+      // Build query parameters based on current filters
+      const queryParams = new URLSearchParams()
+      
+      if (searchTerm) {
+        queryParams.append('searchTerm', searchTerm)
+      }
+      
+      if (statusFilter && statusFilter !== 'all') {
+        queryParams.append('status', statusFilter)
+      }
+      
+      if (typeFilter && typeFilter !== 'all') {
+        queryParams.append('type', typeFilter)
+      }
+      
+      if (methodFilter && methodFilter !== 'all') {
+        queryParams.append('method', methodFilter)
+      }
+      
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/reports/payments/pdf${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+      
+      const response = await fetch(url, {
+        method: 'GET',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate report')
+      }
+
+      const blob = await response.blob()
+      const downloadUrl = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.style.display = 'none'
-      a.href = url
-      a.download = `ZFit_Payments_Report_${new Date().toISOString().split('T')[0]}.pdf`
+      a.href = downloadUrl
+      
+      // Use filtered filename if filters are applied
+      const hasFilters = searchTerm || (statusFilter && statusFilter !== 'all') || (typeFilter && typeFilter !== 'all') || (methodFilter && methodFilter !== 'all')
+      const filename = hasFilters ? `ZFit_Payments_Report_Filtered_${new Date().toISOString().split('T')[0]}.pdf` : `ZFit_Payments_Report_${new Date().toISOString().split('T')[0]}.pdf`
+      a.download = filename
+      
       document.body.appendChild(a)
       a.click()
-      window.URL.revokeObjectURL(url)
+      window.URL.revokeObjectURL(downloadUrl)
       a.remove()
     } catch (error) {
       console.error('Error generating report:', error)

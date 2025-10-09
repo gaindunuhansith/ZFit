@@ -2,6 +2,8 @@
 import puppeteer from 'puppeteer'
 import { getAllMemberships } from './membership.service.js'
 import { getPaymentsService } from './payment.services.js'
+import { getRefundRequestsService } from './refundRequest.services.js'
+import { getInvoicesService } from './invoice.services.js'
 
 export interface ReportColumn {
   key: string
@@ -43,6 +45,18 @@ export interface MembershipReportFilters {
 export interface MembershipPlanReportFilters {
   searchTerm?: string | undefined
   category?: string | undefined
+}
+
+export interface PaymentReportFilters {
+  searchTerm?: string | undefined
+  status?: string | undefined
+  type?: string | undefined
+  method?: string | undefined
+}
+
+export interface InvoiceReportFilters {
+  searchTerm?: string | undefined
+  status?: string | undefined
 }
 
 /**
@@ -1209,12 +1223,46 @@ export async function generateRefundsReport(): Promise<Buffer> {
 /**
  * Generate Invoices Report
  */
-export async function generateInvoicesReport(): Promise<Buffer> {
-  const { getInvoicesService } = await import('./invoice.services.js')
-  const invoices = await getInvoicesService()
+export async function generateInvoicesReport(filters?: InvoiceReportFilters): Promise<Buffer> {
+  let invoices = await getInvoicesService()
+
+  // Apply filters if provided (matching frontend logic exactly)
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      invoices = invoices.filter((invoice: any) => 
+        invoice.number?.toLowerCase().includes(searchLower) ||
+        invoice.status?.toLowerCase().includes(searchLower)
+      )
+    }
+
+    if (filters.status && filters.status !== 'all') {
+      invoices = invoices.filter((invoice: any) => 
+        invoice.status === filters.status
+      )
+    }
+  }
+
+  // Format the invoices data for clean display
+  const formattedInvoices = invoices.map(invoice => ({
+    number: invoice.number || 'N/A',
+    paymentId: typeof invoice.paymentId === 'object' && invoice.paymentId !== null
+      ? (invoice.paymentId as any).transactionId || (invoice.paymentId as any)._id || 'N/A'
+      : invoice.paymentId || 'N/A',
+    userId: typeof invoice.userId === 'object' && invoice.userId !== null
+      ? (invoice.userId as any).name || 'N/A'
+      : 'N/A',
+    subtotal: invoice.subtotal || 0,
+    tax: invoice.tax || 0,
+    discount: invoice.discount || 0,
+    total: invoice.total || 0,
+    status: invoice.status || 'N/A',
+    dueDate: invoice.dueDate || invoice.createdAt || new Date(),
+    generatedAt: invoice.generatedAt || invoice.createdAt || new Date()
+  }))
 
   const config: ReportConfig = {
-    title: 'Invoices Report',
+    title: filters?.searchTerm || filters?.status ? 'Invoices Report (Filtered)' : 'Invoices Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -1229,33 +1277,33 @@ export async function generateInvoicesReport(): Promise<Buffer> {
       },
       {
         key: 'userId',
-        header: 'User ID',
-        className: 'user-id-cell'
+        header: 'User Name',
+        className: 'user-name-cell'
       },
       {
         key: 'subtotal',
         header: 'Subtotal',
-        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+        formatter: (value) => `LKR ${Number(value)?.toFixed(2) || '0.00'}`
       },
       {
         key: 'tax',
         header: 'Tax',
-        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+        formatter: (value) => `LKR ${Number(value)?.toFixed(2) || '0.00'}`
       },
       {
         key: 'discount',
         header: 'Discount',
-        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+        formatter: (value) => `LKR ${Number(value)?.toFixed(2) || '0.00'}`
       },
       {
         key: 'total',
         header: 'Total Amount',
-        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+        formatter: (value) => `LKR ${Number(value)?.toFixed(2) || '0.00'}`
       },
       {
         key: 'status',
         header: 'Status',
-        formatter: (value) => `<span class="status-badge status-${value}">${value.toUpperCase()}</span>`
+        formatter: (value) => `<span class="status-badge status-${String(value).toLowerCase()}">${String(value).toUpperCase()}</span>`
       },
       {
         key: 'dueDate',
@@ -1270,7 +1318,7 @@ export async function generateInvoicesReport(): Promise<Buffer> {
         className: 'date-cell'
       }
     ],
-    data: invoices as any[]
+    data: formattedInvoices as any[]
   }
 
   return generateGenericReport(config)
@@ -1279,8 +1327,70 @@ export async function generateInvoicesReport(): Promise<Buffer> {
 /**
  * Generate Payments Report
  */
-export async function generatePaymentsReport(): Promise<Buffer> {
-  const payments = await getPaymentsService('')
+export async function generatePaymentsReport(filters?: PaymentReportFilters): Promise<Buffer> {
+  let payments = await getPaymentsService('')
+
+  // Get refund requests to calculate effective payment status (matching frontend logic)
+  let refundRequests: any[] = []
+  try {
+    refundRequests = await getRefundRequestsService()
+  } catch (error) {
+    console.warn('Could not fetch refund requests for payment status calculation:', error)
+    refundRequests = []
+  }
+
+  // Helper function to get effective payment status (matching frontend logic exactly)
+  const getEffectivePaymentStatus = (payment: any) => {
+    const hasApprovedRefund = refundRequests.some((refund: any) => {
+      const refundPaymentId = typeof refund.paymentId === 'string' 
+        ? refund.paymentId 
+        : refund.paymentId?._id || refund.paymentId
+      return refundPaymentId === payment._id && refund.status === 'approved'
+    })
+    
+    return hasApprovedRefund ? 'refunded' : payment.status
+  }
+
+  // Apply filters if provided (matching frontend logic exactly)
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      payments = payments.filter((payment: any) => 
+        payment.transactionId?.toLowerCase().includes(searchLower) ||
+        payment._id?.toString().toLowerCase().includes(searchLower)
+      )
+    }
+
+    if (filters.status && filters.status !== 'all') {
+      payments = payments.filter((payment: any) => 
+        getEffectivePaymentStatus(payment) === filters.status
+      )
+    }
+
+    if (filters.type && filters.type !== 'all') {
+      payments = payments.filter((payment: any) => 
+        payment.type === filters.type
+      )
+    }
+
+    if (filters.method && filters.method !== 'all') {
+      payments = payments.filter((payment: any) => 
+        payment.method === filters.method
+      )
+    }
+  }
+
+  // Helper function to get effective payment status (reuse the function defined above)
+  const getEffectivePaymentStatusForReport = (payment: any) => {
+    const hasApprovedRefund = refundRequests.some((refund: any) => {
+      const refundPaymentId = typeof refund.paymentId === 'string' 
+        ? refund.paymentId 
+        : refund.paymentId?._id || refund.paymentId
+      return refundPaymentId === payment._id && refund.status === 'approved'
+    })
+    
+    return hasApprovedRefund ? 'refunded' : payment.status
+  }
 
   // Format the payments data for clean display
   const formattedPayments = payments.map(payment => ({
@@ -1292,12 +1402,12 @@ export async function generatePaymentsReport(): Promise<Buffer> {
     currency: payment.currency || 'LKR',
     type: payment.type || 'N/A',
     method: payment.method || 'N/A',
-    status: payment.status || 'N/A',
+    status: getEffectivePaymentStatusForReport(payment) || 'N/A',
     date: payment.date || payment.createdAt || new Date()
   }))
 
   const config: ReportConfig = {
-    title: 'Payments Report',
+    title: filters?.searchTerm || filters?.status || filters?.type || filters?.method ? 'Payments Report (Filtered)' : 'Payments Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {
