@@ -536,7 +536,7 @@ export default function RefundManagementPage() {
       const url = window.URL.createObjectURL(reportBlob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `ZFit_Refunds_Report_${new Date().toISOString().split('T')[0]}.pdf`
+      link.download = `Zfit_Refund_${new Date().toISOString().split('T')[0]}.pdf`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)

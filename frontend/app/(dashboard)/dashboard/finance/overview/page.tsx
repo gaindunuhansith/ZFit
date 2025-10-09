@@ -429,9 +429,8 @@ export default function PaymentManagementPage() {
                 onClick={() => {
                   if (userData._id) {
                     setShowUserModal(false)
-                    // Store userId in sessionStorage to avoid showing in URL
-                    sessionStorage.setItem('paymentHistoryUserId', userData._id)
-                    router.push('/dashboard/finance/overview/payment-history')
+                    // Navigate to member details page with payments tab
+                    router.push(`/dashboard/users/members/${userData._id}?tab=payments`)
                   }
                 }}
                 className="bg-primary hover:bg-primary/90"

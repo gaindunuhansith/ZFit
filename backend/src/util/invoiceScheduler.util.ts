@@ -1,4 +1,4 @@
-import { checkAndUpdateOverdueInvoices, cleanupOldPendingPayments } from '../services/invoiceScheduler.services.js';
+import { checkAndUpdateOverdueInvoices, checkAndSendDraftInvoices, cleanupOldPendingPayments } from '../services/invoiceScheduler.services.js';
 
 /**
  * Invoice automation scheduler
@@ -6,6 +6,7 @@ import { checkAndUpdateOverdueInvoices, cleanupOldPendingPayments } from '../ser
  */
 class InvoiceScheduler {
     private overdueCheckInterval: NodeJS.Timeout | null = null;
+    private draftCheckInterval: NodeJS.Timeout | null = null;
     private paymentCleanupInterval: NodeJS.Timeout | null = null;
 
     /**
@@ -13,6 +14,12 @@ class InvoiceScheduler {
      */
     start(): void {
         
+
+        // Check for draft invoices to send daily (every 24 hours)
+        this.draftCheckInterval = setInterval(async () => {
+            
+            await checkAndSendDraftInvoices();
+        }, 24 * 60 * 60 * 1000); // 24 hours
 
         // Check for overdue invoices daily (every 24 hours)
         this.overdueCheckInterval = setInterval(async () => {
@@ -29,6 +36,9 @@ class InvoiceScheduler {
         // Run initial checks on startup
         setTimeout(async () => {
             
+            await checkAndSendDraftInvoices();
+
+            
             await checkAndUpdateOverdueInvoices();
 
             
@@ -42,6 +52,11 @@ class InvoiceScheduler {
     stop(): void {
         
 
+        if (this.draftCheckInterval) {
+            clearInterval(this.draftCheckInterval);
+            this.draftCheckInterval = null;
+        }
+
         if (this.overdueCheckInterval) {
             clearInterval(this.overdueCheckInterval);
             this.overdueCheckInterval = null;
@@ -51,6 +66,14 @@ class InvoiceScheduler {
             clearInterval(this.paymentCleanupInterval);
             this.paymentCleanupInterval = null;
         }
+    }
+
+    /**
+     * Manually trigger draft invoice check (for testing)
+     */
+    async triggerDraftCheck(): Promise<void> {
+        
+        await checkAndSendDraftInvoices();
     }
 
     /**

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -58,7 +58,17 @@ interface MemberDetails {
 export default function MemberDetailsPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const memberId = params.id as string
+
+  // Get tab from URL query parameter, default to 'personal'
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'personal')
+
+  // Update active tab when search params change
+  useEffect(() => {
+    const tab = searchParams.get('tab') || 'personal'
+    setActiveTab(tab)
+  }, [searchParams])
 
   const [member, setMember] = useState<MemberDetails | null>(null)
   const [loading, setLoading] = useState(true)
@@ -254,7 +264,7 @@ export default function MemberDetailsPage() {
       </div>
 
       {/* Member Overview */}
-      <Tabs defaultValue="personal" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="personal">Personal Info</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>

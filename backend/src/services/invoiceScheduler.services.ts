@@ -32,6 +32,38 @@ export const checkAndUpdateOverdueInvoices = async (): Promise<void> => {
 };
 
 /**
+ * Check for draft invoices older than 21 days and mark them as sent
+ * This function should be called periodically (e.g., daily)
+ */
+export const checkAndSendDraftInvoices = async (): Promise<void> => {
+    try {
+        const twentyOneDaysAgo = new Date();
+        twentyOneDaysAgo.setDate(twentyOneDaysAgo.getDate() - 21);
+
+        // Find all draft invoices older than 21 days
+        const draftInvoicesToSend = await Invoice.find({
+            status: 'draft',
+            generatedAt: { $lt: twentyOneDaysAgo }
+        }).populate('userId', 'name email contactNo');
+
+        for (const invoice of draftInvoicesToSend) {
+            try {
+                // Update status to sent
+                await Invoice.findByIdAndUpdate(invoice._id, {
+                    status: 'sent',
+                    updatedAt: new Date()
+                });
+                console.log(`Invoice ${invoice._id} marked as sent after 21 days`);
+            } catch (updateError) {
+                console.error(`Failed to send draft invoice ${invoice._id}:`, updateError);
+            }
+        }
+    } catch (error) {
+        console.error('Error checking for draft invoices to send:', error);
+    }
+};
+
+/**
  * Get invoice statistics for dashboard
  */
 export const getInvoiceStatistics = async () => {
