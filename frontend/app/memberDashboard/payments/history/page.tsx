@@ -342,10 +342,7 @@ export default function PaymentHistoryPage() {
               </Badge>
             )}
           </Button>
-          <Button onClick={loadData} variant="outline" size="sm">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
-          </Button>
+          
         </div>
       </div>
 

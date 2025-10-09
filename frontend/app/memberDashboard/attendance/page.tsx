@@ -53,10 +53,7 @@ export default function MemberAttendancePage() {
           <h2 className="text-3xl font-bold tracking-tight">My Attendance History</h2>
           <p className="text-muted-foreground">View your check-in and check-out records</p>
         </div>
-        <Button onClick={fetchAttendanceRecords} variant="outline">
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh
-        </Button>
+        
       </div>
 
       {/* Attendance Table */}

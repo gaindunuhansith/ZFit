@@ -196,10 +196,6 @@ export default function RefundRequestsPage() {
             </p>
           </div>
         </div>
-        <Button onClick={loadRefundRequests} variant="outline" size="sm">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
-        </Button>
       </div>
 
       {/* Search Bar */}
