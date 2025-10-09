@@ -171,9 +171,13 @@ export default function PaymentManagementPage() {
 
   const filteredPayments = payments.filter(payment => {
     const searchLower = searchTerm.toLowerCase()
+    const effectiveStatus = getEffectivePaymentStatus(payment, refundRequests)
     const matchesSearch = payment.transactionId?.toLowerCase().includes(searchLower) ||
-                         payment._id?.toLowerCase().includes(searchLower)
-    const matchesStatus = statusFilter === "all" || getEffectivePaymentStatus(payment, refundRequests) === statusFilter
+                         payment._id?.toLowerCase().includes(searchLower) ||
+                         effectiveStatus?.toLowerCase().includes(searchLower) ||
+                         payment.type?.toLowerCase().includes(searchLower) ||
+                         payment.method?.toLowerCase().includes(searchLower)
+    const matchesStatus = statusFilter === "all" || effectiveStatus === statusFilter
     const matchesType = typeFilter === "all" || payment.type === typeFilter
     const matchesMethod = methodFilter === "all" || payment.method === methodFilter
     return matchesSearch && matchesStatus && matchesType && matchesMethod
