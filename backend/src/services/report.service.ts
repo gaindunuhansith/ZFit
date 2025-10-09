@@ -1088,7 +1088,7 @@ export async function generateSuppliersReport(searchTerm?: string): Promise<Buff
  */
 export async function generateCategoriesReport(filters?: { searchTerm?: string; activeOnly?: boolean }): Promise<Buffer> {
   const Category = (await import('../models/category.model.js')).default
-  let query: any = {}
+  const query: any = {}
 
   // Filter by active status if specified
   if (filters?.activeOnly) {
@@ -1228,7 +1228,7 @@ export async function generateInvoicesReport(): Promise<Buffer> {
         key: 'paymentId',
         header: 'Payment ID',
         className: 'payment-id-cell',
-        formatter: (value, row) => {
+        formatter: (value) => {
           if (typeof value === 'object' && value !== null) {
             return (value as any)._id?.toString() || 'N/A';
           }
@@ -1239,7 +1239,7 @@ export async function generateInvoicesReport(): Promise<Buffer> {
         key: 'userId',
         header: 'User Name',
         className: 'user-name-cell',
-        formatter: (value, row) => {
+        formatter: (value) => {
           if (typeof value === 'object' && value !== null) {
             return (value as any).name || 'N/A';
           }
