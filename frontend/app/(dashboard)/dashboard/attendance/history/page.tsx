@@ -101,10 +101,10 @@ export default function AttendanceHistoryPage() {
           <p className="text-muted-foreground">Manage and view attendance records</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={fetchAttendanceRecords} variant="outline">
+          {/*<Button onClick={fetchAttendanceRecords} variant="outline">
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
-          </Button>
+          </Button>*/}
         </div>
       </div>
 
