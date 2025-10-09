@@ -219,7 +219,7 @@ const createInvoiceForPayment = async (payment: IPayment) => {
             discount,
             total,
             dueDate,
-            status: 'sent', // Automatically sent when created
+            status: 'draft', // Start as draft, will be sent after 21 days
             generatedAt: new Date(),
             currency: payment.currency || 'LKR'
         };
