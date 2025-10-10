@@ -11,13 +11,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import TrainerFormModal from "@/components/trainerFormModal";
+import { toast } from "sonner";
 
 type Trainer = {
   _id: string;
@@ -33,19 +29,25 @@ export default function ManageTrainersPage() {
   const [filteredTrainers, setFilteredTrainers] = useState<Trainer[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Trainer | null>(null);
-  const [form, setForm] = useState<Partial<Trainer>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
 
   // Fetch trainers
+  const refreshData = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/v1/bookings/trainers");
+      const data = await res.json();
+      if (data.success) {
+        setTrainers(data.data);
+        setFilteredTrainers(data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching trainers:", err);
+    }
+  };
+
   useEffect(() => {
-    fetch("http://localhost:5000/api/v1/trainers")
-      .then((res) => res.json())
-      .then((data) => {
-        setTrainers(data.data || []);
-        setFilteredTrainers(data.data || []);
-      })
-      .catch((err) => console.error("Error fetching trainers:", err));
+    refreshData();
   }, []);
 
   // Filter & search logic
@@ -67,64 +69,36 @@ export default function ManageTrainersPage() {
     setFilteredTrainers(results);
   }, [searchTerm, statusFilter, trainers]);
 
-  // Open dialog for Add/Edit
-  const handleOpen = (t?: Trainer) => {
-    setEditing(t || null);
-    setForm(t || {});
+  // Open form for Add/Edit
+  const handleOpen = (trainer?: Trainer) => {
+    setEditing(trainer || null);
     setOpen(true);
-  };
-
-  // Save trainer
-  const handleSave = async () => {
-    try {
-      const url = editing
-        ? `http://localhost:5000/api/v1/trainers/${editing._id}`
-        : "http://localhost:5000/api/v1/trainers";
-      const method = editing ? "PATCH" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          createdAt: editing ? form.createdAt : new Date().toISOString(),
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        if (editing) {
-          setTrainers((prev) =>
-            prev.map((tr) => (tr._id === editing._id ? data.data : tr))
-          );
-        } else {
-          setTrainers((prev) => [...prev, data.data]);
-        }
-        setOpen(false);
-      }
-    } catch (err) {
-      console.error("Error saving trainer:", err);
-    }
   };
 
   // Delete trainer
   const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this trainer?")) return;
+
     try {
-      const res = await fetch(`http://localhost:5000/api/v1/trainers/${id}`, {
+      const res = await fetch(`http://localhost:5000/api/v1/bookings/trainers/${id}`, {
         method: "DELETE",
       });
       const data = await res.json();
       if (data.success) {
         setTrainers((prev) => prev.filter((t) => t._id !== id));
+        toast.success("Trainer deleted!");
+      } else {
+        toast.error(data.message || "Failed to delete trainer");
       }
     } catch (err) {
-      console.error("Error deleting trainer:", err);
+      console.error(err);
+      toast.error("Failed to delete trainer");
     }
   };
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header with search, filter, add button */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <h1 className="text-2xl font-bold">Manage Trainers</h1>
         <div className="flex items-center gap-3">
@@ -134,10 +108,7 @@ export default function ManageTrainersPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <Select
-            value={statusFilter}
-            onValueChange={setStatusFilter}
-          >
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-40 bg-card text-foreground border border-border rounded-md focus:ring-2 focus:ring-primary">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -176,17 +147,13 @@ export default function ManageTrainersPage() {
                       className={`px-2 py-1 rounded text-xs ${
                         t.status === "active"
                           ? "bg-green-500 text-white"
-                          : t.status === "inactive"
-                          ? "bg-gray-400 text-white"
-                          : "bg-yellow-500 text-white"
+                          : "bg-gray-400 text-white"
                       }`}
                     >
                       {t.status}
                     </span>
                   </TableCell>
-                  <TableCell>
-                    {new Date(t.createdAt).toLocaleDateString()}
-                  </TableCell>
+                  <TableCell>{new Date(t.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="space-x-2">
                     <Button variant="ghost" size="sm" onClick={() => handleOpen(t)}>
                       ✏️
@@ -208,42 +175,42 @@ export default function ManageTrainersPage() {
         </Table>
       </div>
 
-      {/* Add/Edit Trainer Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit Trainer" : "Add Trainer"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              placeholder="Name"
-              value={form.name || ""}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-            <Input
-              placeholder="Specialization"
-              value={form.specialization || ""}
-              onChange={(e) => setForm({ ...form, specialization: e.target.value })}
-            />
-            <Input
-              type="number"
-              placeholder="Experience"
-              min={0}
-              value={form.experience || 0}
-              onChange={(e) => setForm({ ...form, experience: Number(e.target.value) })}
-            />
-            <Input
-              placeholder="Status"
-              value={form.status || ""}
-              onChange={(e) => setForm({ ...form, status: e.target.value })}
-            />
-            <div className="flex justify-end space-x-2">
-              <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={handleSave}>{editing ? "Update" : "Save"}</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Add/Edit Trainer Modal */}
+      <TrainerFormModal
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        initialData={editing || undefined}
+        mode={editing ? "edit" : "add"}
+        title={editing ? "Edit Trainer" : "Add Trainer"}
+        onSubmit={async (data) => {
+          try {
+            const url = editing
+              ? `http://localhost:5000/api/v1/bookings/trainers/${editing._id}`
+              : "http://localhost:5000/api/v1/bookings/trainers";
+            const method = editing ? "PATCH" : "POST";
+
+            const res = await fetch(url, {
+              method,
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ...data,
+                createdAt: editing ? data.createdAt : new Date().toISOString(),
+              }),
+            });
+
+            const resData = await res.json();
+            if (resData.success) {
+              await refreshData();
+              toast.success(editing ? "Trainer updated!" : "Trainer added!");
+            } else {
+              toast.error(resData.message || "Failed to save trainer");
+            }
+          } catch (err) {
+            console.error(err);
+            toast.error("Failed to save trainer");
+          }
+        }}
+      />
     </div>
   );
 }

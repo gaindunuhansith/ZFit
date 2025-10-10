@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   startOfMonth,
   endOfMonth,
@@ -12,99 +12,71 @@ import {
   format,
   addMonths,
   subMonths,
+  setMonth,
+  setYear,
 } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 
 interface Booking {
   _id: string;
   memberName: string;
   className: string;
-  scheduledDate: string; // ISO string
-  status: string;
+  scheduledDate: string;
+  fee?: number;
+  status?: string;
 }
 
 export default function FullPageCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedBookings, setSelectedBookings] = useState<Booking[]>([]);
 
-  // Fetch bookings
   useEffect(() => {
-    setLoading(true);
-    fetch("/api/bookings") // adjust your API endpoint
+    fetch("/api/bookings")
       .then((res) => res.json())
-      .then((data) => setBookings(Array.isArray(data) ? data : []))
-      .catch(() => setBookings([]))
-      .finally(() => setLoading(false));
+      .then((data) => setBookings(data || []))
+      .catch((err) => console.error(err));
   }, []);
 
-  // Map bookings by date for easy access
-  const dateBookings = useMemo(() => {
-    const map: Record<string, Booking[]> = {};
-    (bookings || []).forEach((b) => {
-      if (!b.scheduledDate) return;
-      const date = b.scheduledDate.split("T")[0];
-      if (!map[date]) map[date] = [];
-      map[date].push(b);
-    });
-    return map;
-  }, [bookings]);
+  const monthOptions = Array.from({ length: 12 }, (_, i) => i);
+  const yearOptions = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i);
 
-  const handleDateClick = (day: Date) => {
-    const key = format(day, "yyyy-MM-dd");
-    setSelectedBookings(dateBookings[key] || []);
-    setSelectedDate(day);
-    setDialogOpen(true);
-  };
-
-  const handleReschedule = (booking: Booking) => {
-    const newDate = prompt("Enter new date (YYYY-MM-DD):", booking.scheduledDate.slice(0,10));
+  const handleReschedule = (b: Booking) => {
+    const newDate = prompt("Enter new date (YYYY-MM-DD):", b.scheduledDate);
     if (!newDate) return;
-    fetch(`/api/bookings/${booking._id}/reschedule`, {
+    fetch(`/api/bookings/${b._id}/reschedule`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ scheduledDate: newDate }),
-    }).then(() => {
-      setBookings((prev) =>
-        prev.map((b) =>
-          b._id === booking._id ? { ...b, scheduledDate: newDate } : b
-        )
-      );
-      alert("Rescheduled successfully");
-    });
+    })
+      .then(() => {
+        setBookings((prev) =>
+          prev.map((x) => (x._id === b._id ? { ...x, scheduledDate: newDate } : x))
+        );
+      })
+      .catch((err) => console.error(err));
   };
 
-  const handleCancel = (booking: Booking) => {
+  const handleCancel = (b: Booking) => {
     if (!confirm("Are you sure you want to cancel this booking?")) return;
-    fetch(`/api/bookings/${booking._id}/cancel`, { method: "PATCH" }).then(() => {
-      setBookings((prev) =>
-        prev.map((b) =>
-          b._id === booking._id ? { ...b, status: "cancelled" } : b
-        )
-      );
-      alert("Booking cancelled");
-    });
+    fetch(`/api/bookings/${b._id}/cancel`, { method: "PATCH" })
+      .then(() => {
+        setBookings((prev) =>
+          prev.map((x) => (x._id === b._id ? { ...x, status: "cancelled" } : x))
+        );
+      })
+      .catch((err) => console.error(err));
   };
 
-  const renderHeader = () => (
-    <div className="flex justify-between items-center p-4 bg-card text-card-foreground">
-      <Button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>Prev</Button>
-      <h2 className="text-xl font-bold">{format(currentMonth, "MMMM yyyy")}</h2>
-      <Button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>Next</Button>
-    </div>
-  );
-
-  const renderWeekDays = () => (
-    <div className="grid grid-cols-7 text-center text-muted-foreground border-b border-border">
-      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-        <div key={day} className="py-2 font-semibold">{day}</div>
-      ))}
-    </div>
+  const dateBookings = useMemo(
+    () =>
+      selectedDate
+        ? bookings.filter((b) =>
+            b.scheduledDate ? isSameDay(new Date(b.scheduledDate), selectedDate) : false
+          )
+        : [],
+    [selectedDate, bookings]
   );
 
   const generateCalendar = () => {
@@ -113,106 +85,172 @@ export default function FullPageCalendar() {
     const startDate = startOfWeek(monthStart);
     const endDate = endOfWeek(monthEnd);
 
-    const rows = [];
-    let days = [];
+    const calendarDays = [];
     let day = startDate;
-
-    const totalRows = 6;
-    const headerHeight = 64;
-    const weekdaysHeight = 32;
-    const dayHeight = `calc((100vh - ${headerHeight + weekdaysHeight}px) / ${totalRows})`;
-
     while (day <= endDate) {
-      for (let i = 0; i < 7; i++) {
-        const key = format(day, "yyyy-MM-dd");
-        const dayBookings = dateBookings[key] || [];
-
-        days.push(
-          <div
-            key={day.toString()}
-            className={`flex flex-col justify-center items-center border border-border cursor-pointer
-              ${isSameMonth(day, monthStart) ? "bg-card text-card-foreground" : "bg-background text-muted-foreground"}
-              ${selectedDate && isSameDay(day, selectedDate) ? "border-2 border-ring" : ""}`}
-            style={{ height: dayHeight, borderRadius: "var(--radius)" }}
-            onClick={() => handleDateClick(day)}
-          >
-            <span className="text-lg font-semibold">{format(day, "d")}</span>
-            <div className="flex space-x-1 mt-1">
-              {dayBookings.slice(0, 3).map((b, i) => (
-                <span key={i} className="h-3 w-3 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
-              ))}
-              {dayBookings.length > 3 && <span className="h-3 w-3 rounded-full bg-muted" />}
-            </div>
-          </div>
-        );
-
-        day = addDays(day, 1);
-      }
-      rows.push(<div key={day.toString()} className="flex w-full">{days}</div>);
-      days = [];
+      calendarDays.push(day);
+      day = addDays(day, 1);
     }
-
-    return rows;
+    return calendarDays;
   };
 
   return (
-    <div className="min-h-screen min-w-screen bg-background text-foreground flex flex-col p-4">
-      {renderHeader()}
-      {renderWeekDays()}
-      <div className="flex-1">{loading ? <p>Loading...</p> : generateCalendar()}</div>
+    <div className="min-h-screen bg-background text-foreground p-4 flex flex-col gap-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-2 p-4 bg-card rounded-md">
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+            style={{ backgroundColor: "var(--accent)", color: "var(--foreground)" }}
+          >
+            Prev
+          </Button>
+          <Button
+            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+            style={{ backgroundColor: "var(--accent)", color: "var(--foreground)" }}
+          >
+            Next
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <select
+            value={currentMonth.getMonth()}
+            onChange={(e) =>
+              setCurrentMonth(setMonth(currentMonth, Number(e.target.value)))
+            }
+            style={{
+              backgroundColor: "var(--accent)",
+              color: "var(--foreground)",
+              borderRadius: "var(--radius)",
+              padding: "0.25rem 0.5rem",
+            }}
+          >
+            {monthOptions.map((m) => (
+              <option key={m} value={m}>
+                {format(setMonth(new Date(), m), "MMMM")}
+              </option>
+            ))}
+          </select>
+          <select
+            value={currentMonth.getFullYear()}
+            onChange={(e) =>
+              setCurrentMonth(setYear(currentMonth, Number(e.target.value)))
+            }
+            style={{
+              backgroundColor: "var(--accent)",
+              color: "var(--foreground)",
+              borderRadius: "var(--radius)",
+              padding: "0.25rem 0.5rem",
+            }}
+          >
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+        <h2 className="text-xl font-bold">{format(currentMonth, "MMMM yyyy")}</h2>
+      </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>
-              Bookings on {selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
-            </DialogTitle>
-          </DialogHeader>
-          <Card>
-            <CardHeader>
-              <CardTitle>Bookings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {selectedBookings.length === 0 ? (
-                <p>No bookings on this date.</p>
-              ) : (
-                <table className="w-full table-auto border border-border">
-                  <thead>
-                    <tr>
-                      <th className="border px-2 py-1">Member</th>
-                      <th className="border px-2 py-1">Class</th>
-                      <th className="border px-2 py-1">Date</th>
-                      <th className="border px-2 py-1">Status</th>
-                      <th className="border px-2 py-1">Actions</th>
+      {/* Weekdays */}
+      <div className="grid grid-cols-7 text-center text-muted-foreground border-b border-border font-semibold">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+          <div key={day} className="py-2">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar */}
+      <div className="grid grid-cols-7 gap-1">
+        {generateCalendar().map((day) => {
+          const dayBookings = bookings.filter(
+            (b) => b.scheduledDate && isSameDay(new Date(b.scheduledDate), day)
+          );
+
+          const isSelected = selectedDate && isSameDay(day, selectedDate);
+          const inMonth = isSameMonth(day, currentMonth);
+
+          return (
+            <div
+              key={day.toString()}
+              className={`flex flex-col justify-start items-center border border-border cursor-pointer p-1 rounded-md
+                ${inMonth ? "bg-card text-card-foreground" : "bg-background text-muted-foreground"}
+                ${isSelected ? "border-2 border-ring" : ""}`}
+              style={{ minHeight: "100px" }}
+              onClick={() => setSelectedDate(day)}
+            >
+              <span className="font-semibold">{format(day, "d")}</span>
+              <div className="flex space-x-1 mt-1">
+                {dayBookings.slice(0, 3).map((_, i) => (
+                  <span
+                    key={i}
+                    className="h-3 w-3 rounded-full"
+                    style={{ backgroundColor: "var(--accent)" }}
+                  />
+                ))}
+                {dayBookings.length > 3 && (
+                  <span className="h-3 w-3 rounded-full bg-muted" />
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Selected Date Bookings */}
+      {selectedDate && (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>
+              Bookings on {format(selectedDate, "MMMM d, yyyy")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {dateBookings.length === 0 ? (
+              <p>No bookings for this date.</p>
+            ) : (
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left p-2">Member</th>
+                    <th className="text-left p-2">Class</th>
+                    <th className="text-left p-2">Fee</th>
+                    <th className="text-left p-2">Status</th>
+                    <th className="text-left p-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dateBookings.map((b) => (
+                    <tr key={b._id} className="border-b border-border">
+                      <td className="p-2">{b.memberName}</td>
+                      <td className="p-2">{b.className}</td>
+                      <td className="p-2">{b.fee}</td>
+                      <td className="p-2">{b.status}</td>
+                      <td className="p-2 space-x-2">
+                        <Button
+                          size="sm"
+                          style={{
+                            backgroundColor: "var(--accent)",
+                            color: "var(--foreground)",
+                          }}
+                          onClick={() => handleReschedule(b)}
+                        >
+                          Reschedule
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleCancel(b)}>
+                          Cancel
+                        </Button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {selectedBookings.map((b) => (
-                      <tr key={b._id}>
-                        <td className="border px-2 py-1">{b.memberName}</td>
-                        <td className="border px-2 py-1">{b.className}</td>
-                        <td className="border px-2 py-1">{b.scheduledDate.slice(0,10)}</td>
-                        <td className="border px-2 py-1">{b.status}</td>
-                        <td className="border px-2 py-1 space-x-2">
-                          {b.status !== "cancelled" && (
-                            <>
-                              <Button size="sm" onClick={() => handleReschedule(b)}>Reschedule</Button>
-                              <Button size="sm" variant="destructive" onClick={() => handleCancel(b)}>Cancel</Button>
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </CardContent>
-          </Card>
-          <DialogFooter>
-            <Button onClick={() => setDialogOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

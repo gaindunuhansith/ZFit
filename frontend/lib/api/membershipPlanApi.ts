@@ -1,3 +1,5 @@
+import { z } from "@/node_modules/zod/v4/classic/external.cjs"
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
 
 interface ApiResponse<T = unknown> {
@@ -127,3 +129,15 @@ export const membershipPlanApi = {
     return response as { success: boolean; data: string[] }
   },
 }
+// Validation schema
+export const classFormSchema = z.object({
+  name: z.string().min(1, "Class name is required"),
+  type: z.enum(["yoga", "pilates", "zumba", "spinning", "crossfit", "strength", "cardio", "other"], { errorMap: () => ({ message: "Select a class type" }) }),
+  duration: z.number().min(40, "Duration must be at least 40 minutes")
+    .max(180, "Duration cannot exceed 180 minutes"),
+  maxCapacity: z.number().min(1, "Capacity must be at least 1")
+    .max(20, "Capacity cannot exceed 20"),
+  price: z.number().min(0, "Price cannot be negative"),
+  status: z.enum(["active", "inactive"], { errorMap: () => ({ message: "Select status" }) }),
+  notes: z.string().max(1000).optional(),
+});
