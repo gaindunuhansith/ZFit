@@ -67,6 +67,16 @@ export default function MemberReservationsPage() {
   const [selectedDate, setSelectedDate] = useState<Date>()
   const [activeTab, setActiveTab] = useState("bookings")
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Modal states
+  const [bookingModal, setBookingModal] = useState<{ isOpen: boolean; booking: Booking | null }>({
+    isOpen: false,
+    booking: null
+  })
+  const [rescheduleModal, setRescheduleModal] = useState<{ isOpen: boolean; booking: Booking | null }>({
+    isOpen: false,
+    booking: null
+  })
 
   // Show loading if auth is still loading
   if (authLoading) {
@@ -90,12 +100,6 @@ export default function MemberReservationsPage() {
       </div>
     )
   }
-  
-  // Modal states
-  const [bookingModal, setBookingModal] = useState<{ isOpen: boolean; booking: Booking | null }>({
-    isOpen: false,
-    booking: null
-  })
 
   useEffect(() => {
     if (user?._id) {
@@ -154,6 +158,10 @@ export default function MemberReservationsPage() {
     setBookingModal({ isOpen: true, booking })
   }
 
+  const handleRescheduleBooking = (booking: Booking) => {
+    setRescheduleModal({ isOpen: true, booking })
+  }
+
   const handleRefresh = () => {
     fetchBookings()
   }
@@ -170,10 +178,8 @@ export default function MemberReservationsPage() {
   console.log("Selected bookings:", selectedBookings)
   console.log("Selected date:", selectedDate)
 
-
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">My Reservations</h1>
@@ -200,7 +206,6 @@ export default function MemberReservationsPage() {
           </Button>
         </div>
       </div>
-
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-2 bg-[#202022] border-gray-700">
@@ -263,6 +268,7 @@ export default function MemberReservationsPage() {
               bookings={selectedBookings}
               onRefresh={handleRefresh}
               onEdit={handleEditBooking}
+              onReschedule={handleRescheduleBooking}
               isAdmin={false}
             />
           )}
@@ -277,6 +283,16 @@ export default function MemberReservationsPage() {
         onSuccess={handleRefresh}
         showStatusField={false}
         bookingData={bookingModal.booking}
+      />
+
+      {/* Reschedule Modal */}
+      <BookingFormModal
+        isOpen={rescheduleModal.isOpen}
+        onClose={() => setRescheduleModal({ isOpen: false, booking: null })}
+        onSuccess={handleRefresh}
+        showStatusField={false}
+        bookingData={rescheduleModal.booking}
+        isReschedule={true}
       />
     </div>
   )

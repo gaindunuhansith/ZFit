@@ -29,7 +29,7 @@ export default function MemberDashboardPage() {
       title: "Reservations",
       description: "Book, view, and manage your class reservations",
       icon: Calendar,
-      href: "/memberDashboard/reservations/Bookings",
+      href: "/memberDashboard/reservations",
       color: "text-emerald-500"
     },
     {

@@ -1,287 +1,472 @@
-		"use client";
+"use client"
 
-		import { useEffect, useMemo, useState } from "react";
-		import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-		import { Button } from "@/components/ui/button";
-		import { Input } from "@/components/ui/input";
-		import { Label } from "@/components/ui/label";
-		import BookingTable from "@/components/bookingTable";
-		import CalendarView from "@/components/calendarView";
-		import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { CalendarView } from "@/components/CalendarView"
+import { BookingTable } from "@/components/BookingTable"
+import { BookingFormModal } from "@/components/BookingFormModal"
+import { 
+  Plus, 
+  Calendar,
+  BookOpen,
+  Filter,
+  Search,
+  Users,
+  CheckCircle,
+  Clock,
+  XCircle,
+  FileText,
+  Bell,
+  X,
+  AlertCircle
+} from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { useAuth } from "@/lib/auth-context"
+import { apiRequest } from "@/lib/apiRequest"
+import { toast } from "sonner"
 
-		interface BookingFormInput {
-		memberId: string;
-		classId: string;
-		trainerId: string;
-		facilityId: string;
-		classType: string;
-		scheduledDate: string; // ISO string
-		fee: number;
-		status?: string;
-		}
+interface Booking {
+  _id: string
+  memberId: string
+  classId: string
+  trainerId: string
+  facilityId: string
+  classType: string
+  scheduledDate: string
+  fee: number
+  status: string
+  member?: {
+    name: string
+    email: string
+  }
+  class?: {
+    name: string
+    type: string
+  }
+  trainer?: {
+    name: string
+    specialization: string
+  }
+  facility?: {
+    name: string
+  }
+}
 
-		interface ClassItem { _id: string; name: string; classTypes: string[]; }
-		interface Trainer { _id: string; name: string; }
-		interface Facility { _id: string; name: string; }
-		interface Booking { _id: string; classId: string; trainerId: string; facilityId: string; classType: string; scheduledDate: string; fee: number; status: string; }
+export default function BookingsPage() {
+  const { isManager } = useAuth()
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>()
+  const [selectedBookings, setSelectedBookings] = useState<Booking[]>([])
+  const [allBookings, setAllBookings] = useState<Booking[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [showPastBookings, setShowPastBookings] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [notifications, setNotifications] = useState<Array<{
+    id: string
+    type: 'cancellation' | 'reschedule'
+    message: string
+    bookingId: string
+    timestamp: Date
+  }>>([])
+  
+  // Modal states
+  const [bookingModal, setBookingModal] = useState<{ isOpen: boolean; booking: Booking | null }>({
+    isOpen: false,
+    booking: null
+  })
+  const [rescheduleModal, setRescheduleModal] = useState<{ isOpen: boolean; booking: Booking | null }>({
+    isOpen: false,
+    booking: null
+  })
 
-		export default function AdminBookingsPage() {
-		const [rows, setRows] = useState<Booking[]>([]);
-		const [classes, setClasses] = useState<ClassItem[]>([]);
-		const [trainers, setTrainers] = useState<Trainer[]>([]);
-		const [facilities, setFacilities] = useState<Facility[]>([]);
-		const [filter, setFilter] = useState("");
-		const [date, setDate] = useState<string>("");
-		const [statusFilter, setStatusFilter] = useState("all");
+  useEffect(() => {
+    fetchAllBookings()
+    
+    // Poll for updates every 30 seconds
+    const interval = setInterval(() => {
+      fetchAllBookings()
+    }, 30000)
+    
+    return () => clearInterval(interval)
+  }, [])
 
-		const [isAddOpen, setIsAddOpen] = useState(false);
-		const [form, setForm] = useState<Partial<BookingFormInput>>({});
+  const addNotification = (type: 'cancellation' | 'reschedule', message: string, bookingId: string) => {
+    const notification = {
+      id: Date.now().toString(),
+      type,
+      message,
+      bookingId,
+      timestamp: new Date()
+    }
+    setNotifications(prev => [notification, ...prev.slice(0, 9)]) // Keep only last 10 notifications
+    
+    // Auto-remove notification after 10 seconds
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== notification.id))
+    }, 10000)
+  }
 
-		// Fetch data from backend
-		useEffect(() => {
-			async function fetchData() {
-			try {
-				const [cRes, tRes, fRes, bRes] = await Promise.all([
-				fetch("http://localhost:5000/api/v1/classes"),
-				fetch("http://localhost:5000/api/v1/trainers"),
-				fetch("http://localhost:5000/api/v1/facilities"),
-				fetch("http://localhost:5000/api/v1/Booking")
-				]);
-				const [c, t, f, b] = await Promise.all([cRes.json(), tRes.json(), fRes.json(), bRes.json()]);
-				setClasses(c.data || []);
-				setTrainers(t.data || []);
-				setFacilities(f.data || []);
-				setRows(b.data || []);
-			} catch (err) {
-				console.error("Failed to fetch data", err);
-			}
-			}
-			void fetchData();
-		}, []);
+  const fetchAllBookings = async () => {
+    setIsLoading(true)
+    try {
+      const response = await apiRequest("/bookings")
+      const newBookings = response.data || []
+      
+      // Check for status changes to detect cancellations/reschedules
+      if (allBookings.length > 0) {
+        newBookings.forEach((newBooking: Booking) => {
+          const oldBooking = allBookings.find(b => b._id === newBooking._id)
+          if (oldBooking && oldBooking.status !== newBooking.status) {
+            if (newBooking.status === 'cancelled' && oldBooking.status !== 'cancelled') {
+              addNotification('cancellation', `Booking cancelled by member`, newBooking._id)
+            } else if (newBooking.status === 'rescheduled' && oldBooking.status !== 'rescheduled') {
+              addNotification('reschedule', `Booking rescheduled by member`, newBooking._id)
+            }
+          }
+        })
+      }
+      
+      setAllBookings(newBookings)
+    } catch (error) {
+      console.error("Failed to fetch bookings:", error)
+      toast.error("Failed to load bookings")
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-		const filtered = useMemo(() => {
-			const fText = filter.toLowerCase();
-			return rows.filter((b) => {
-			const className = classes.find(c => c._id === b.classId)?.name.toLowerCase() || "";
-			const matchesText = !fText || className.includes(fText);
-			const matchesDate = !date || b.scheduledDate.split("T")[0] === date;
-			const matchesStatus = statusFilter === "all" || b.status.toLowerCase() === statusFilter.toLowerCase();
-			return matchesText && matchesDate && matchesStatus;
-			});
-		}, [rows, classes, filter, date, statusFilter]);
+  const handleDateSelect = (date: Date, bookings: Booking[]) => {
+    setSelectedDate(date)
+    setSelectedBookings(bookings)
+  }
 
-		// Delete booking
-		const onDelete = async (b: Booking) => {
-			try {
-			await fetch(`http://localhost:5000/api/v1/Booking/${b._id}`, { method: "DELETE" });
-			setRows(prev => prev.filter(x => x._id !== b._id));
-			} catch (err) {
-			console.error("Failed to delete booking", err);
-			}
-		};
+  const handleRefresh = () => {
+    fetchAllBookings()
+    setSelectedDate(undefined)
+    setSelectedBookings([])
+  }
 
-		// Update booking date/time
-		const onEdit = async (b: Booking) => {
-			const nd = prompt("New date (YYYY-MM-DD)", b.scheduledDate.split("T")[0]) || b.scheduledDate.split("T")[0];
-			const nt = prompt("New time (HH:MM)", b.scheduledDate.split("T")[1]?.slice(0,5) || "00:00") || b.scheduledDate.split("T")[1]?.slice(0,5);
-			try {
-			const res = await fetch(`http://localhost:5000/api/v1/Booking/${b._id}`, {
-				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ scheduledDate: `${nd}T${nt}` })
-			});
-			const updated = await res.json();
-			setRows(prev => prev.map(x => x._id === b._id ? updated.data : x));
-			} catch (err) {
-			console.error("Failed to update booking", err);
-			}
-		};
+  const handleEditBooking = (booking: Booking) => {
+    setBookingModal({ isOpen: true, booking })
+  }
 
-		const refreshByDate = async () => {
-			if (!date) return;
-			try {
-			const res = await fetch(`http://localhost:5000/api/v1/Booking?date=${date}`);
-			const data = await res.json();
-			setRows(data.data || []);
-			} catch (err) {
-			console.error("Failed to fetch bookings by date", err);
-			}
-		};
+  const handleRescheduleBooking = (booking: Booking) => {
+    setRescheduleModal({ isOpen: true, booking })
+  }
 
-		// Generate CSV report
-		const generateReport = () => {
-			if (filtered.length === 0) return alert("No bookings to export.");
-			const headers = ["Class", "Trainer", "Facility", "Date", "Time", "Status", "Fee"];
-			const rowsData = filtered.map(b => [
-			classes.find(c => c._id === b.classId)?.name || "-",
-			trainers.find(t => t._id === b.trainerId)?.name || "-",
-			facilities.find(f => f._id === b.facilityId)?.name || "-",
-			b.scheduledDate.split("T")[0],
-			b.scheduledDate.split("T")[1]?.slice(0,5) || "-",
-			b.status,
-			b.fee
-			]);
-			const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rowsData].map(e => e.join(",")).join("\n");
-			const encodedUri = encodeURI(csvContent);
-			const link = document.createElement("a");
-			link.setAttribute("href", encodedUri);
-			link.setAttribute("download", `bookings_report_${Date.now()}.csv`);
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
-		};
+  const handleBulkDelete = async (bookingIds: string[]) => {
+    try {
+      // Delete bookings one by one (since we don't have a bulk delete endpoint)
+      for (const bookingId of bookingIds) {
+        await apiRequest(`/bookings/${bookingId}`, {
+          method: "DELETE"
+        })
+      }
+      toast.success(`${bookingIds.length} booking(s) deleted successfully!`)
+      handleRefresh()
+    } catch (error: any) {
+      console.error("Failed to delete bookings:", error)
+      toast.error(error.message || "Failed to delete bookings")
+    }
+  }
 
-		return (
-			<div className="p-6 space-y-6">
-			{/* Header */}
-			<div className="flex flex-col md:flex-row justify-between items-center gap-4">
-				<h1 className="text-2xl font-bold">Bookings</h1>
-				<div className="flex gap-2 flex-wrap">
-				<Button variant="secondary" onClick={() => { setFilter(""); setDate(""); setStatusFilter("all"); }}>Reset</Button>
-				<Button onClick={refreshByDate} disabled={!date}>Filter by date</Button>
-				<Button onClick={() => setIsAddOpen(true)}>Add Booking</Button>
-				<Button onClick={generateReport}>Generate Report</Button>
-				</div>
-			</div>
+  const getBookingStats = () => {
+    const total = allBookings.length
+    const confirmed = allBookings.filter(b => b.status === 'confirmed').length
+    const pending = allBookings.filter(b => b.status === 'pending').length
+    const cancelled = allBookings.filter(b => b.status === 'cancelled').length
+    const rescheduled = allBookings.filter(b => b.status === 'rescheduled').length
+    const completed = allBookings.filter(b => b.status === 'completed').length
+    
+    return { total, confirmed, pending, cancelled, rescheduled, completed }
+  }
 
-			{/* Filters */}
-			<Card>
-				<CardHeader><CardTitle>Filters</CardTitle></CardHeader>
-				<CardContent>
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-					<div>
-					<Label>Search</Label>
-					<Input value={filter} placeholder="Search by class" onChange={e => setFilter(e.target.value)} />
-					</div>
-					<div>
-					<Label>Date</Label>
-					<Input type="date" value={date} onChange={e => setDate(e.target.value)} />
-					</div>
-					<div>
-					<Label>Status</Label>
-					<Select value={statusFilter} onValueChange={setStatusFilter}>
-						<SelectTrigger className="w-full">
-						<SelectValue placeholder="Select status" />
-						</SelectTrigger>
-						<SelectContent>
-						<SelectItem value="all">All</SelectItem>
-						<SelectItem value="pending">Pending</SelectItem>
-						<SelectItem value="confirmed">Confirmed</SelectItem>
-						<SelectItem value="cancelled">Cancelled</SelectItem>
-						<SelectItem value="completed">Completed</SelectItem>
-						<SelectItem value="rescheduled">Rescheduled</SelectItem>
-						</SelectContent>
-					</Select>
-					</div>
-				</div>
-				</CardContent>
-			</Card>
+  const stats = getBookingStats()
 
-			{/* Bookings Table */}
-			<Card>
-				<CardHeader><CardTitle>All Bookings</CardTitle></CardHeader>
-				<CardContent>
-				<BookingTable bookings={filtered} onEdit={onEdit} onDelete={onDelete} />
-				</CardContent>
-			</Card>
+  const filteredBookings = allBookings.filter(booking => {
+    const matchesSearch = 
+      booking.member?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      booking.class?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      booking.trainer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      booking.facility?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      booking.classType?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesStatus = statusFilter === "all" || booking.status === statusFilter
+    
+    const isPastBooking = new Date(booking.scheduledDate) < new Date()
+    const matchesTimeFilter = showPastBookings || !isPastBooking
+    
+    return matchesSearch && matchesStatus && matchesTimeFilter
+  })
 
-			{/* Calendar */}
-			<Card>
-				<CardHeader><CardTitle>Calendar</CardTitle></CardHeader>
-				<CardContent>
-				<CalendarView bookings={rows} />
-				</CardContent>
-			</Card>
+  // Access control removed - all users can access this page
 
-			{/* Add Booking Modal */}
-			{isAddOpen && (
-				<div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-				<div className="bg-card dark:bg-card p-6 rounded shadow-lg max-w-lg w-full">
-					<h2 className="text-xl font-bold mb-4">Add Booking</h2>
-					<div className="space-y-3">
-					<div>
-						<Label>Class</Label>
-						<Select value={form.classId || ""} onValueChange={v => setForm({ ...form, classId: v, classType: classes.find(c => c._id === v)?.classTypes[0] })}>
-						<SelectTrigger className="w-full"><SelectValue placeholder="Select class" /></SelectTrigger>
-						<SelectContent>
-							{classes.map(c => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
-						</SelectContent>
-						</Select>
-					</div>
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Bookings Management</h1>
+          <p className="text-gray-400">Manage all fitness class bookings</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => window.location.href = '/dashboard/reports/bookings'}
+            variant="outline"
+            className="border-gray-700 text-gray-300 hover:bg-gray-800"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Reports
+          </Button>
+          <Button
+            onClick={() => setBookingModal({ isOpen: true, booking: null })}
+            className="bg-[#AAFF69] text-black hover:bg-[#AAFF69]/90"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Booking
+          </Button>
+        </div>
+      </div>
 
-					<div>
-						<Label>Class Type</Label>
-						<Select value={form.classType || ""} onValueChange={v => setForm({ ...form, classType: v })}>
-						<SelectTrigger className="w-full"><SelectValue placeholder="Select class type" /></SelectTrigger>
-						<SelectContent>
-							{classes.find(c => c._id === form.classId)?.classTypes.map(ct => <SelectItem key={ct} value={ct}>{ct}</SelectItem>)}
-						</SelectContent>
-						</Select>
-					</div>
+      {/* Notifications Panel */}
+      {notifications.length > 0 && (
+        <Card className="bg-[#202022] border-gray-700">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-white flex items-center gap-2">
+              <Bell className="h-5 w-5 text-[#AAFF69]" />
+              Recent Activity ({notifications.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border ${
+                    notification.type === 'cancellation' 
+                      ? 'bg-red-500/10 border-red-500/20' 
+                      : 'bg-blue-500/10 border-blue-500/20'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className={`h-4 w-4 ${
+                      notification.type === 'cancellation' ? 'text-red-400' : 'text-blue-400'
+                    }`} />
+                    <div>
+                      <p className="text-sm text-white font-medium">
+                        {notification.message}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {notification.timestamp.toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-					<div>
-						<Label>Trainer</Label>
-						<Select value={form.trainerId || ""} onValueChange={v => setForm({ ...form, trainerId: v })}>
-						<SelectTrigger className="w-full"><SelectValue placeholder="Select trainer" /></SelectTrigger>
-						<SelectContent>{trainers.map(t => <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>)}</SelectContent>
-						</Select>
-					</div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+        <Card className="bg-[#202022] border-gray-700">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Total Bookings</CardTitle>
+            <BookOpen className="h-4 w-4 text-gray-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{stats.total}</div>
+          </CardContent>
+        </Card>
 
-					<div>
-						<Label>Facility</Label>
-						<Select value={form.facilityId || ""} onValueChange={v => setForm({ ...form, facilityId: v })}>
-						<SelectTrigger className="w-full"><SelectValue placeholder="Select facility" /></SelectTrigger>
-						<SelectContent>{facilities.map(f => <SelectItem key={f._id} value={f._id}>{f.name}</SelectItem>)}</SelectContent>
-						</Select>
-					</div>
+        <Card className="bg-[#202022] border-gray-700">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Confirmed</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{stats.confirmed}</div>
+          </CardContent>
+        </Card>
 
-					<div className="grid grid-cols-2 gap-3">
-						<div>
-						<Label>Date</Label>
-						<Input type="date" value={form.scheduledDate?.split("T")[0] || ""} onChange={e => {
-							const time = form.scheduledDate?.split("T")[1] || "00:00";
-							setForm({ ...form, scheduledDate: `${e.target.value}T${time}` });
-						}} />
-						</div>
-						<div>
-						<Label>Time</Label>
-						<Input type="time" value={form.scheduledDate?.split("T")[1]?.slice(0,5) || ""} onChange={e => {
-							const datePart = form.scheduledDate?.split("T")[0] || new Date().toISOString().split("T")[0];
-							setForm({ ...form, scheduledDate: `${datePart}T${e.target.value}` });
-						}} />
-						</div>
-					</div>
+        <Card className="bg-[#202022] border-gray-700">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Pending</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{stats.pending}</div>
+          </CardContent>
+        </Card>
 
-					<div>
-						<Label>Fee</Label>
-						<Input type="number" min={0} value={form.fee || 0} onChange={e => setForm({ ...form, fee: Number(e.target.value) })} />
-					</div>
+        <Card className="bg-[#202022] border-gray-700">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Cancelled</CardTitle>
+            <XCircle className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{stats.cancelled}</div>
+          </CardContent>
+        </Card>
 
-					<div className="flex justify-end gap-2 mt-3">
-						<Button variant="secondary" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-						<Button onClick={async () => {
-						if (!form.classId || !form.trainerId || !form.facilityId || !form.classType || !form.scheduledDate) {
-							return alert("Please fill all required fields");
-						}
-						try {
-							const res = await fetch("http://localhost:5000/api/v1/Booking", {
-							method: "POST",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify(form)
-							});
-							const newBooking = await res.json();
-							setRows(prev => [...prev, newBooking.data]);
-							setIsAddOpen(false);
-						} catch (err) {
-							console.error("Failed to add booking", err);
-							alert("Failed to add booking");
-						}
-						}}>Save</Button>
-					</div>
-					</div>
-				</div>
-				</div>
-			)}
-			</div>
-		);
-		}
+        <Card className="bg-[#202022] border-gray-700">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Rescheduled</CardTitle>
+            <Calendar className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{stats.rescheduled}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-[#202022] border-gray-700">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-300">Completed</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{stats.completed}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Calendar View */}
+      <Card className="bg-[#202022] border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-[#AAFF69]" />
+            Calendar View
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CalendarView 
+            onDateSelect={handleDateSelect}
+            selectedDate={selectedDate}
+            bookings={allBookings}
+            isAdmin={true}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Filters and Search */}
+      <Card className="bg-[#202022] border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Filter className="h-5 w-5 text-[#AAFF69]" />
+            Filters & Search
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search by member, class, trainer, facility, or class type..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-[#202022] border-gray-700 text-white focus:border-[#AAFF69] focus:ring-[#AAFF69]"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 bg-[#202022] border border-gray-700 text-white rounded-md focus:border-[#AAFF69] focus:ring-[#AAFF69] min-w-[140px]"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="completed">Completed</option>
+                <option value="rescheduled">Rescheduled</option>
+              </select>
+              <Button
+                variant={showPastBookings ? "default" : "outline"}
+                onClick={() => setShowPastBookings(!showPastBookings)}
+                className={showPastBookings 
+                  ? "bg-[#AAFF69] text-black hover:bg-[#AAFF69]/90" 
+                  : "border-gray-700 text-gray-300 hover:bg-gray-800"
+                }
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                {showPastBookings ? "Hide Past" : "Show Past"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchTerm("")
+                  setStatusFilter("all")
+                  setShowPastBookings(true)
+                }}
+                className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Clear
+              </Button>
+            </div>
+          </div>
+          <div className="mt-4 text-sm text-gray-400">
+            Showing {filteredBookings.length} of {allBookings.length} bookings
+            {searchTerm && ` matching "${searchTerm}"`}
+            {statusFilter !== "all" && ` with status "${statusFilter}"`}
+            {!showPastBookings && " (future bookings only)"}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bookings Table */}
+      <Card className="bg-[#202022] border-gray-700">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-white flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-[#AAFF69]" />
+              {selectedDate ? `Bookings for ${selectedDate.toLocaleDateString()}` : "All Bookings"}
+            </CardTitle>
+            <div className="text-sm text-gray-400">
+              {filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <BookingTable
+            bookings={selectedDate ? selectedBookings : filteredBookings}
+            onRefresh={handleRefresh}
+            onEdit={handleEditBooking}
+            onReschedule={handleRescheduleBooking}
+            onBulkDelete={handleBulkDelete}
+            isAdmin={true}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Booking Modal */}
+      <BookingFormModal
+        isOpen={bookingModal.isOpen}
+        onClose={() => setBookingModal({ isOpen: false, booking: null })}
+        onSuccess={handleRefresh}
+        bookingData={bookingModal.booking}
+      />
+
+      {/* Reschedule Modal */}
+      <BookingFormModal
+        isOpen={rescheduleModal.isOpen}
+        onClose={() => setRescheduleModal({ isOpen: false, booking: null })}
+        onSuccess={handleRefresh}
+        showStatusField={true}
+        bookingData={rescheduleModal.booking}
+        isReschedule={true}
+      />
+    </div>
+  )
+}

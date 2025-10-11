@@ -80,11 +80,11 @@ const data = {
     },
     {
       title: "Reservations",
-      url: "/memberDashboard/reservations/Bookings",
+      url: "/memberDashboard/reservations",
       icon: Calendar,
       items: [
-        { title: "My Bookings", url: "/memberDashboard/reservations/Bookings" },
-        { title: "Calendar", url: "/memberDashboard/reservations/calendar" },
+        { title: "My Bookings", url: "/memberDashboard/reservations" },
+        { title: "Calendar", url: "/memberDashboard/reservations" },
       ],
     },
   ],

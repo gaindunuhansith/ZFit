@@ -8,6 +8,12 @@ import trainerRoutes from "./trainer.routes.js";
 
 const router = Router();
 
+// Nested routes must come before /:id routes to avoid conflicts
+router.use("/classes", classRoutes);
+router.use("/facilities", facilityRoutes);
+router.use("/trainers", trainerRoutes);
+
+// Booking routes
 router.post("/", BookingController.createBooking);
 router.get("/", BookingController.getAllBookings);
 router.get("/:id", BookingController.getBookingById);
@@ -16,13 +22,5 @@ router.delete("/:id", BookingController.deleteBooking);
 
 router.put("/:id/cancel", BookingController.cancelBooking);
 router.put("/:id/reschedule", BookingController.rescheduleBooking);
-
-router.use("/classes", classRoutes);
-
-
-router.use("/facilities", facilityRoutes);
-
-
-router.use("/trainers", trainerRoutes);
 
 export default router;

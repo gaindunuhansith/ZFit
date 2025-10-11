@@ -8,8 +8,8 @@ import type { IClass } from "../models/class.model.js";
 const classSchema = z.object({
   name: z.string().min(1),
   type: z.enum(["yoga","pilates","zumba","spinning","crossfit","strength","cardio","other"]),
-  duration: z.number().min(15).max(180),
-  maxCapacity: z.number().min(1).max(50),
+  duration: z.number().min(40).max(180),
+  maxCapacity: z.number().min(1).max(30),
   price: z.number().min(0),
   status: z.enum(["active","inactive"]).optional()
 });
