@@ -4,7 +4,6 @@ import {
   SquareTerminal,
   Users,
   Calendar,
-  BarChart3,
   TrendingUp,
   Activity,
   Package,
@@ -43,6 +42,12 @@ const data = {
       url: "/dashboard",
       icon: SquareTerminal,
       isActive: true,
+    },
+    {
+      title: "Front Desk Mode",
+      url: "/frontdesk",
+      icon: Users,
+      target: "_blank",
     },
     {
       title: "My Profile",
