@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { QrCode, UserPlus, Sun, Moon } from "lucide-react"
+import { QRScannerModal } from "@/components/QRScannerModal"
 
 export default function FrontDeskPage() {
   const [greeting, setGreeting] = useState("")
   const [currentTime, setCurrentTime] = useState("")
   const [currentDay, setCurrentDay] = useState("")
+  const [isScannerOpen, setIsScannerOpen] = useState(false)
 
   useEffect(() => {
     const updateGreeting = () => {
@@ -44,12 +46,12 @@ export default function FrontDeskPage() {
   }
 
   const handleScanQR = () => {
-    // Navigate to QR scanner page or open modal
-    console.log("Scan QR clicked")
+    setIsScannerOpen(true)
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
+    <>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
       <div className="w-full max-w-2xl mx-auto text-center space-y-12">
         {/* Greeting Section */}
         <div className="space-y-4">
@@ -105,5 +107,11 @@ export default function FrontDeskPage() {
         </div>
       </div>
     </div>
+
+    <QRScannerModal
+      isOpen={isScannerOpen}
+      onClose={() => setIsScannerOpen(false)}
+    />
+    </>
   )
 }
