@@ -183,7 +183,7 @@ export function QRScannerModal({ isOpen, onClose }: QRScannerModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[95vh] overflow-hidden">
+      <DialogContent className="sm:max-w-2xl max-h-[95vh] overflow-hidden [&_button[data-slot='dialog-close']_svg]:size-8">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5" />
