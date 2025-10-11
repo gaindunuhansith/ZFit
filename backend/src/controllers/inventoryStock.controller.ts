@@ -82,12 +82,10 @@ export const updateMaintenance = async (req: Request, res: Response, next: NextF
             });
         }
 
-        const { maintenanceStatus, lastMaintenanceDate } = updateMaintenanceSchema.parse(req.body);
-        const item = await stockService.updateMaintenance(id, maintenanceStatus, lastMaintenanceDate);
-        res.status(200).json({
-            success: true,
-            message: "Maintenance updated successfully",
-            data: item
+        // Maintenance features not yet implemented in schema
+        res.status(501).json({
+            success: false,
+            message: "Maintenance features not yet implemented"
         });
     } catch (error) {
         next(error);

@@ -12,39 +12,10 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { Plus, Edit, Trash2, Truck, Search, FileText } from 'lucide-react'
+import { Plus, Edit, Trash2, Truck, Search, Download } from 'lucide-react'
 import { supplierApiService } from '@/lib/api/supplierApi'
 import type { SupplierData } from '@/lib/api/supplierApi'
 import { SupplierFormModal, SupplierFormData, UpdateSupplierFormData } from '@/components/SupplierFormModal'
-
-const handleGenerateReport = async () => {
-  try {
-    const response = await fetch('/api/reports/suppliers', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error('Failed to generate report')
-    }
-
-    const blob = await response.blob()
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.style.display = 'none'
-    a.href = url
-    a.download = `suppliers-report-${new Date().toISOString().split('T')[0]}.pdf`
-    document.body.appendChild(a)
-    a.click()
-    window.URL.revokeObjectURL(url)
-    document.body.removeChild(a)
-  } catch (error) {
-    console.error('Error generating report:', error)
-    alert('Failed to generate report')
-  }
-}
 
 interface Supplier {
   _id: string
@@ -120,6 +91,46 @@ export default function SuppliersPage() {
     }
   }
 
+  const handleGenerateReport = async () => {
+    try {
+      // Build query parameters based on current filters
+      const queryParams = new URLSearchParams()
+      
+      if (searchTerm) {
+        queryParams.append('searchTerm', searchTerm)
+      }
+      
+      const url = `http://localhost:5000/api/v1/reports/suppliers/pdf${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate report')
+      }
+
+      const blob = await response.blob()
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      
+      // Include filter info in filename if filters are applied
+      const filterSuffix = searchTerm ? '-filtered' : ''
+      link.download = `suppliers-report${filterSuffix}-${new Date().toISOString().split('T')[0]}.pdf`
+      
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(downloadUrl)
+    } catch (error) {
+      console.error('Error generating report:', error)
+      setError('Failed to generate suppliers report')
+    }
+  }
+
   // Filter suppliers based on search term
   const filteredSuppliers = suppliers.filter(supplier => {
     const searchLower = searchTerm.toLowerCase()
@@ -162,16 +173,36 @@ export default function SuppliersPage() {
           <p className="text-muted-foreground">Manage inventory suppliers</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleGenerateReport}>
-            <FileText className="h-4 w-4 mr-2" />
-            Generate Report
-          </Button>
           <Button onClick={handleAddSupplier}>
             <Plus className="h-4 w-4 mr-2" />
             Add Supplier
           </Button>
+          <Button variant="outline" onClick={handleGenerateReport}>
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
+          </Button>
         </div>
       </div>
+
+      {/* Search Bar */}
+      <div className="flex items-center space-x-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search suppliers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
 
       {/* Suppliers Table */}
       <Card>
@@ -185,24 +216,6 @@ export default function SuppliersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-4">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
-
-          {/* Search Bar */}
-          <div className="flex items-center space-x-2 mb-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search suppliers..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
 
           <Table>
             <TableHeader>

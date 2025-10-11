@@ -2,7 +2,22 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import mongoose from 'mongoose';
 import BankTransferPayment from '../models/bankTransfer.model.js';
+import type { IBankTransferPayment } from '../models/bankTransfer.model.js';
 import { uploadReceiptImage } from '../services/fileUpload.service.js';
+import { sendMail } from '../util/sendMail.util.js';
+import { getBankTransferApprovalTemplate, getBankTransferDeclineTemplate, type BankTransferApprovalData } from '../util/emailTemplates.js';
+
+import {
+    createBankTransferPaymentService,
+    getBankTransferPaymentsService,
+    getBankTransferPaymentByIdService,
+    getPendingBankTransferPaymentsService,
+    updateBankTransferPaymentService,
+    approveBankTransferPaymentService,
+    declineBankTransferPaymentService,
+    deleteBankTransferPaymentService
+} from '../services/bankTransfer.service.js';
+
 
 // Extend Request interface for multer
 declare global {
@@ -15,6 +30,7 @@ declare global {
 
 // Zod validation schemas
 const createBankTransferSchema = z.object({
+    userId: z.string().optional(), // Optional for backward compatibility when auth middleware provides it
     membershipId: z.string().min(1, 'Membership ID is required'),
     amount: z.number().min(0, 'Amount must be non-negative'),
     currency: z.string().optional(),
@@ -72,16 +88,15 @@ export const uploadReceipt = async (req: Request, res: Response) => {
 export const createBankTransferPayment = async (req: Request, res: Response) => {
     try {
         const validated = createBankTransferSchema.parse(req.body);
-        // Temporarily use a default userId for testing without authentication
-        const userId = (req as any).userId || '507f1f77bcf86cd799439011'; // Default ObjectId for testing
+        // Get userId from request body if provided, otherwise use authenticated user ID
+        const userId = validated.userId || (req as any).userId;
 
-        // Skip authentication check for now
-        // if (!userId) {
-        //     return res.status(401).json({
-        //         success: false,
-        //         message: 'Authentication required'
-        //     });
-        // }
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'User ID is required'
+            });
+        }
 
         // Check if user already has a pending bank transfer for this membership
         const existingPayment = await BankTransferPayment.findOne({
@@ -98,9 +113,9 @@ export const createBankTransferPayment = async (req: Request, res: Response) => 
         }
 
         // Create bank transfer payment record
-        const bankTransferPayment = new BankTransferPayment({
-            userId,
-            membershipId: validated.membershipId,
+        const bankTransferData: Partial<IBankTransferPayment> = {
+            userId: new mongoose.Types.ObjectId(userId),
+            membershipId: new mongoose.Types.ObjectId(validated.membershipId),
             amount: validated.amount,
             currency: validated.currency || 'LKR',
             receiptImageUrl: req.body.receiptImageUrl, // Should be provided after file upload
@@ -109,11 +124,14 @@ export const createBankTransferPayment = async (req: Request, res: Response) => 
                 accountNumber: '123456789012', // Should come from config
                 bankName: 'Bank of Ceylon',
                 accountHolder: 'ZFit Gym Management'
-            },
-            notes: validated.notes
-        });
+            }
+        };
 
-        await bankTransferPayment.save();
+        if (validated.notes) {
+            bankTransferData.notes = validated.notes;
+        }
+
+        const bankTransferPayment = await createBankTransferPaymentService(bankTransferData);
 
         res.status(201).json({
             success: true,
@@ -147,30 +165,25 @@ export const createBankTransferPayment = async (req: Request, res: Response) => 
  */
 export const getPendingBankTransfers = async (req: Request, res: Response) => {
     try {
+        // Temporarily skip admin check for testing
+        // const adminId = (req as any).userId;
+        // const adminRole = (req as any).role;
+
+        // if (!adminId || adminRole !== 'admin') {
+        //     return res.status(403).json({
+        //         success: false,
+        //         message: 'Admin access required'
+        //     });
+        // }
+
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
-        const skip = (page - 1) * limit;
 
-        const payments = await BankTransferPayment.find({ status: 'pending' })
-            .populate('userId', 'name email contactNo')
-            .populate('membershipId', 'name price')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        const total = await BankTransferPayment.countDocuments({ status: 'pending' });
+        const result = await getPendingBankTransferPaymentsService(page, limit);
 
         res.status(200).json({
             success: true,
-            data: {
-                payments,
-                pagination: {
-                    page,
-                    limit,
-                    total,
-                    pages: Math.ceil(total / limit)
-                }
-            }
+            data: result
         });
     } catch (error) {
         console.error('Error fetching pending bank transfers:', error);
@@ -189,41 +202,77 @@ export const approveBankTransfer = async (req: Request, res: Response) => {
     try {
         const { id } = bankTransferIdSchema.parse(req.params);
         const { adminNotes } = approveDeclineSchema.parse(req.body);
-        const adminId = req.user?.id;
+        // Temporarily use dummy adminId for testing since auth is disabled
+        const adminId = (req as any).userId || '507f1f77bcf86cd799439011'; // Dummy admin ID
 
-        const payment = await BankTransferPayment.findById(id);
-        if (!payment) {
-            return res.status(404).json({
-                success: false,
-                message: 'Bank transfer payment not found'
+
+        try {
+            const payment = await approveBankTransferPaymentService(id, adminId, adminNotes);
+
+            if (!payment) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Bank transfer payment not found'
+                });
+            }
+
+            // Populate user and membership data for email (already populated by service)
+            // await payment.populate([
+            //     { path: 'userId', select: 'name email contactNo' },
+            //     { path: 'membershipId', select: 'name price' }
+            // ]);
+
+            // Send approval email notification
+            try {
+                const userData = payment.userId as any;
+                const membershipData = payment.membershipId as any;
+                
+                if (userData?.email) {
+                    const template = getBankTransferApprovalTemplate({
+                        userName: userData.name || 'Customer',
+                        membershipName: membershipData?.name || 'Membership',
+                        amount: payment.amount,
+                        currency: payment.currency,
+                        transactionId: (payment._id as mongoose.Types.ObjectId).toString(),
+                        approvedDate: new Date().toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }),
+                        adminNotes: adminNotes || undefined
+                    });
+                    
+                    await sendMail({
+                        to: userData.email,
+                        subject: template.subject,
+                        text: template.text,
+                        html: template.html
+                    });
+                    
+                    console.log(`Approval email sent to ${userData.email} for bank transfer ${payment._id}`);
+                }
+            } catch (emailError) {
+                console.error('Failed to send approval email:', emailError);
+                // Don't fail the approval if email fails - log the error instead
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: 'Bank transfer payment approved successfully',
+                data: payment
             });
+        } catch (serviceError: any) {
+            // Handle service layer errors (like status validation)
+            if (serviceError.message.includes('not in pending status') || serviceError.message.includes('not found')) {
+                return res.status(400).json({
+                    success: false,
+                    message: serviceError.message
+                });
+            }
+            throw serviceError; // Re-throw if it's not a known service error
         }
-
-        if (payment.status !== 'pending') {
-            return res.status(400).json({
-                success: false,
-                message: 'Payment is not in pending status'
-            });
-        }
-
-        // Update payment status
-        payment.status = 'approved';
-        if (adminNotes) {
-            payment.adminNotes = adminNotes;
-        }
-        payment.processedBy = new mongoose.Types.ObjectId((req as any).userId);
-        payment.processedAt = new Date();
-
-        await payment.save();
-
-        // TODO: Create actual payment record and activate membership
-        // This would involve creating a Payment record and updating membership status
-
-        res.status(200).json({
-            success: true,
-            message: 'Bank transfer payment approved successfully',
-            data: payment
-        });
     } catch (error) {
         if (error instanceof z.ZodError) {
             return res.status(400).json({
@@ -249,38 +298,77 @@ export const declineBankTransfer = async (req: Request, res: Response) => {
     try {
         const { id } = bankTransferIdSchema.parse(req.params);
         const { adminNotes } = approveDeclineSchema.parse(req.body);
-        const adminId = req.user?.id;
+        // Temporarily use dummy adminId for testing since auth is disabled
+        const adminId = (req as any).userId || '507f1f77bcf86cd799439011'; // Dummy admin ID
 
-        const payment = await BankTransferPayment.findById(id);
-        if (!payment) {
-            return res.status(404).json({
-                success: false,
-                message: 'Bank transfer payment not found'
+
+        try {
+            const payment = await declineBankTransferPaymentService(id, adminId, adminNotes);
+
+            if (!payment) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Bank transfer payment not found'
+                });
+            }
+
+            // Populate user and membership data for email (already populated by service)
+            // await payment.populate([
+            //     { path: 'userId', select: 'name email contactNo' },
+            //     { path: 'membershipId', select: 'name price' }
+            // ]);
+
+            // Send decline email notification
+            try {
+                const userData = payment.userId as any;
+                const membershipData = payment.membershipId as any;
+                
+                if (userData?.email) {
+                    const template = getBankTransferDeclineTemplate({
+                        userName: userData.name || 'Customer',
+                        membershipName: membershipData?.name || 'Membership',
+                        amount: payment.amount,
+                        currency: payment.currency,
+                        transactionId: (payment._id as mongoose.Types.ObjectId).toString(),
+                        approvedDate: new Date().toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }),
+                        adminNotes: adminNotes || undefined
+                    });
+                    
+                    await sendMail({
+                        to: userData.email,
+                        subject: template.subject,
+                        text: template.text,
+                        html: template.html
+                    });
+                    
+                    console.log(`Decline email sent to ${userData.email} for bank transfer ${payment._id}`);
+                }
+            } catch (emailError) {
+                console.error('Failed to send decline email:', emailError);
+                // Don't fail the decline if email fails - log the error instead
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: 'Bank transfer payment declined',
+                data: payment
             });
+        } catch (serviceError: any) {
+            // Handle service layer errors (like status validation)
+            if (serviceError.message.includes('not in pending status') || serviceError.message.includes('not found')) {
+                return res.status(400).json({
+                    success: false,
+                    message: serviceError.message
+                });
+            }
+            throw serviceError; // Re-throw if it's not a known service error
         }
-
-        if (payment.status !== 'pending') {
-            return res.status(400).json({
-                success: false,
-                message: 'Payment is not in pending status'
-            });
-        }
-
-        // Update payment status
-        payment.status = 'declined';
-        if (adminNotes) {
-            payment.adminNotes = adminNotes;
-        }
-        payment.processedBy = new mongoose.Types.ObjectId((req as any).userId);
-        payment.processedAt = new Date();
-
-        await payment.save();
-
-        res.status(200).json({
-            success: true,
-            message: 'Bank transfer payment declined',
-            data: payment
-        });
     } catch (error) {
         if (error instanceof z.ZodError) {
             return res.status(400).json({
@@ -305,35 +393,63 @@ export const declineBankTransfer = async (req: Request, res: Response) => {
 export const getUserBankTransfers = async (req: Request, res: Response) => {
     try {
         const userId = (req as any).userId;
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
-        const skip = (page - 1) * limit;
 
-        const payments = await BankTransferPayment.find({ userId })
-            .populate('membershipId', 'name price')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+        }
 
-        const total = await BankTransferPayment.countDocuments({ userId });
+        const payments = await getBankTransferPaymentsService(userId);
 
         res.status(200).json({
             success: true,
-            data: {
-                payments,
-                pagination: {
-                    page,
-                    limit,
-                    total,
-                    pages: Math.ceil(total / limit)
-                }
-            }
+            data: payments
         });
     } catch (error) {
         console.error('Error fetching user bank transfers:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch bank transfer payments'
+        });
+    }
+};
+
+/**
+ * Delete bank transfer payment (Admin only)
+ * DELETE /api/v1/admin/payments/bank-transfer/:id
+ */
+export const deleteBankTransfer = async (req: Request, res: Response) => {
+    try {
+        const { id } = bankTransferIdSchema.parse(req.params);
+
+        const deletedPayment = await deleteBankTransferPaymentService(id);
+
+        if (!deletedPayment) {
+            return res.status(404).json({
+                success: false,
+                message: 'Bank transfer payment not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Bank transfer payment deleted successfully'
+        });
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({
+                success: false,
+                message: 'Validation error',
+                errors: error.issues
+            });
+        }
+
+        console.error('Error deleting bank transfer:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete bank transfer payment'
         });
     }
 };

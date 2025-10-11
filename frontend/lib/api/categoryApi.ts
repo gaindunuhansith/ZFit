@@ -5,14 +5,24 @@ interface ApiResponse<T = unknown> {
   data?: T
   message?: string
   error?: string
+  count?: number
 }
 
 interface CategoryData {
-  categoryName: string
-  categoryDescription: string
+  name: string
+  description?: string
 }
 
-export type { CategoryData }
+interface Category {
+  _id: string
+  name: string
+  description?: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export type { CategoryData, Category }
 
 // Base request function - EXACT SAME AS userApi.ts
 const apiRequest = async <T>(
@@ -40,44 +50,88 @@ const apiRequest = async <T>(
 
   try {
     const response = await fetch(url, config)
-    const data = await response.json()
+    
+    let data
+    try {
+      data = await response.json()
+    } catch {
+      // If JSON parsing fails, create a fallback error
+      data = { message: `HTTP error! status: ${response.status}` }
+    }
 
     if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`)
+      // Backend sends errors in 'error' field, successes in 'message' field
+      const errorMessage = data.error || data.message || `HTTP error! status: ${response.status}`
+      const error = new Error(errorMessage) as Error & {
+        response?: {
+          data: unknown
+          status: number
+          statusText: string
+        }
+        status?: number
+      }
+      error.response = { 
+        data, 
+        status: response.status,
+        statusText: response.statusText 
+      }
+      error.status = response.status
+      throw error
     }
 
     return data
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('API request failed:', error)
+    
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        response: 'response' in error ? error.response : undefined,
+        status: 'status' in error ? error.status : undefined
+      })
+      
+      // If it's a network error, provide better context
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        error.message = 'Network error - unable to connect to server'
+      }
+    }
+    
     throw error
   }
 }
 
-// Category API functions - SAME PATTERN AS userApi.ts
-export const getCategories = () => apiRequest('/inventory/categories')
+// Category API functions - Updated for new API structure
+export const getCategories = (includeInactive?: boolean) => {
+  const params = includeInactive ? '?includeInactive=true' : ''
+  return apiRequest<Category[]>(`/categories${params}`)
+}
+
+export const getCategoryById = (id: string) => 
+  apiRequest<Category>(`/categories/${id}`)
 
 export const createCategory = (categoryData: CategoryData) => {
   console.log('API createCategory called with:', categoryData)
-  return apiRequest('/inventory/categories', {
+  return apiRequest<Category>('/categories', {
     method: 'POST',
     body: JSON.stringify(categoryData),
   })
 }
 
 export const updateCategory = (id: string, categoryData: Partial<CategoryData>) =>
-  apiRequest(`/inventory/categories/${id}`, {
+  apiRequest<Category>(`/categories/${id}`, {
     method: 'PUT',
     body: JSON.stringify(categoryData),
   })
 
 export const deleteCategory = (id: string) =>
-  apiRequest(`/inventory/categories/${id}`, {
+  apiRequest<Category>(`/categories/${id}`, {
     method: 'DELETE',
   })
 
-// Combined API service - SAME PATTERN AS userApi.ts
+// Combined API service - Updated for new API structure
 export const categoryApiService = {
   getCategories,
+  getCategoryById,
   createCategory,
   updateCategory,
   deleteCategory,

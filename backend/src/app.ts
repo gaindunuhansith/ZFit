@@ -9,6 +9,9 @@ import userRouter from "./routes/user.routes.js";
 import membershipPlanRouter from "./routes/membershipPlan.routes.js";  
 import membershipRouter from "./routes/membership.routes.js";  
 import inventoryRoutes from "./routes/inventory.routes.js";  
+import categoryRoutes from "./routes/inventoryCategory.routes.js";
+import itemRoutes from "./routes/item.routes.js";
+import supplierRoutes from "./routes/inventorySuppliers.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";  
 import BookingRoutes from "./routes/Booking.routes.js";
 import progressRoutes from "./routes/progress.routes.js";
@@ -17,9 +20,13 @@ import invoiceRoutes from "./routes/invoice.routes.js";
 import gatewayRoutes from "./routes/gateway.routes.js";
 import attendanceRouter from "./routes/attendance.routes.js";
 import refundRequestRouter from "./routes/refundRequest.routes.js";
-import bankTransferRouter from "./routes/bankTransfer.routes.js";
+import bankTransferRouter, { adminRouter as bankTransferAdminRouter } from "./routes/bankTransfer.routes.js";
+import cartRoutes from "./routes/cart.routes.js";
+import inventoryTransactionRoutes from "./routes/inventoryTransaction.routes.js";
+import lowStockAlertRoutes from "./routes/lowStockAlert.routes.js";
 import errorMiddleware from "./middleware/error.middleware.js";
 import { rateLimitMiddleware } from "./middleware/rateLimit.middleware.js";
+
 
 //creating a express app instance
 const app: express.Application = express();
@@ -44,6 +51,9 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", userRouter);  
 app.use("/api/v1/membership-plans", membershipPlanRouter);  
 app.use("/api/v1/memberships", membershipRouter);  
+app.use('/api/v1', categoryRoutes);  // Categories at /api/v1/categories
+app.use('/api/v1', itemRoutes);  // Items at /api/v1/items
+app.use('/api/v1/suppliers', supplierRoutes);  // Suppliers at /api/v1/suppliers
 app.use('/api/v1/inventory', inventoryRoutes);  
 app.use('/api/v1/payments', paymentRoutes);  
 app.use('/api/v1/bookings', BookingRoutes);
@@ -54,6 +64,10 @@ app.use('/api/v1/gateways', gatewayRoutes);
 app.use('/api/v1/attendance', attendanceRouter);
 app.use('/api/v1/refund-requests', refundRequestRouter);
 app.use('/api/v1/payments/bank-transfer', bankTransferRouter);
+app.use('/api/v1/admin/payments/bank-transfer', bankTransferAdminRouter);
+app.use('/api/v1/cart', cartRoutes);
+app.use('/api/v1/transactions', inventoryTransactionRoutes);
+app.use('/api/v1/inventory/low-stock', lowStockAlertRoutes);
 
 app.use(errorMiddleware);
 

@@ -27,7 +27,7 @@ const apiRequest = async <T>(
     const data = await response.json()
 
     if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`)
+      throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`)
     }
 
     return data
@@ -39,10 +39,38 @@ const apiRequest = async <T>(
 
 // Auth API functions
 export const sendPasswordResetEmail = (email: string) =>
-  apiRequest('/api/v1/auth/password/forget', {
+  apiRequest('/api/v1/auth/password/forgot', {
     method: 'POST',
     body: JSON.stringify({ email }),
   })
+
+export const sendEmailVerification = (email: string) =>
+  apiRequest('/api/v1/auth/email/verification', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+
+export const validateResetCode = async (code: string) => {
+  const url = `${API_BASE_URL}/api/v1/auth/password/validate/${code}`
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`)
+    }
+
+    return data
+  } catch (error) {
+    // Don't log validation errors to console as invalid codes are expected
+    throw error
+  }
+}
 
 export const resetPassword = (password: string, verificationCode: string) =>
   apiRequest('/api/v1/auth/password/reset', {
@@ -53,5 +81,7 @@ export const resetPassword = (password: string, verificationCode: string) =>
 // Combined API service for backward compatibility
 export const authApi = {
   sendPasswordResetEmail,
+  sendEmailVerification,
+  validateResetCode,
   resetPassword,
 }

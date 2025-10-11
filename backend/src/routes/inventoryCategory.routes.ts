@@ -6,22 +6,24 @@ import {
   updateCategory,
   deleteCategory,
 } from '../controllers/inventoryCategory.controller.js';
+// import authenticate from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
-// POST   /api/v1/inventory/categories
+// Category management routes
+// POST   /api/v1/categories - Create a new category
 router.post('/categories', createCategory);
 
-// GET    /api/v1/inventory/categories
+// GET    /api/v1/categories - Get all categories (query param: includeInactive=true to include inactive)
 router.get('/categories', getAllCategories);
 
-// GET    /api/v1/inventory/categories/:id
-router.get('/categories/:id',  getCategoryById);
+// GET    /api/v1/categories/:id - Get category by ID
+router.get('/categories/:id', getCategoryById);
 
-// PUT    /api/v1/inventory/categories/:id
-router.put('/categories/:id',  updateCategory);
+// PUT    /api/v1/categories/:id - Update category (name/description)
+router.put('/categories/:id', updateCategory);
 
-// DELETE /api/v1/inventory/categories/:id
-router.delete('/categories/:id',  deleteCategory);
+// DELETE /api/v1/categories/:id - Delete category (blocked if items exist)
+router.delete('/categories/:id', deleteCategory);
 
 export default router;

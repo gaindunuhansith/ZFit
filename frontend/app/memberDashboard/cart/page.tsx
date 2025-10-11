@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { cartApi, type Cart, type CartItem } from '@/lib/api/cartApi'
+import { initiatePayHerePayment, type PayHerePaymentRequest } from '@/lib/api/paymentApi'
 
 export default function CartPage() {
   const { user } = useAuth()
@@ -105,40 +106,77 @@ export default function CartPage() {
 
   const getTotalPrice = () => {
     if (!cart?.items) return 0
-    return cart.items.reduce((total, item) => total + (item.itemId.price * item.quantity), 0)
+    return cart.items.reduce((total, item) => total + ((item.itemId.price || 0) * item.quantity), 0)
   }
 
-  const handleCheckout = () => {
-    if (!cart?.items || cart.items.length === 0) return
+  const handleCheckout = async () => {
+    if (!cart?.items || cart.items.length === 0 || !user) return
 
-    // Prepare cart payment data
-    const cartPaymentData = {
-      type: 'cart',
-      items: cart.items.map(item => ({
-        _id: item.itemId._id,
-        itemName: item.itemId.itemName,
-        price: item.itemId.price,
-        cartQuantity: item.quantity,
-        quantity: item.itemId.quantity
-      })),
-      totalAmount: getTotalPrice(),
-      totalItems: getTotalItems(),
-      currency: 'LKR'
+    setLoading(true)
+    setError('')
+
+    try {
+      // Prepare PayHere payment request
+      const nameParts = (user.name || 'Customer').split(' ')
+      const paymentRequest: PayHerePaymentRequest = {
+        userId: user._id,
+        amount: getTotalPrice(),
+        currency: 'LKR',
+        type: 'other' as const,
+        relatedId: '', // Cart payments don't have a single related ID
+        description: `Purchase of ${getTotalItems()} items from ZFit Store`,
+        customerFirstName: nameParts[0] || 'Customer',
+        customerLastName: nameParts.slice(1).join(' ') || 'User',
+        customerEmail: user.email || 'customer@example.com',
+        customerPhone: user.contactNo || '0000000000',
+        customerAddress: user.profile?.address || 'No address provided',
+        customerCity: 'Colombo', // Default city
+      }
+
+      console.log('Initiating PayHere cart payment:', paymentRequest)
+
+      const response = await initiatePayHerePayment(paymentRequest)
+
+      if (response.paymentForm) {
+        console.log('Payment form received, submitting...')
+
+        // Create form in current window and submit immediately
+        const formContainer = document.createElement('div')
+        formContainer.innerHTML = response.paymentForm
+        document.body.appendChild(formContainer)
+
+        // Find the form and submit it manually
+        const paymentForm = document.getElementById('payhere-form') as HTMLFormElement
+        if (paymentForm) {
+          setTimeout(() => {
+            paymentForm.submit()
+          }, 100)
+        } else {
+          throw new Error('Payment form element not found')
+        }
+      } else {
+        throw new Error('Payment form not received')
+      }
+    } catch (err) {
+      console.error('Payment initiation failed:', err)
+      setError(err instanceof Error ? err.message : 'Payment initiation failed. Please try again.')
+    } finally {
+      setLoading(false)
     }
-
-    // Store cart data in localStorage
-    localStorage.setItem('cartPaymentData', JSON.stringify(cartPaymentData))
-
-    // Navigate to payment method page
-    router.push('/payment/method')
   }
 
   const isOutOfStock = (item: CartItem) => {
-    return item.itemId.quantity === 0
+    return (item.itemId.stock || 0) === 0
   }
 
   const getMaxQuantity = (item: CartItem) => {
-    return item.itemId.quantity
+    return item.itemId.stock || 0
+  }
+
+  const getAvailableStock = (item: CartItem) => {
+    const totalStock = item.itemId.stock || 0
+    const currentQuantity = item.quantity || 0
+    return Math.max(0, totalStock - currentQuantity)
   }
 
   if (loading) {
@@ -222,7 +260,7 @@ export default function CartPage() {
             <ShoppingCart className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold mb-2">Your cart is empty</h3>
             <p className="text-muted-foreground text-center mb-6">
-              Browse our supplement store and add items to your cart.
+              Browse our store and add items to your cart.
             </p>
             <Button onClick={() => router.push('/memberDashboard/store')}>
               <Package className="w-4 h-4 mr-2" />
@@ -246,18 +284,21 @@ export default function CartPage() {
                     {/* Item Details */}
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-lg mb-1 truncate">
-                        {item.itemId.itemName}
+                        {item.itemId.name}
                       </h3>
-                      {item.itemId.itemDescription && (
-                        <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                          {item.itemId.itemDescription}
-                        </p>
-                      )}
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="text-xs">
+                          {typeof item.itemId.categoryID === 'object' ? item.itemId.categoryID.name : 'No category'}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          Available: {getAvailableStock(item)} / Total: {item.itemId.stock || 0}
+                        </Badge>
+                      </div>
                       <div className="flex items-center gap-4">
                         <p className="text-lg font-bold text-primary">
-                          LKR {item.itemId.price.toFixed(2)}
+                          LKR {(item.itemId.price || 0).toFixed(2)}
                         </p>
-                        {item.itemId.supplierID && (
+                        {typeof item.itemId.supplierID === 'object' && item.itemId.supplierID && (
                           <Badge variant="secondary" className="text-xs">
                             {item.itemId.supplierID.supplierName}
                           </Badge>
@@ -277,17 +318,19 @@ export default function CartPage() {
                         size="sm"
                         onClick={() => updateItemQuantity(item.itemId._id, item.quantity - 1)}
                         disabled={updating === item.itemId._id || item.quantity <= 1}
+                        title="Decrease quantity"
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
                       <div className="w-12 text-center font-medium">
-                        {item.quantity}
+                        {updating === item.itemId._id ? '...' : item.quantity}
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => updateItemQuantity(item.itemId._id, item.quantity + 1)}
-                        disabled={updating === item.itemId._id || item.quantity >= getMaxQuantity(item)}
+                        disabled={updating === item.itemId._id || item.quantity >= getMaxQuantity(item) || isOutOfStock(item)}
+                        title={`Increase quantity (Max: ${getMaxQuantity(item)})`}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -296,7 +339,7 @@ export default function CartPage() {
                     {/* Item Total & Remove */}
                     <div className="text-right">
                       <p className="text-lg font-bold mb-2">
-                        LKR {(item.itemId.price * item.quantity).toFixed(2)}
+                        LKR {((item.itemId.price || 0) * item.quantity).toFixed(2)}
                       </p>
                       <Button
                         variant="ghost"
@@ -356,10 +399,19 @@ export default function CartPage() {
                   className="w-full"
                   size="lg"
                   onClick={handleCheckout}
-                  disabled={!cart?.items || cart.items.length === 0}
+                  disabled={!cart?.items || cart.items.length === 0 || loading}
                 >
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Proceed to Checkout
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 mr-2 animate-spin border-2 border-current border-t-transparent rounded-full" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Proceed to Checkout
+                    </>
+                  )}
                 </Button>
 
                 <div className="text-center">

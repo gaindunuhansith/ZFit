@@ -2,40 +2,8 @@
 import puppeteer from 'puppeteer'
 import { getAllMemberships } from './membership.service.js'
 import { getPaymentsService } from './payment.services.js'
-
-/**
- * Generic Report Service for generating PDF reports
- *
- * Usage Examples:
- *
- * // For Users Report
- * const userConfig: ReportConfig = {
- *   title: 'Users Report',
- *   companyName: 'ZFit Gym Management System',
- *   columns: [
- *     { key: 'name', header: 'Name' },
- *     { key: 'email', header: 'Email' },
- *     { key: 'role', header: 'Role', type: 'status' },
- *     { key: 'createdAt', header: 'Created Date', type: 'date' }
- *   ],
- *   data: users
- * }
- *
- * // For Staff Report
- * const staffConfig: ReportConfig = {
- *   title: 'Staff Report',
- *   columns: [
- *     { key: 'name', header: 'Name' },
- *     { key: 'position', header: 'Position' },
- *     { key: 'salary', header: 'Salary', type: 'currency' },
- *     { key: 'hireDate', header: 'Hire Date', type: 'date' }
- *   },
- *   data: staff
- * }
- *
- * // Generate report
- * const pdfBuffer = await generateGenericReport(config)
- */
+import { getRefundRequestsService } from './refundRequest.services.js'
+import { getInvoicesService } from './invoice.services.js'
 
 export interface ReportColumn {
   key: string
@@ -51,6 +19,107 @@ export interface ReportConfig {
   columns: ReportColumn[]
   data: any[]
   customStyles?: string
+}
+
+export interface InventoryReportFilters {
+  searchTerm?: string | undefined
+  categoryId?: string | undefined
+  type?: string | undefined
+  lowStockOnly?: boolean | undefined
+  supplierId?: string | undefined
+  minStock?: number | undefined
+  maxStock?: number | undefined
+}
+
+export interface UserReportFilters {
+  searchTerm?: string | undefined
+  status?: string | undefined
+}
+
+export interface MembershipReportFilters {
+  searchTerm?: string | undefined
+  status?: string | undefined
+  planId?: string | undefined
+}
+
+export interface MembershipPlanReportFilters {
+  searchTerm?: string | undefined
+  category?: string | undefined
+}
+
+export interface PaymentReportFilters {
+  searchTerm?: string | undefined
+  status?: string | undefined
+  type?: string | undefined
+  method?: string | undefined
+}
+
+export interface InvoiceReportFilters {
+  searchTerm?: string | undefined
+  status?: string | undefined
+}
+
+export interface RefundRequestReportFilters {
+  searchTerm?: string | undefined
+  status?: string | undefined
+}
+
+/**
+ * Apply filters to inventory items array
+ */
+function applyInventoryFilters(items: any[], filters: InventoryReportFilters): any[] {
+  let filteredItems = [...items]
+
+  // Filter by search term (item name)
+  if (filters.searchTerm) {
+    const searchLower = filters.searchTerm.toLowerCase()
+    filteredItems = filteredItems.filter(item => 
+      item.name?.toLowerCase().includes(searchLower) ||
+      (typeof item.categoryID === 'object' ? item.categoryID?.name?.toLowerCase().includes(searchLower) : false) ||
+      (typeof item.supplierID === 'object' ? item.supplierID?.supplierName?.toLowerCase().includes(searchLower) : false)
+    )
+  }
+
+  // Filter by category
+  if (filters.categoryId) {
+    filteredItems = filteredItems.filter(item => {
+      const categoryId = typeof item.categoryID === 'object' ? item.categoryID?._id?.toString() : item.categoryID?.toString()
+      return categoryId === filters.categoryId
+    })
+  }
+
+  // Filter by type
+  if (filters.type) {
+    filteredItems = filteredItems.filter(item => item.type === filters.type)
+  }
+
+  // Filter by supplier
+  if (filters.supplierId) {
+    filteredItems = filteredItems.filter(item => {
+      const supplierId = typeof item.supplierID === 'object' ? item.supplierID?._id?.toString() : item.supplierID?.toString()
+      return supplierId === filters.supplierId
+    })
+  }
+
+  // Filter by stock range
+  if (filters.minStock !== undefined) {
+    filteredItems = filteredItems.filter(item => (item.stock || 0) >= filters.minStock!)
+  }
+
+  if (filters.maxStock !== undefined) {
+    filteredItems = filteredItems.filter(item => (item.stock || 0) <= filters.maxStock!)
+  }
+
+  // Filter by low stock only
+  if (filters.lowStockOnly) {
+    filteredItems = filteredItems.filter(item => {
+      const currentStock = item.stock || 0
+      const alertThreshold = item.lowStockAlert || 10
+      return currentStock <= alertThreshold
+    })
+  }
+
+  return filteredItems
 }
 
 /**
@@ -213,8 +282,8 @@ function generateGenericHTML(config: ReportConfig): string {
         thead th {
           color: #000000;
           font-weight: 600;
-          font-size: 14px;
-          padding: 16px 12px;
+          font-size: 12px;
+          padding: 12px 8px;
           text-align: left;
           text-transform: uppercase;
           letter-spacing: 0.5px;
@@ -234,9 +303,9 @@ function generateGenericHTML(config: ReportConfig): string {
         }
 
         tbody td {
-          padding: 14px 12px;
+          padding: 10px 8px;
           color: #000000;
-          font-size: 14px;
+          font-size: 11px;
           vertical-align: middle;
         }
 
@@ -248,11 +317,12 @@ function generateGenericHTML(config: ReportConfig): string {
         .user-name {
           font-weight: 500;
           color: #000000;
+          font-size: 11px;
           margin-bottom: 2px;
         }
 
         .user-email {
-          font-size: 12px;
+          font-size: 10px;
           color: #666666;
         }
 
@@ -264,20 +334,21 @@ function generateGenericHTML(config: ReportConfig): string {
         .plan-name {
           font-weight: 500;
           color: #000000;
+          font-size: 11px;
           margin-bottom: 2px;
         }
 
         .plan-price {
-          font-size: 12px;
+          font-size: 10px;
           color: #666666;
         }
 
         .status-badge {
           display: inline-flex;
           align-items: center;
-          padding: 4px 8px;
+          padding: 3px 6px;
           border-radius: 6px;
-          font-size: 11px;
+          font-size: 9px;
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.5px;
@@ -303,12 +374,32 @@ function generateGenericHTML(config: ReportConfig): string {
           color: #000000;
         }
 
+        .status-completed {
+          background-color: #AAFF69;
+          color: #000000;
+        }
+
+        .status-pending {
+          background-color: #f59e0b;
+          color: #000000;
+        }
+
+        .status-failed {
+          background-color: #EF4444;
+          color: #ffffff;
+        }
+
+        .status-refunded {
+          background-color: #6c757d;
+          color: #ffffff;
+        }
+
         .auto-renew-badge {
           display: inline-flex;
           align-items: center;
-          padding: 4px 8px;
+          padding: 3px 6px;
           border-radius: 6px;
-          font-size: 11px;
+          font-size: 9px;
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.5px;
@@ -326,15 +417,32 @@ function generateGenericHTML(config: ReportConfig): string {
 
         .date-cell {
           font-family: 'Inter', monospace;
-          font-size: 13px;
+          font-size: 11px;
           color: #000000;
         }
 
         .transaction-id {
           font-family: 'Inter', monospace;
-          font-size: 12px;
+          font-size: 10px;
           color: #666666;
           font-weight: 500;
+        }
+
+        .user-name-cell {
+          font-weight: 500;
+          color: #000000;
+        }
+
+        .currency-cell {
+          font-family: 'Inter', monospace;
+          text-align: center;
+          font-weight: 500;
+        }
+
+        .date-cell {
+          font-family: 'Inter', monospace;
+          font-size: 13px;
+          color: #000000;
         }
 
         ${customStyles}
@@ -411,7 +519,7 @@ function generateGenericHTML(config: ReportConfig): string {
                     } else if (col.type === 'date' && value) {
                       displayValue = new Date(value as string).toLocaleDateString()
                     } else if (col.type === 'currency' && typeof value === 'number') {
-                      displayValue = '$' + value.toFixed(2)
+                      displayValue = 'LKR ' + value.toFixed(2)
                     } else if (col.type === 'boolean') {
                       displayValue = value ? 'Yes' : 'No'
                     } else {
@@ -450,12 +558,37 @@ export async function generateGenericReport(config: ReportConfig): Promise<Buffe
 /**
  * Generate memberships report
  */
-export async function generateMembershipsReport(): Promise<Buffer> {
+export async function generateMembershipsReport(filters?: MembershipReportFilters): Promise<Buffer> {
   // Get all memberships data
-  const memberships = await getAllMemberships()
+  let memberships = await getAllMemberships()
+
+  // Apply filters if provided
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      memberships = memberships.filter((membership: any) => 
+        membership.userId?.name?.toLowerCase().includes(searchLower) ||
+        membership.userId?.email?.toLowerCase().includes(searchLower) ||
+        membership.membershipPlanId?.name?.toLowerCase().includes(searchLower)
+      )
+    }
+
+    if (filters.status) {
+      memberships = memberships.filter((membership: any) => 
+        membership.status?.toLowerCase() === filters.status?.toLowerCase()
+      )
+    }
+
+    if (filters.planId) {
+      memberships = memberships.filter((membership: any) => 
+        membership.membershipPlanId?._id === filters.planId ||
+        membership.membershipPlanId === filters.planId
+      )
+    }
+  }
 
   const config: ReportConfig = {
-    title: 'Memberships Report',
+    title: filters?.searchTerm || filters?.status || filters?.planId ? 'Memberships Report (Filtered)' : 'Memberships Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -474,7 +607,7 @@ export async function generateMembershipsReport(): Promise<Buffer> {
         formatter: (value, row) => `
           <div class="plan-info">
             <div class="plan-name">${(row as any)?.membershipPlanId?.name || 'N/A'}</div>
-            <div class="plan-price">${(row as any)?.membershipPlanId?.price ? '$' + (row as any).membershipPlanId.price : 'N/A'}</div>
+            <div class="plan-price">${(row as any)?.membershipPlanId?.price ? 'LKR ' + (row as any).membershipPlanId.price : 'N/A'}</div>
           </div>
         `
       },
@@ -517,13 +650,31 @@ export async function generateMembershipsReport(): Promise<Buffer> {
 /**
  * Generate membership plans report
  */
-export async function generateMembershipPlansReport(): Promise<Buffer> {
+export async function generateMembershipPlansReport(filters?: MembershipPlanReportFilters): Promise<Buffer> {
   // Get all membership plans data
   const { getAllMembershipPlans } = await import('./membershipPlan.service.js')
-  const membershipPlans = await getAllMembershipPlans()
+  let membershipPlans = await getAllMembershipPlans()
+
+  // Apply filters if provided
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      membershipPlans = membershipPlans.filter((plan: any) => 
+        plan.name?.toLowerCase().includes(searchLower) ||
+        plan.description?.toLowerCase().includes(searchLower) ||
+        plan.category?.toLowerCase().includes(searchLower)
+      )
+    }
+
+    if (filters.category) {
+      membershipPlans = membershipPlans.filter((plan: any) => 
+        plan.category?.toLowerCase() === filters.category?.toLowerCase()
+      )
+    }
+  }
 
   const config: ReportConfig = {
-    title: 'Membership Plans Report',
+    title: filters?.searchTerm || filters?.category ? 'Membership Plans Report (Filtered)' : 'Membership Plans Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -574,13 +725,31 @@ export async function generateMembershipPlansReport(): Promise<Buffer> {
 /**
  * Generate members report
  */
-export async function generateMembersReport(): Promise<Buffer> {
+export async function generateMembersReport(filters?: UserReportFilters): Promise<Buffer> {
   // Get all members data
   const { getAllMembers } = await import('./user.service.js')
-  const members = await getAllMembers()
+  let members = await getAllMembers()
+
+  // Apply filters if provided
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      members = members.filter((member: any) => 
+        member.name?.toLowerCase().includes(searchLower) ||
+        member.email?.toLowerCase().includes(searchLower) ||
+        member.contactNo?.toLowerCase().includes(searchLower)
+      )
+    }
+
+    if (filters.status) {
+      members = members.filter((member: any) => 
+        member.status?.toLowerCase() === filters.status?.toLowerCase()
+      )
+    }
+  }
 
   const config: ReportConfig = {
-    title: 'Members Report',
+    title: filters?.searchTerm || filters?.status ? 'Members Report (Filtered)' : 'Members Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -616,13 +785,31 @@ export async function generateMembersReport(): Promise<Buffer> {
 /**
  * Generate staff report
  */
-export async function generateStaffReport(): Promise<Buffer> {
+export async function generateStaffReport(filters?: UserReportFilters): Promise<Buffer> {
   // Get all staff data
   const { getAllStaff } = await import('./user.service.js')
-  const staff = await getAllStaff()
+  let staff = await getAllStaff()
+
+  // Apply filters if provided
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      staff = staff.filter((member: any) => 
+        member.name?.toLowerCase().includes(searchLower) ||
+        member.email?.toLowerCase().includes(searchLower) ||
+        member.contactNo?.toLowerCase().includes(searchLower)
+      )
+    }
+
+    if (filters.status) {
+      staff = staff.filter((member: any) => 
+        member.status?.toLowerCase() === filters.status?.toLowerCase()
+      )
+    }
+  }
 
   const config: ReportConfig = {
-    title: 'Staff Report',
+    title: filters?.searchTerm || filters?.status ? 'Staff Report (Filtered)' : 'Staff Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -658,13 +845,31 @@ export async function generateStaffReport(): Promise<Buffer> {
 /**
  * Generate managers report
  */
-export async function generateManagersReport(): Promise<Buffer> {
+export async function generateManagersReport(filters?: UserReportFilters): Promise<Buffer> {
   // Get all managers data
   const { getAllManagers } = await import('./user.service.js')
-  const managers = await getAllManagers()
+  let managers = await getAllManagers()
+
+  // Apply filters if provided
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      managers = managers.filter((member: any) => 
+        member.name?.toLowerCase().includes(searchLower) ||
+        member.email?.toLowerCase().includes(searchLower) ||
+        member.contactNo?.toLowerCase().includes(searchLower)
+      )
+    }
+
+    if (filters.status) {
+      managers = managers.filter((member: any) => 
+        member.status?.toLowerCase() === filters.status?.toLowerCase()
+      )
+    }
+  }
 
   const config: ReportConfig = {
-    title: 'Managers Report',
+    title: filters?.searchTerm || filters?.status ? 'Managers Report (Filtered)' : 'Managers Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -698,50 +903,61 @@ export async function generateManagersReport(): Promise<Buffer> {
 }
 
 /**
- * Generate Inventory Items Report
+ * Generate Inventory Items Report with optional filters
  */
-export async function generateInventoryItemsReport(): Promise<Buffer> {
+export async function generateInventoryItemsReport(filters?: InventoryReportFilters): Promise<Buffer> {
   const inventoryService = new (await import('./inventoryItem.service.js')).default()
-  const items = await inventoryService.getAllItems()
+  let items = await inventoryService.getAllItems()
+
+  // Apply filters if provided
+  if (filters) {
+    items = applyInventoryFilters(items, filters)
+  }
+
+  const reportTitle = filters && Object.values(filters).some(v => v !== undefined && v !== '') 
+    ? 'Filtered Inventory Items Report' 
+    : 'Inventory Items Report'
 
   const config: ReportConfig = {
-    title: 'Inventory Items Report',
+    title: reportTitle,
     companyName: 'ZFit Gym Management System',
     columns: [
       {
-        key: 'itemName',
+        key: 'name',
         header: 'Item Name',
         className: 'item-name-cell'
       },
       {
         key: 'categoryID',
         header: 'Category',
-        className: 'category-cell'
+        formatter: (value) => typeof value === 'object' ? value?.name || 'Unknown Category' : value || 'Unknown Category'
       },
       {
         key: 'supplierID',
         header: 'Supplier',
-        formatter: (value) => value?.supplierName || 'No Supplier'
+        formatter: (value) => typeof value === 'object' ? value?.supplierName || 'No Supplier' : 'No Supplier'
       },
       {
-        key: 'quantity',
+        key: 'stock',
         header: 'Current Stock',
-        className: 'quantity-cell'
+        className: 'quantity-cell',
+        formatter: (value) => value || '0'
       },
       {
         key: 'price',
         header: 'Price (LKR)',
-        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+        formatter: (value) => value ? `LKR ${value.toFixed(2)}` : 'N/A'
       },
       {
-        key: 'lowStockThreshold',
+        key: 'lowStockAlert',
         header: 'Low Stock Alert',
-        className: 'threshold-cell'
+        className: 'threshold-cell',
+        formatter: (value) => value || 'Not Set'
       },
       {
-        key: 'maintenanceStatus',
-        header: 'Status',
-        formatter: (value) => `<span class="status-badge status-${value}">${value.replace('_', ' ').toUpperCase()}</span>`
+        key: 'type',
+        header: 'Type',
+        formatter: (value) => value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Unknown'
       }
     ],
     data: items as any[]
@@ -753,12 +969,35 @@ export async function generateInventoryItemsReport(): Promise<Buffer> {
 /**
  * Generate Stock Levels Report
  */
-export async function generateStockLevelsReport(): Promise<Buffer> {
-  const reportService = new (await import('./reportService.js')).default()
-  const stockData = await reportService.getStockLevels()
+export async function generateStockLevelsReport(filters?: InventoryReportFilters): Promise<Buffer> {
+  const inventoryService = new (await import('./inventoryItem.service.js')).default()
+  let items = await inventoryService.getAllItems()
+
+  // Filter only sellable items for stock report
+  items = items.filter((item: any) => item.type === 'sellable')
+
+  // Apply additional filters if provided
+  if (filters) {
+    items = applyInventoryFilters(items, filters)
+  }
+
+  // Transform data for stock report
+  const stockData = items.map((item: any) => ({
+    name: item.name,
+    category: typeof item.categoryID === 'object' ? item.categoryID?.name : 'Unknown Category',
+    supplier: typeof item.supplierID === 'object' ? item.supplierID?.supplierName : 'No Supplier',
+    quantity: item.stock || 0,
+    lowStock: (item.stock || 0) < (item.lowStockAlert || 10),
+    lowStockAlert: item.lowStockAlert || 'Not Set',
+    price: item.price || 0
+  }))
+
+  const reportTitle = filters && Object.values(filters).some(v => v !== undefined && v !== '') 
+    ? 'Filtered Stock Levels Report' 
+    : 'Stock Levels Report'
 
   const config: ReportConfig = {
-    title: 'Stock Levels Report',
+    title: reportTitle,
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -773,13 +1012,22 @@ export async function generateStockLevelsReport(): Promise<Buffer> {
       },
       {
         key: 'supplier',
-        header: 'Supplier',
-        formatter: (value) => value?.supplierName || 'No Supplier'
+        header: 'Supplier'
       },
       {
         key: 'quantity',
         header: 'Current Stock',
         className: 'quantity-cell'
+      },
+      {
+        key: 'lowStockAlert',
+        header: 'Low Stock Alert',
+        className: 'threshold-cell'
+      },
+      {
+        key: 'price',
+        header: 'Price (LKR)',
+        formatter: (value) => value ? `LKR ${value.toFixed(2)}` : 'N/A'
       },
       {
         key: 'lowStock',
@@ -798,12 +1046,27 @@ export async function generateStockLevelsReport(): Promise<Buffer> {
 /**
  * Generate Suppliers Report
  */
-export async function generateSuppliersReport(): Promise<Buffer> {
+export async function generateSuppliersReport(searchTerm?: string): Promise<Buffer> {
   const supplierService = new (await import('./inventorySupplier.service.js')).default()
-  const suppliers = await supplierService.getAllSuppliers()
+  let suppliers = await supplierService.getAllSuppliers()
+
+  // Apply search filter if provided
+  if (searchTerm) {
+    const searchLower = searchTerm.toLowerCase()
+    suppliers = suppliers.filter((supplier: any) => 
+      supplier.supplierName?.toLowerCase().includes(searchLower) ||
+      supplier.supplierEmail?.toLowerCase().includes(searchLower) ||
+      supplier.supplierPhone?.toLowerCase().includes(searchLower) ||
+      supplier.supplierAddress?.toLowerCase().includes(searchLower)
+    )
+  }
+
+  const reportTitle = searchTerm 
+    ? 'Filtered Suppliers Report' 
+    : 'Suppliers Report'
 
   const config: ReportConfig = {
-    title: 'Suppliers Report',
+    title: reportTitle,
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -834,6 +1097,67 @@ export async function generateSuppliersReport(): Promise<Buffer> {
       }
     ],
     data: suppliers as any[]
+  }
+
+  return generateGenericReport(config)
+}
+
+/**
+ * Generate Categories Report
+ */
+export async function generateCategoriesReport(filters?: { searchTerm?: string; activeOnly?: boolean }): Promise<Buffer> {
+  const Category = (await import('../models/category.model.js')).default
+  const query: any = {}
+
+  // Filter by active status if specified
+  if (filters?.activeOnly) {
+    query.isActive = true
+  }
+
+  let categories = await Category.find(query).sort({ name: 1 })
+
+  // Apply search filter if provided
+  if (filters?.searchTerm) {
+    const searchLower = filters.searchTerm.toLowerCase()
+    categories = categories.filter((category: any) => 
+      category.name?.toLowerCase().includes(searchLower) ||
+      category.description?.toLowerCase().includes(searchLower)
+    )
+  }
+
+  const reportTitle = (filters?.searchTerm || filters?.activeOnly) 
+    ? 'Filtered Categories Report' 
+    : 'Categories Report'
+
+  const config: ReportConfig = {
+    title: reportTitle,
+    columns: [
+      {
+        key: 'name',
+        header: 'Category Name',
+        className: 'name-cell'
+      },
+      {
+        key: 'description',
+        header: 'Description',
+        className: 'description-cell',
+        formatter: (value) => value || 'No description'
+      },
+      {
+        key: 'isActive',
+        header: 'Status',
+        formatter: (value) => value ? 
+          '<span class="status-badge status-good">ACTIVE</span>' : 
+          '<span class="status-badge status-inactive">INACTIVE</span>'
+      },
+      {
+        key: 'createdAt',
+        header: 'Created Date',
+        type: 'date',
+        className: 'date-cell'
+      }
+    ],
+    data: categories as any[]
   }
 
   return generateGenericReport(config)
@@ -906,12 +1230,46 @@ export async function generateRefundsReport(): Promise<Buffer> {
 /**
  * Generate Invoices Report
  */
-export async function generateInvoicesReport(): Promise<Buffer> {
-  const { getInvoicesService } = await import('./invoice.services.js')
-  const invoices = await getInvoicesService()
+export async function generateInvoicesReport(filters?: InvoiceReportFilters): Promise<Buffer> {
+  let invoices = await getInvoicesService()
+
+  // Apply filters if provided (matching frontend logic exactly)
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      invoices = invoices.filter((invoice: any) => 
+        invoice.number?.toLowerCase().includes(searchLower) ||
+        invoice.status?.toLowerCase().includes(searchLower)
+      )
+    }
+
+    if (filters.status && filters.status !== 'all') {
+      invoices = invoices.filter((invoice: any) => 
+        invoice.status === filters.status
+      )
+    }
+  }
+
+  // Format the invoices data for clean display
+  const formattedInvoices = invoices.map(invoice => ({
+    number: invoice.number || 'N/A',
+    paymentId: typeof invoice.paymentId === 'object' && invoice.paymentId !== null
+      ? (invoice.paymentId as any).transactionId || (invoice.paymentId as any)._id || 'N/A'
+      : invoice.paymentId || 'N/A',
+    userId: typeof invoice.userId === 'object' && invoice.userId !== null
+      ? (invoice.userId as any).name || 'N/A'
+      : 'N/A',
+    subtotal: invoice.subtotal || 0,
+    tax: invoice.tax || 0,
+    discount: invoice.discount || 0,
+    total: invoice.total || 0,
+    status: invoice.status || 'N/A',
+    dueDate: invoice.dueDate || invoice.createdAt || new Date(),
+    generatedAt: invoice.generatedAt || invoice.createdAt || new Date()
+  }))
 
   const config: ReportConfig = {
-    title: 'Invoices Report',
+    title: filters?.searchTerm || filters?.status ? 'Invoices Report (Filtered)' : 'Invoices Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -926,35 +1284,37 @@ export async function generateInvoicesReport(): Promise<Buffer> {
       },
       {
         key: 'userId',
-        header: 'User ID',
-        className: 'user-id-cell'
+        header: 'User Name',
+        className: 'user-name-cell'
       },
       {
         key: 'subtotal',
         header: 'Subtotal',
-        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+        formatter: (value) => `LKR ${Number(value)?.toFixed(2) || '0.00'}`
       },
       {
         key: 'tax',
         header: 'Tax',
-        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+        formatter: (value) => `LKR ${Number(value)?.toFixed(2) || '0.00'}`
       },
       {
         key: 'discount',
         header: 'Discount',
-        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+        formatter: (value) => `LKR ${Number(value)?.toFixed(2) || '0.00'}`
       },
       {
         key: 'total',
         header: 'Total Amount',
-        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
+        formatter: (value) => `LKR ${Number(value)?.toFixed(2) || '0.00'}`
       },
       {
+
         key: 'status',
         header: 'Status',
-        formatter: (value) => `<span class="status-badge status-${value}">${value.toUpperCase()}</span>`
+        formatter: (value) => `<span class="status-badge status-${String(value).toLowerCase()}">${String(value).toUpperCase()}</span>`
       },
       {
+
         key: 'dueDate',
         header: 'Due Date',
         type: 'date',
@@ -967,7 +1327,7 @@ export async function generateInvoicesReport(): Promise<Buffer> {
         className: 'date-cell'
       }
     ],
-    data: invoices as any[]
+    data: formattedInvoices as any[]
   }
 
   return generateGenericReport(config)
@@ -976,11 +1336,86 @@ export async function generateInvoicesReport(): Promise<Buffer> {
 /**
  * Generate Payments Report
  */
-export async function generatePaymentsReport(): Promise<Buffer> {
-  const payments = await getPaymentsService('')
+export async function generatePaymentsReport(filters?: PaymentReportFilters): Promise<Buffer> {
+  let payments = await getPaymentsService('')
+
+  // Get refund requests to calculate effective payment status (matching frontend logic)
+  let refundRequests: any[] = []
+  try {
+    refundRequests = await getRefundRequestsService()
+  } catch (error) {
+    console.warn('Could not fetch refund requests for payment status calculation:', error)
+    refundRequests = []
+  }
+
+  // Helper function to get effective payment status (matching frontend logic exactly)
+  const getEffectivePaymentStatus = (payment: any) => {
+    const hasApprovedRefund = refundRequests.some((refund: any) => {
+      const refundPaymentId = typeof refund.paymentId === 'string' 
+        ? refund.paymentId 
+        : refund.paymentId?._id || refund.paymentId
+      return refundPaymentId === payment._id && refund.status === 'approved'
+    })
+    
+    return hasApprovedRefund ? 'refunded' : payment.status
+  }
+
+  // Apply filters if provided (matching frontend logic exactly)
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      payments = payments.filter((payment: any) => 
+        payment.transactionId?.toLowerCase().includes(searchLower) ||
+        payment._id?.toString().toLowerCase().includes(searchLower)
+      )
+    }
+
+    if (filters.status && filters.status !== 'all') {
+      payments = payments.filter((payment: any) => 
+        getEffectivePaymentStatus(payment) === filters.status
+      )
+    }
+
+    if (filters.type && filters.type !== 'all') {
+      payments = payments.filter((payment: any) => 
+        payment.type === filters.type
+      )
+    }
+
+    if (filters.method && filters.method !== 'all') {
+      payments = payments.filter((payment: any) => 
+        payment.method === filters.method
+      )
+    }
+  }
+
+  // Helper function to get effective payment status (reuse the function defined above)
+  const getEffectivePaymentStatusForReport = (payment: any) => {
+    const hasApprovedRefund = refundRequests.some((refund: any) => {
+      const refundPaymentId = typeof refund.paymentId === 'string' 
+        ? refund.paymentId 
+        : refund.paymentId?._id || refund.paymentId
+      return refundPaymentId === payment._id && refund.status === 'approved'
+    })
+    
+    return hasApprovedRefund ? 'refunded' : payment.status
+  }
+
+  // Format the payments data for clean display
+  const formattedPayments = payments.map(payment => ({
+    transactionId: payment.transactionId || 'N/A',
+    userName: typeof payment.userId === 'object' && payment.userId !== null
+      ? (payment.userId as any).name || 'N/A'
+      : 'N/A',
+    amount: payment.amount || 0,
+    type: payment.type || 'N/A',
+    method: payment.method || 'N/A',
+    status: getEffectivePaymentStatusForReport(payment) || 'N/A',
+    date: payment.date || payment.createdAt || new Date()
+  }))
 
   const config: ReportConfig = {
-    title: 'Payments Report',
+    title: filters?.searchTerm || filters?.status || filters?.type || filters?.method ? 'Payments Report (Filtered)' : 'Payments Report',
     companyName: 'ZFit Gym Management System',
     columns: [
       {
@@ -989,34 +1424,29 @@ export async function generatePaymentsReport(): Promise<Buffer> {
         className: 'transaction-id-cell'
       },
       {
-        key: 'userId',
-        header: 'User ID',
-        className: 'user-id-cell'
+        key: 'userName',
+        header: 'User Name',
+        className: 'user-name-cell'
       },
       {
         key: 'amount',
         header: 'Amount',
-        formatter: (value) => `LKR ${value?.toFixed(2) || '0.00'}`
-      },
-      {
-        key: 'currency',
-        header: 'Currency',
-        className: 'currency-cell'
+        formatter: (value) => `LKR ${Number(value)?.toFixed(2) || '0.00'}`
       },
       {
         key: 'type',
         header: 'Type',
-        formatter: (value) => value ? value.replace('_', ' ').toUpperCase() : 'N/A'
+        formatter: (value) => value ? String(value).toUpperCase().replace('_', ' ') : 'N/A'
       },
       {
         key: 'method',
         header: 'Method',
-        formatter: (value) => value ? value.replace('_', ' ').toUpperCase() : 'N/A'
+        formatter: (value) => value ? String(value).toUpperCase().replace('_', ' ').replace('-', ' ') : 'N/A'
       },
       {
         key: 'status',
         header: 'Status',
-        formatter: (value) => `<span class="status-badge status-${value}">${value.toUpperCase()}</span>`
+        formatter: (value) => `<span class="status-badge status-${String(value).toLowerCase()}">${String(value).toUpperCase()}</span>`
       },
       {
         key: 'date',
@@ -1025,7 +1455,112 @@ export async function generatePaymentsReport(): Promise<Buffer> {
         className: 'date-cell'
       }
     ],
-    data: payments as any[]
+    data: formattedPayments as any[]
+  }
+
+  return generateGenericReport(config)
+}
+
+/**
+ * Generate Refund Requests Report
+ */
+export async function generateRefundRequestsReport(filters?: RefundRequestReportFilters): Promise<Buffer> {
+  let refundRequests = await getRefundRequestsService()
+
+  // Apply filters if provided (matching frontend logic exactly)
+  if (filters) {
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      refundRequests = refundRequests.filter((request: any) => {
+        const userName = typeof request.userId === 'object' ? request.userId?.name : ''
+        const userEmail = typeof request.userId === 'object' ? request.userId?.email : ''
+        
+        return request.requestId?.toLowerCase().includes(searchLower) ||
+               userName?.toLowerCase().includes(searchLower) ||
+               userEmail?.toLowerCase().includes(searchLower) ||
+               request.notes?.toLowerCase().includes(searchLower) ||
+               request.status?.toLowerCase().includes(searchLower)
+      })
+    }
+
+    if (filters.status && filters.status !== 'all') {
+      refundRequests = refundRequests.filter((request: any) => 
+        request.status === filters.status
+      )
+    }
+  }
+
+  // Format the refund requests data for clean display
+  const formattedRefundRequests = refundRequests.map(request => ({
+    requestId: request.requestId || 'N/A',
+    userName: typeof request.userId === 'object' && request.userId !== null
+      ? (request.userId as any).name || 'N/A'
+      : 'N/A',
+    userEmail: typeof request.userId === 'object' && request.userId !== null
+      ? (request.userId as any).email || 'N/A'
+      : 'N/A',
+    requestedAmount: request.requestedAmount || 0,
+    originalAmount: typeof request.paymentId === 'object' && request.paymentId !== null
+      ? (request.paymentId as any).amount || 0
+      : 0,
+    status: request.status || 'N/A',
+    notes: request.notes || 'N/A',
+    adminNotes: request.adminNotes || 'N/A',
+    createdAt: request.createdAt || new Date()
+  }))
+
+  const config: ReportConfig = {
+    title: filters?.searchTerm || filters?.status ? 'Refund Requests Report (Filtered)' : 'Refund Requests Report',
+    companyName: 'ZFit Gym Management System',
+    columns: [
+      {
+        key: 'requestId',
+        header: 'Request ID',
+        className: 'request-id-cell'
+      },
+      {
+        key: 'userName',
+        header: 'User Name',
+        className: 'user-name-cell'
+      },
+      {
+        key: 'userEmail',
+        header: 'User Email',
+        className: 'user-email-cell'
+      },
+      {
+        key: 'requestedAmount',
+        header: 'Requested Amount',
+        formatter: (value) => `LKR ${Number(value)?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'originalAmount',
+        header: 'Original Amount',
+        formatter: (value) => `LKR ${Number(value)?.toFixed(2) || '0.00'}`
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        formatter: (value) => `<span class="status-badge status-${String(value).toLowerCase()}">${String(value).toUpperCase()}</span>`
+      },
+      {
+        key: 'notes',
+        header: 'Notes',
+        className: 'notes-cell'
+      },
+      {
+        key: 'adminNotes',
+        header: 'Admin Notes',
+        className: 'admin-notes-cell'
+      },
+      {
+        key: 'createdAt',
+        header: 'Request Date',
+        type: 'date',
+        className: 'date-cell'
+      }
+    ],
+    data: formattedRefundRequests as any[]
   }
 
   return generateGenericReport(config)

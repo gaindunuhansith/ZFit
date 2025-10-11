@@ -5,16 +5,20 @@ import {
     getPendingBankTransfers,
     approveBankTransfer,
     declineBankTransfer,
-    getUserBankTransfers
+    getUserBankTransfers,
+    deleteBankTransfer
 } from '../controllers/bankTransfer.controller.js';
 import { uploadReceiptImage, handleMulterError } from '../services/fileUpload.service.js';
 import authenticate from '../middleware/auth.middleware.js';
 
 const router = Router();
+const adminRouter = Router();
 
 // Temporarily remove authentication for testing
 // router.use(authenticate());
+// adminRouter.use(authenticate());
 
+// User routes
 // Upload receipt image
 router.post('/upload', uploadReceiptImage.single('receipt'), handleMulterError, uploadReceipt);
 
@@ -25,8 +29,10 @@ router.post('/', createBankTransferPayment);
 router.get('/my-payments', getUserBankTransfers);
 
 // Admin routes - require admin role
-router.get('/pending', getPendingBankTransfers);
-router.put('/:id/approve', approveBankTransfer);
-router.put('/:id/decline', declineBankTransfer);
+adminRouter.get('/pending', getPendingBankTransfers);
+adminRouter.put('/:id/approve', approveBankTransfer);
+adminRouter.put('/:id/decline', declineBankTransfer);
+adminRouter.delete('/:id', deleteBankTransfer);
 
+export { adminRouter };
 export default router;

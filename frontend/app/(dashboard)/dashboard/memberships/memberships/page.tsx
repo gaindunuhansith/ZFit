@@ -178,7 +178,16 @@ export default function MembershipsPage() {
 
   const handleDownloadReport = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/reports/memberships/pdf`, {
+      // Build query parameters based on current filters
+      const queryParams = new URLSearchParams()
+      
+      if (searchTerm) {
+        queryParams.append('searchTerm', searchTerm)
+      }
+      
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/reports/memberships/pdf${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+      
+      const response = await fetch(url, {
         method: 'GET',
       })
 
@@ -187,13 +196,17 @@ export default function MembershipsPage() {
       }
 
       const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
+      const downloadUrl = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url
-      a.download = 'memberships-report.pdf'
+      a.href = downloadUrl
+      
+      // Use filtered filename if filters are applied
+      const filename = searchTerm ? 'memberships-report-filtered.pdf' : 'memberships-report.pdf'
+      a.download = filename
+      
       document.body.appendChild(a)
       a.click()
-      window.URL.revokeObjectURL(url)
+      window.URL.revokeObjectURL(downloadUrl)
       document.body.removeChild(a)
     } catch (error) {
       console.error('Error downloading report:', error)
@@ -250,16 +263,36 @@ export default function MembershipsPage() {
           <p className="text-muted-foreground">Manage gym memberships</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleDownloadReport}>
-            <Download className="h-4 w-4 mr-2" />
-            Download Report
-          </Button>
           <Button onClick={handleAddMembership}>
             <Plus className="h-4 w-4 mr-2" />
             Add Membership
           </Button>
+          <Button variant="outline" onClick={handleDownloadReport}>
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
+          </Button>
         </div>
       </div>
+
+      {/* Search Bar */}
+      <div className="flex items-center space-x-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search memberships..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
 
       {/* Memberships Table */}
       <Card>
@@ -273,24 +306,6 @@ export default function MembershipsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-4">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
-
-          {/* Search Bar */}
-          <div className="flex items-center space-x-2 mb-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search memberships..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
 
           <Table>
             <TableHeader>

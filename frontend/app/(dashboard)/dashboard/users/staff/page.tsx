@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -13,10 +14,9 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Plus, Edit, Trash2, UserCheck, Download, Search } from 'lucide-react'
+import { UserCheck, Download, Search, Plus } from 'lucide-react'
 import { apiService } from '@/lib/api/userApi'
-import type { MemberData } from '@/lib/api/userApi'
-import { UserFormModal, UserFormData, UpdateUserFormData } from '@/components/UserFormModal'
+import { UserFormModal } from '@/components/UserFormModal'
 
 interface Staff {
   _id: string
@@ -40,9 +40,9 @@ export default function StaffPage() {
   const [staff, setStaff] = useState<Staff[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingStaff, setEditingStaff] = useState<Staff | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     fetchStaff()
@@ -66,25 +66,17 @@ export default function StaffPage() {
     }
   }
 
-  const handleAddStaff = () => {
-    setEditingStaff(null)
-    setModalOpen(true)
+  const handleViewStaff = (staffMember: Staff) => {
+    router.push(`/dashboard/users/staff/${staffMember._id}`)
   }
 
-  const handleEditStaff = (staffMember: Staff) => {
-    setEditingStaff(staffMember)
-    setModalOpen(true)
-  }
-
-  const handleDeleteStaff = async (staffId: string) => {
-    if (!confirm('Are you sure you want to delete this staff member?')) return
-
+  const handleAddStaff = async (staffData: any) => {
     try {
-      await apiService.deleteUser(staffId)
-      setStaff(staff.filter(member => member._id !== staffId))
+      await apiService.createUser({ ...staffData, role: 'staff' })
+      fetchStaff() // Refresh the list
     } catch (error) {
-      console.error('Error deleting staff:', error)
-      setError('Failed to delete staff member')
+      console.error('Error adding staff:', error)
+      throw error
     }
   }
 
@@ -103,7 +95,16 @@ export default function StaffPage() {
 
   const handleDownloadReport = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/reports/staff/pdf`, {
+      // Build query parameters based on current filters
+      const queryParams = new URLSearchParams()
+      
+      if (searchQuery) {
+        queryParams.append('searchTerm', searchQuery)
+      }
+      
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/reports/staff/pdf${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+      
+      const response = await fetch(url, {
         method: 'GET',
       })
 
@@ -112,60 +113,21 @@ export default function StaffPage() {
       }
 
       const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
+      const downloadUrl = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url
-      a.download = 'staff-report.pdf'
+      a.href = downloadUrl
+      
+      // Use filtered filename if filters are applied
+      const filename = searchQuery ? 'staff-report-filtered.pdf' : 'staff-report.pdf'
+      a.download = filename
+      
       document.body.appendChild(a)
       a.click()
-      window.URL.revokeObjectURL(url)
+      window.URL.revokeObjectURL(downloadUrl)
       document.body.removeChild(a)
     } catch (error) {
       console.error('Error downloading report:', error)
       setError('Failed to download report')
-    }
-  }
-
-  const handleModalSubmit = async (formData: UserFormData | UpdateUserFormData) => {
-    try {
-      if (editingStaff) {
-        // Update existing staff - send only the fields that were provided
-        const updateData: Partial<MemberData> = {}
-        if (formData.name) updateData.name = formData.name
-        if (formData.email) updateData.email = formData.email
-        if (formData.contactNo) updateData.contactNo = formData.contactNo
-        if (formData.role) updateData.role = formData.role
-        if (formData.status) updateData.status = formData.status
-
-        await apiService.updateUser(editingStaff._id, updateData)
-      } else {
-        // Create new staff - ensure all required fields are present
-        const createData: MemberData = {
-          name: formData.name as string,
-          email: formData.email as string,
-          contactNo: formData.contactNo as string,
-          password: (formData as UserFormData).password,
-          role: 'staff',
-          status: formData.status as 'active' | 'inactive' | 'expired',
-          consent: {
-            gdpr: true,
-            marketing: false,
-          }
-        }
-        console.log('Form data received:', formData)
-        console.log('Form data has password:', 'password' in formData)
-        if ('password' in formData) {
-          console.log('Password value:', formData.password)
-          console.log('Password type:', typeof formData.password)
-          console.log('Password length:', formData.password.length)
-        }
-        await apiService.createUser(createData)
-      }
-      fetchStaff() // Refresh the list
-    } catch (error) {
-      console.error('Error saving staff:', error)
-      setError('Failed to save staff member')
-      throw error
     }
   }
 
@@ -199,16 +161,36 @@ export default function StaffPage() {
           <p className="text-muted-foreground">Manage gym staff members</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button onClick={() => setShowAddModal(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Staff
+          </Button>
           <Button variant="outline" onClick={handleDownloadReport}>
             <Download className="h-4 w-4 mr-2" />
             Download Report
           </Button>
-          <Button onClick={handleAddStaff}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Staff
-          </Button>
         </div>
       </div>
+
+      {/* Search Bar */}
+      <div className="flex items-center space-x-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search staff by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
 
       {/* Staff Table */}
       <Card>
@@ -222,24 +204,6 @@ export default function StaffPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-4">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
-
-          <div className="mb-4">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search staff by name or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-          </div>
-
           <Table>
             <TableHeader>
               <TableRow>
@@ -268,17 +232,9 @@ export default function StaffPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleEditStaff(staffMember)}
+                        onClick={() => handleViewStaff(staffMember)}
                       >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteStaff(staffMember._id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
+                        Manage
                       </Button>
                     </div>
                   </TableCell>
@@ -298,18 +254,11 @@ export default function StaffPage() {
       </Card>
 
       <UserFormModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleModalSubmit}
-        initialData={editingStaff ? {
-          name: editingStaff.name,
-          email: editingStaff.email,
-          contactNo: editingStaff.contactNo,
-          role: 'staff' as 'member' | 'staff' | 'manager',
-          status: editingStaff.status as 'active' | 'inactive' | 'expired'
-        } : undefined}
-        mode={editingStaff ? 'edit' : 'add'}
-        title={editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={handleAddStaff}
+        mode="add"
+        title="Add New Staff"
       />
     </div>
   )

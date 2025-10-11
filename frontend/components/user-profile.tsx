@@ -20,15 +20,13 @@ import {
   Eye,
   CheckCircle,
   XCircle,
-  Clock,
-  Building,
-  Briefcase
+  Clock
 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { getUserById, updateUser } from "@/lib/api/userApi"
 import { UserFormModal, UpdateUserFormData } from "@/components/UserFormModal"
-import { ChangePasswordDialog } from "@/components/ChangePasswordDialog"
 import { QRCodeModal } from "@/components/QRCodeModal"
+import { authApi } from "@/lib/api/authApi"
 
 interface UserProfileData {
   _id?: string
@@ -59,8 +57,6 @@ interface UserProfileData {
   lastLogin?: string
   updatedAt?: string
   fitnessGoals?: string[]
-  department?: string
-  position?: string
   employeeId?: string
   manager?: string
   salary?: number
@@ -150,8 +146,11 @@ export function UserProfile({
   const [loading, setLoading] = useState(!initialProfileData)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [showQRModal, setShowQRModal] = useState(false)
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false)
+  const [resetPasswordMessage, setResetPasswordMessage] = useState<string | null>(null)
+  const [verifyEmailLoading, setVerifyEmailLoading] = useState(false)
+  const [verifyEmailMessage, setVerifyEmailMessage] = useState<string | null>(null)
 
   // Fetch user profile data if not provided via props
   useEffect(() => {
@@ -182,7 +181,16 @@ export function UserProfile({
             role: userData.role,
             status: userData.status,
             verified: userData.verified,
-            dateOfBirth: userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : undefined,
+            dateOfBirth: (() => {
+              if (!userData.dob) return undefined;
+              try {
+                const date = new Date(userData.dob);
+                if (isNaN(date.getTime())) return undefined;
+                return date.toISOString().substring(0, 10);
+              } catch {
+                return undefined;
+              }
+            })(),
             address: userData.profile?.address,
             profile: {
               avatar: userData.profile?.avatar,
@@ -233,7 +241,16 @@ export function UserProfile({
         role: userData.role,
         status: userData.status,
         verified: userData.verified,
-        dateOfBirth: userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : undefined,
+        dateOfBirth: (() => {
+          if (!userData.dob) return undefined;
+          try {
+            const date = new Date(userData.dob);
+            if (isNaN(date.getTime())) return undefined;
+            return date.toISOString().substring(0, 10);
+          } catch {
+            return undefined;
+          }
+        })(),
         address: userData.profile?.address,
         profile: {
           avatar: userData.profile?.avatar,
@@ -250,6 +267,56 @@ export function UserProfile({
         updatedAt: new Date(userData.updatedAt).toISOString(),
       }
       setProfileData(mappedData)
+    }
+  }
+
+  const handleResetPassword = async () => {
+    if (!profileData?.email) {
+      setResetPasswordMessage("Email address not found")
+      return
+    }
+
+    try {
+      setResetPasswordLoading(true)
+      setResetPasswordMessage(null)
+
+      const response = await authApi.sendPasswordResetEmail(profileData.email)
+
+      if (response.message) {
+        setResetPasswordMessage("Password reset email sent successfully! Please check your inbox.")
+      } else {
+        setResetPasswordMessage("Failed to send password reset email")
+      }
+    } catch (error) {
+      console.error("Error sending password reset email:", error)
+      setResetPasswordMessage("Failed to send password reset email. Please try again.")
+    } finally {
+      setResetPasswordLoading(false)
+    }
+  }
+
+  const handleSendEmailVerification = async () => {
+    if (!profileData?.email) {
+      setVerifyEmailMessage("Email address not found")
+      return
+    }
+
+    try {
+      setVerifyEmailLoading(true)
+      setVerifyEmailMessage(null)
+
+      const response = await authApi.sendEmailVerification(profileData.email)
+
+      if (response.message) {
+        setVerifyEmailMessage("Email verification sent successfully! Please check your inbox.")
+      } else {
+        setVerifyEmailMessage("Failed to send email verification")
+      }
+    } catch (error) {
+      console.error("Error sending email verification:", error)
+      setVerifyEmailMessage("Failed to send email verification. Please try again.")
+    } finally {
+      setVerifyEmailLoading(false)
     }
   }
 
@@ -380,7 +447,7 @@ export function UserProfile({
                   Date of Birth
                 </div>
                 <p className="font-medium">
-                  {profileData?.dateOfBirth ? new Date(profileData.dateOfBirth).toLocaleDateString() : 'N/A'}
+                  {profileData?.dateOfBirth ? new Date(profileData.dateOfBirth).toLocaleDateString() : 'Not set'}
                 </p>
               </div>
 
@@ -424,21 +491,6 @@ export function UserProfile({
 
               {isStaff && (
                 <>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Building className="h-4 w-4" />
-                      Department
-                    </div>
-                    <p className="font-medium">{profileData?.department || 'N/A'}</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Briefcase className="h-4 w-4" />
-                      Position
-                    </div>
-                    <p className="font-medium">{profileData?.position || 'N/A'}</p>
-                  </div>
                 </>
               )}
             </div>
@@ -516,11 +568,38 @@ export function UserProfile({
               <Button
                 variant="outline"
                 className="w-full justify-start"
-                onClick={() => setShowPasswordDialog(true)}
+                onClick={handleResetPassword}
+                disabled={resetPasswordLoading}
               >
                 <Lock className="mr-2 h-4 w-4" />
-                Change Password
+                {resetPasswordLoading ? "Sending..." : "Reset Password"}
               </Button>
+
+              {resetPasswordMessage && (
+                <p className={`text-sm ${resetPasswordMessage.includes("successfully") ? "text-[#AAFF69]" : "text-red-600"}`}>
+                  {resetPasswordMessage}
+                </p>
+              )}
+
+              {profileData?.verified === false && (
+                <>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={handleSendEmailVerification}
+                    disabled={verifyEmailLoading}
+                  >
+                    <Mail className="mr-2 h-4 w-4" />
+                    {verifyEmailLoading ? "Sending..." : "Verify Email"}
+                  </Button>
+
+                  {verifyEmailMessage && (
+                    <p className={`text-sm ${verifyEmailMessage.includes("successfully") ? "text-[#AAFF69]" : "text-red-600"}`}>
+                      {verifyEmailMessage}
+                    </p>
+                  )}
+                </>
+              )}
 
               {profileData?.qrCode && (
                 <Button
@@ -596,12 +675,6 @@ export function UserProfile({
           </CardContent>
         </Card>
       )}
-
-      {/* Change Password Dialog */}
-      <ChangePasswordDialog
-        open={showPasswordDialog}
-        onOpenChange={setShowPasswordDialog}
-      />
 
       {/* QR Code Modal */}
       {profileData?.qrCode && (

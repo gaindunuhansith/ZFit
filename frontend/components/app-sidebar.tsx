@@ -8,7 +8,6 @@ import {
   TrendingUp,
   Activity,
   Package,
-  Store,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -98,25 +97,7 @@ const data = {
         },
       ],
     },
-    {
-      title: "Analytics",
-      url: "/dashboard/analytics",
-      icon: BarChart3,
-      items: [
-        {
-          title: "Membership Trends",
-          url: "/dashboard/analytics/membership",
-        },
-        {
-          title: "Revenue Reports",
-          url: "/dashboard/analytics/revenue",
-        },
-        {
-          title: "Attendance Stats",
-          url: "/dashboard/analytics/attendance",
-        },
-      ],
-    },
+   
     {
       title: "Tracking & Progress",
       url: "/dashboard/tracking",
@@ -149,12 +130,16 @@ const data = {
           url: "/dashboard/finance/overview",
         },
         {
-          title: "Invoices",
-          url: "/dashboard/finance/invoice",
+          title: "Bank Transfers",
+          url: "/dashboard/finance/bank-transfers",
         },
         {
           title: "Refunds",
-          url: "/dashboard/finance/refund",
+          url: "/dashboard/finance/refund/requests",
+        },
+        {
+          title: "Invoices",
+          url: "/dashboard/finance/invoice",
         },
       ],
     },
@@ -163,6 +148,10 @@ const data = {
       url: "/dashboard/inventory",
       icon: Package,
       items: [
+        {
+          title: "Categories",
+          url: "/dashboard/inventory/categories",
+        },
         {
           title: "Items",
           url: "/dashboard/inventory/items",
@@ -175,22 +164,11 @@ const data = {
           title: "Suppliers",
           url: "/dashboard/inventory/suppliers",
         },
+       /* {
+          title: "Transaction History",
+          url: "/dashboard/inventory/transactions",
+        },*/
       ],
-    },
-    {
-      title: "Reservations",
-      icon: Calendar,
-      items: [
-        { title: "Bookings", url: "/dashboard/reservations/bookings" },
-        { title: "Classes", url: "/dashboard/reservations/classes" },
-        { title: "Trainers", url: "/dashboard/reservations/trainers" },
-        { title: "Facilities", url: "/dashboard/reservations/facilities" },
-      ],
-    },
-    {
-      title: "Store",
-      url: "/dashboard/store",
-      icon: Store,
     },
   ],
   projects: [

@@ -38,9 +38,25 @@ const apiRequest = async <T>(
 }
 
 // Types based on backend model
+export interface User {
+  _id: string
+  name: string
+  email: string
+  contactNo: string
+  role: string
+  status: string
+}
+
 export interface Payment {
   _id: string
-  userId: string
+  userId: string | {
+    _id: string
+    name: string
+    email: string
+    contactNo: string
+    role: string
+    status: string
+  }
   amount: number
   currency: string
   type: 'membership' | 'inventory' | 'booking' | 'other'
@@ -100,6 +116,23 @@ export const getPayments = async (): Promise<Payment[]> => {
   }
 }
 
+export const getPaymentsByUserId = async (userId: string): Promise<ApiResponse<Payment[]>> => {
+  try {
+    const response = await apiRequest<Payment[]>(`/payments?userId=${userId}`)
+    return {
+      success: true,
+      data: response.data || []
+    }
+  } catch (error) {
+    console.error('Error fetching user payments:', error)
+    return {
+      success: false,
+      data: [],
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
 export const getPaymentById = async (id: string): Promise<Payment> => {
   try {
     const response = await apiRequest<Payment>(`/payments/${id}`)
@@ -156,6 +189,40 @@ export const deletePayment = async (id: string): Promise<void> => {
   }
 }
 
+export const deleteAllPayments = async (): Promise<{ deletedCount: number }> => {
+  try {
+    const response = await apiRequest<{ deletedCount: number }>(`/payments/all`, {
+      method: 'DELETE',
+    })
+    
+    if (response.success && response.data) {
+      return response.data
+    } else {
+      throw new Error(response.message || 'Failed to delete all payments')
+    }
+  } catch (error) {
+    console.error('Error deleting all payments:', error)
+    throw error
+  }
+}
+
+// User API functions
+export const getUserById = async (userId: string): Promise<ApiResponse<User>> => {
+  try {
+    const response = await apiRequest<User>(`/users/${userId}`)
+    return {
+      success: true,
+      data: response.data
+    }
+  } catch (error) {
+    console.error('Error fetching user:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
 export interface PayHerePaymentRequest {
   userId: string
   amount: number
@@ -177,6 +244,54 @@ export interface PayHerePaymentResponse {
   checkoutUrl: string
   paymentData: Record<string, unknown>
   paymentForm: string
+}
+
+export interface PayHereRefundRequest {
+  paymentId: string
+  amount: number
+  reason?: string
+}
+
+export interface PayHereRefundResponse {
+  refundId: string
+  status: string
+  amount: number
+  currency: string
+  processedAt: string
+  checkoutUrl?: string // For redirect-based refunds
+  paymentForm?: string // For form-based refunds
+}
+
+// PayHere refund function
+export const initiatePayHereRefund = async (refundData: PayHereRefundRequest): Promise<PayHereRefundResponse> => {
+  try {
+    const response = await apiRequest<PayHereRefundResponse>('/gateways/payhere/refund', {
+      method: 'POST',
+      body: JSON.stringify(refundData),
+    })
+    
+    console.log('PayHere refund API response:', response)
+    
+    // Handle special case where refund is processed but requires manual verification
+    if (response.message && response.message.includes('Refund processed (manual verification required)')) {
+      // Return a mock successful response for manual verification cases
+      return {
+        refundId: `${Date.now()}`,
+        status: 'pending_verification',
+        amount: refundData.amount,
+        currency: 'LKR',
+        processedAt: new Date().toISOString()
+      }
+    }
+    
+    if (!response.success || !response.data) {
+      throw new Error(response.message || 'Failed to initiate PayHere refund')
+    }
+    return response.data
+  } catch (error) {
+    console.error('Error initiating PayHere refund:', error)
+    throw error
+  }
 }
 
 // PayHere payment functions
@@ -209,6 +324,7 @@ export interface BankTransferUploadResponse {
 }
 
 export interface BankTransferPaymentRequest {
+  userId?: string // Optional for when included explicitly
   membershipId: string
   amount: number
   currency?: string
@@ -275,11 +391,14 @@ export const createBankTransferPayment = async (paymentData: BankTransferPayment
 // Bank Transfer Admin types
 export interface BankTransferAdmin {
   _id: string
+  transferId?: string
   userId: {
     _id: string
     name: string
     email: string
     contactNo?: string
+    role: string
+    status: string
   } | null
   membershipId: {
     _id: string
@@ -323,7 +442,7 @@ export interface ApproveDeclineRequest {
 // Bank Transfer Admin functions
 export const getPendingBankTransfers = async (page: number = 1, limit: number = 10): Promise<BankTransferAdminResponse> => {
   try {
-    const response = await apiRequest<{ payments: BankTransferAdmin[], pagination: { page: number, limit: number, total: number, pages: number } }>(`/payments/bank-transfer/pending?page=${page}&limit=${limit}`)
+    const response = await apiRequest<{ payments: BankTransferAdmin[], pagination: { page: number, limit: number, total: number, pages: number } }>(`/admin/payments/bank-transfer/pending?page=${page}&limit=${limit}`)
 
     if (!response.success || !response.data) {
       throw new Error(response.message || 'Failed to fetch pending bank transfers')
@@ -338,7 +457,7 @@ export const getPendingBankTransfers = async (page: number = 1, limit: number = 
 
 export const approveBankTransfer = async (transferId: string, data: ApproveDeclineRequest = {}): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await apiRequest<{ success: boolean; message: string }>(`/payments/bank-transfer/${transferId}/approve`, {
+    const response = await apiRequest<{ success: boolean; message: string }>(`/admin/payments/bank-transfer/${transferId}/approve`, {
       method: 'PUT',
       body: JSON.stringify(data),
     })
@@ -359,7 +478,7 @@ export const approveBankTransfer = async (transferId: string, data: ApproveDecli
 
 export const declineBankTransfer = async (transferId: string, data: ApproveDeclineRequest = {}): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await apiRequest<{ success: boolean; message: string }>(`/payments/bank-transfer/${transferId}/decline`, {
+    const response = await apiRequest<{ success: boolean; message: string }>(`/admin/payments/bank-transfer/${transferId}/decline`, {
       method: 'PUT',
       body: JSON.stringify(data),
     })
@@ -374,6 +493,26 @@ export const declineBankTransfer = async (transferId: string, data: ApproveDecli
     }
   } catch (error) {
     console.error('Error declining bank transfer:', error)
+    throw error
+  }
+}
+
+export const deleteBankTransfer = async (transferId: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await apiRequest<{ success: boolean; message: string }>(`/admin/payments/bank-transfer/${transferId}`, {
+      method: 'DELETE',
+    })
+
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to delete bank transfer')
+    }
+
+    return {
+      success: response.success,
+      message: response.message || 'Bank transfer deleted successfully'
+    }
+  } catch (error) {
+    console.error('Error deleting bank transfer:', error)
     throw error
   }
 }

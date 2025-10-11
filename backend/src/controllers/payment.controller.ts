@@ -7,7 +7,10 @@ import {
     getPaymentByIdService,
     updatePaymentService,
     deletePaymentService,
-    processPaymentService
+    processPaymentService,
+    deleteAllPaymentsService,
+    cleanupPendingPaymentsService,
+    getPendingPaymentStatsService
 } from '../services/payment.services.js';
 
 // Zod validation schemas
@@ -71,7 +74,8 @@ export const createPayment = async (req: Request, res: Response, next: NextFunct
 // Get all payments
 export const getPayments = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const payments = await getPaymentsService('');
+        const userId = req.query.userId as string;
+        const payments = await getPaymentsService(userId || '');
         res.json({ success: true, data: payments });
     } catch (error) {
         next(error);
@@ -150,6 +154,44 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
             message: 'Payment processed successfully',
             data: payment 
         });
+    } catch (error) {
+        next(error); 
+    }
+};
+
+export const deleteAllPayments = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const result = await deleteAllPaymentsService();
+        
+        res.json({ 
+            success: true, 
+            message: `All ${result.deletedCount} payments deleted successfully`,
+            data: { deletedCount: result.deletedCount }
+        });
+    } catch (error) {
+        next(error); 
+    }
+};
+
+export const cleanupPendingPayments = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const result = await cleanupPendingPaymentsService();
+        
+        res.json({ 
+            success: true, 
+            message: `All ${result.deletedCount} pending payments deleted successfully`,
+            data: { deletedCount: result.deletedCount }
+        });
+    } catch (error) {
+        next(error); 
+    }
+};
+
+export const getPendingPaymentStats = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const stats = await getPendingPaymentStatsService();
+        
+        res.json({ success: true, data: stats });
     } catch (error) {
         next(error); 
     }

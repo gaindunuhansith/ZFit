@@ -114,6 +114,7 @@ export const deleteRefundRequest = async (req: Request, res: Response, next: Nex
 // Approve refund request (admin only)
 export const approveRefundRequest = async (req: Request, res: Response, next: NextFunction) => {
     try {
+        console.log('🔥 CONTROLLER: approveRefundRequest called for ID:', req.params.id);
         if (!req.params.id) return res.status(400).json({ success: false, message: 'Refund request ID is required' });
 
         const { adminNotes } = req.body;
@@ -134,8 +135,8 @@ export const declineRefundRequest = async (req: Request, res: Response, next: Ne
     try {
         if (!req.params.id) return res.status(400).json({ success: false, message: 'Refund request ID is required' });
 
-        const { adminNotes } = req.body;
-        const refundRequest = await declineRefundRequestService(req.params.id, adminNotes);
+        const { adminNotes, declineReason } = req.body;
+        const refundRequest = await declineRefundRequestService(req.params.id, adminNotes, declineReason);
 
         res.json({
             success: true,

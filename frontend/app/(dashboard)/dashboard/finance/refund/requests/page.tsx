@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import {
+  Download,
   RefreshCw,
   Search,
   AlertCircle,
@@ -10,6 +12,8 @@ import {
   Clock,
   Eye,
   Trash2,
+  Plus,
+  Loader2,
 } from "lucide-react"
 
 import {
@@ -46,7 +50,9 @@ import {
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { getRefundRequests, approveRefundRequest, declineRefundRequest, deleteRefundRequest, getPendingRequestsCount, type RefundRequest } from "@/lib/api/refundRequestApi"
+import { getRefundRequests, approveRefundRequest, declineRefundRequest, deleteRefundRequest, getPendingRequestsCount, updateRefundRequest, type RefundRequest } from "@/lib/api/refundRequestApi"
+import { updatePayment, initiatePayHereRefund, type PayHereRefundRequest } from "@/lib/api/paymentApi"
+import { generateRefundRequestsReport } from "@/lib/api/reportApi"
 
 const getStatusIcon = (status: string) => {
   switch (status) {
@@ -71,6 +77,7 @@ const getStatusBadge = (status: string) => {
 }
 
 export default function RefundRequestsManagementPage() {
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [requests, setRequests] = useState<RefundRequest[]>([])
@@ -82,6 +89,11 @@ export default function RefundRequestsManagementPage() {
   const [processingAction, setProcessingAction] = useState<"approve" | "decline" | null>(null)
   const [adminNotes, setAdminNotes] = useState("")
   const [pendingCount, setPendingCount] = useState(0)
+  const [processingRequest, setProcessingRequest] = useState(false)
+  
+  // State for admin notes editing
+  const [editableAdminNotes, setEditableAdminNotes] = useState("")
+  const [isSavingNotes, setIsSavingNotes] = useState(false)
 
   // Fetch requests on component mount
   useEffect(() => {
@@ -89,7 +101,7 @@ export default function RefundRequestsManagementPage() {
       try {
         setLoading(true)
         const [requestsData, countData] = await Promise.all([
-          getRefundRequests(),
+          getRefundRequests(undefined, ['userId', 'paymentId']),
           getPendingRequestsCount()
         ])
         setRequests(requestsData)
@@ -122,14 +134,121 @@ export default function RefundRequestsManagementPage() {
 
   const handleViewDetails = (request: RefundRequest) => {
     setSelectedRequest(request)
+    setEditableAdminNotes(request.adminNotes || "")
     setIsViewModalOpen(true)
   }
 
-  const handleProcessRequest = (request: RefundRequest, action: "approve" | "decline") => {
-    setSelectedRequest(request)
-    setProcessingAction(action)
-    setAdminNotes("")
-    setIsProcessingModalOpen(true)
+  const handleSaveAdminNotes = async () => {
+    if (!selectedRequest) return
+
+    try {
+      setIsSavingNotes(true)
+      const updatedRequest = await updateRefundRequest(selectedRequest._id, {
+        adminNotes: editableAdminNotes
+      })
+
+      // Update the selected request and the requests list
+      setSelectedRequest(updatedRequest)
+      setRequests(prev => 
+        prev.map(req => 
+          req._id === updatedRequest._id ? updatedRequest : req
+        )
+      )
+
+      // Show success message (you could replace this with a toast notification)
+      alert('Admin notes updated successfully!')
+    } catch (error) {
+      console.error('Error saving admin notes:', error)
+      alert('Failed to save admin notes. Please try again.')
+    } finally {
+      setIsSavingNotes(false)
+    }
+  }
+
+  const handleProcessRequest = async (request: RefundRequest, action: "approve" | "decline") => {
+    if (action === 'decline') {
+      // Handle decline with modal
+      setSelectedRequest(request)
+      setProcessingAction(action)
+      setAdminNotes("")
+      setIsProcessingModalOpen(true)
+      return
+    }
+
+    // Handle approve with PayHere refund
+    if (action === 'approve') {
+      try {
+        setProcessingRequest(true)
+        
+        // Get payment details
+        const paymentId = typeof request.paymentId === 'string' 
+          ? request.paymentId 
+          : request.paymentId._id
+
+        // Initiate PayHere refund
+        const refundRequest: PayHereRefundRequest = {
+          paymentId: paymentId,
+          amount: request.requestedAmount,
+          reason: request.notes || 'Refund request approved'
+        }
+
+        console.log('Initiating PayHere refund:', refundRequest)
+        
+        const refundResponse = await initiatePayHereRefund(refundRequest)
+        
+        console.log('PayHere refund response:', refundResponse)
+
+        // Handle redirect-based refunds (like payments)
+        if (refundResponse.checkoutUrl) {
+          window.location.href = refundResponse.checkoutUrl
+          return // Exit here as we're redirecting
+        }
+
+        // Handle form-based refunds
+        if (refundResponse.paymentForm) {
+          const formContainer = document.createElement('div')
+          formContainer.innerHTML = refundResponse.paymentForm
+          document.body.appendChild(formContainer)
+
+          const refundForm = document.getElementById('payhere-refund-form') as HTMLFormElement
+          if (refundForm) {
+            setTimeout(() => {
+              refundForm.submit()
+            }, 100)
+          } else {
+            throw new Error('Refund form not found')
+          }
+          return // Exit here as we're submitting form
+        }
+
+        // If refund is successful without redirect, approve the request
+        if (refundResponse.status === 'completed' || refundResponse.status === 'success' || refundResponse.status === 'pending_verification') {
+          await approveRefundRequest(request._id, `PayHere refund processed - ${refundResponse.refundId}`)
+          
+          // Update payment status to 'refunded'
+          await updatePayment(paymentId, { status: 'refunded' })
+          
+          // Refresh requests list and count
+          const [updatedRequests, newCount] = await Promise.all([
+            getRefundRequests(),
+            getPendingRequestsCount()
+          ])
+          setRequests(updatedRequests)
+          setPendingCount(newCount)
+          
+          // Show success message
+          alert('Refund processed successfully via PayHere')
+        } else {
+          throw new Error('Refund processing failed')
+        }
+        
+      } catch (error) {
+        console.error('Error processing PayHere refund:', error)
+        alert('Failed to process refund via PayHere. Please try again.')
+      } finally {
+        setProcessingRequest(false)
+      }
+    }
   }
 
   const handleConfirmProcessing = async () => {
@@ -178,6 +297,50 @@ export default function RefundRequestsManagementPage() {
     }
   }
 
+  const handleGenerateReport = async () => {
+    try {
+      // Prepare filter parameters to match current frontend filtering
+      const filterParams = new URLSearchParams()
+      
+      if (searchTerm) {
+        filterParams.append('searchTerm', searchTerm)
+      }
+      
+      if (statusFilter && statusFilter !== 'all') {
+        filterParams.append('status', statusFilter)
+      }
+
+      // Make API request with filter parameters
+      const response = await fetch(`/api/v1/reports/refund-requests/pdf?${filterParams.toString()}`)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const reportBlob = await response.blob()
+
+      // Create a download link and trigger download
+      const url = window.URL.createObjectURL(reportBlob)
+      const link = document.createElement('a')
+      link.href = url
+      
+      // Generate filename based on whether filters are applied
+      const hasFilters = searchTerm || (statusFilter && statusFilter !== 'all')
+      const filename = hasFilters 
+        ? `Zfit_Refund_Requests_Filtered_${new Date().toISOString().split('T')[0]}.pdf`
+        : `Zfit_Refund_Requests_${new Date().toISOString().split('T')[0]}.pdf`
+      
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error generating report:', error)
+      // TODO: Show error toast
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -187,6 +350,16 @@ export default function RefundRequestsManagementPage() {
           <p className="text-muted-foreground">
             Review and process refund requests from members.
           </p>
+        </div>
+        <div className="flex space-x-2">
+          <Button onClick={() => router.push('/dashboard/finance/refund')}>
+          
+            Create Refund
+          </Button>
+          <Button variant="outline" onClick={handleGenerateReport}>
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
+          </Button>
         </div>
       </div>
 
@@ -256,12 +429,27 @@ export default function RefundRequestsManagementPage() {
                     <TableRow key={request._id}>
                       <TableCell className="font-medium">{request.requestId}</TableCell>
                       <TableCell>
-                        <div>
-                          <div className="font-medium">
-                            {typeof request.userId === 'object' ? request.userId?.name : 'Unknown User'}
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-medium text-primary">
+                              {typeof request.userId === 'object' && request.userId?.name
+                                ? request.userId.name.charAt(0).toUpperCase()
+                                : 'U'}
+                            </span>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            {typeof request.userId === 'object' ? request.userId?.email : request.userId}
+                          <div>
+                            <div className="font-medium text-sm">
+                              {typeof request.userId === 'object' && request.userId?.name
+                                ? request.userId.name
+                                : 'Unknown User'}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {typeof request.userId === 'object' && request.userId?.email
+                                ? request.userId.email
+                                : typeof request.userId === 'string'
+                                ? request.userId
+                                : 'N/A'}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -282,26 +470,6 @@ export default function RefundRequestsManagementPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {request.status === 'pending' && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleProcessRequest(request, 'approve')}
-                                className="text-green-600 hover:text-green-700"
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleProcessRequest(request, 'decline')}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
                           <Button
                             variant="outline"
                             size="sm"
@@ -327,63 +495,222 @@ export default function RefundRequestsManagementPage() {
         </CardContent>
       </Card>
 
-      {/* View Details Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Refund Request Details</DialogTitle>
-            <DialogDescription>
-              {selectedRequest && `Request ID: ${selectedRequest.requestId}`}
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Refund Request Details
+            </DialogTitle>
+            <DialogDescription className="text-base font-mono bg-muted px-3 py-2 rounded-md">
+              Request ID: {selectedRequest?.requestId}
             </DialogDescription>
           </DialogHeader>
 
           {selectedRequest && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">User Information</Label>
-                  <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                    <p className="font-medium">
-                      {typeof selectedRequest.userId === 'object' ? selectedRequest.userId?.name : 'Unknown User'}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {typeof selectedRequest.userId === 'object' ? selectedRequest.userId?.email : selectedRequest.userId}
-                    </p>
-                    {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.contactNo && (
-                      <p className="text-sm text-gray-600">{selectedRequest.userId.contactNo}</p>
+            <div className="space-y-6">
+              {/* Row 1: User Information and Payment Information side by side */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* User Information */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">User Information</h3>
+                  <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-primary">
+                          {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.name
+                            ? selectedRequest.userId.name.charAt(0).toUpperCase()
+                            : 'U'}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-semibold">
+                          {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.name
+                            ? selectedRequest.userId.name
+                            : 'Unknown User'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">ID: {selectedRequest._id.slice(-8)}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-1 text-sm">
+                      <p><span className="font-medium">Email:</span> {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.email ? selectedRequest.userId.email : 'N/A'}</p>
+                      <p><span className="font-medium">Phone:</span> {typeof selectedRequest.userId === 'object' && selectedRequest.userId?.contactNo ? selectedRequest.userId.contactNo : 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Information */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">Payment Information</h3>
+                  {typeof selectedRequest.paymentId === 'object' && selectedRequest.paymentId ? (
+                    <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                      <div>
+                        <p className="text-sm font-medium">Transaction ID</p>
+                        <p className="text-sm font-mono bg-background px-2 py-1 rounded border">
+                          {selectedRequest.paymentId.transactionId}
+                        </p>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm font-medium">Original Amount</p>
+                          <p className="text-lg font-semibold">
+                            {selectedRequest.paymentId.currency || 'LKR'} {selectedRequest.paymentId.amount.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium">Type:</span> {selectedRequest.paymentId.type}
+                        </div>
+                        <div>
+                          <span className="font-medium">Method:</span> <span className="font-semibold text-primary">{selectedRequest.paymentId.method || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-muted/30 rounded-lg text-center text-muted-foreground">
+                      <AlertCircle className="h-6 w-6 mx-auto mb-2" />
+                      <p className="text-sm">Payment details not available</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 2: Refund Details and Timeline side by side */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column: Refund Amount, Status, Date */}
+                <div className="space-y-3">
+                  <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-primary">LKR {selectedRequest.requestedAmount.toFixed(2)}</p>
+                      <p className="text-sm text-muted-foreground">Refund Amount Requested</p>
+                    </div>
+                    <div className="flex justify-center">
+                      {getStatusBadge(selectedRequest.status)}
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-medium">Requested on</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(selectedRequest.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Request Timeline */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">Request Timeline</h3>
+                  <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Request Created</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(selectedRequest.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {selectedRequest.updatedAt && selectedRequest.updatedAt !== selectedRequest.createdAt && (
+                      <div className="flex items-start gap-3">
+                        <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                          selectedRequest.status === 'approved' ? 'bg-green-500' :
+                          selectedRequest.status === 'declined' ? 'bg-red-500' : 'bg-yellow-500'
+                        }`}></div>
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">
+                            Request {selectedRequest.status.charAt(0).toUpperCase() + selectedRequest.status.slice(1)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(selectedRequest.updatedAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
+              </div>
 
-                <div>
-                  <Label className="text-sm font-medium">Payment Information</Label>
-                  <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                    <p className="font-medium">LKR {selectedRequest.requestedAmount.toFixed(2)}</p>
-                    <p className="text-sm text-gray-600">
-                      Status: {getStatusBadge(selectedRequest.status)}
+              {/* Row 3: Request Notes and Admin Notes side by side */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Request Notes */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">Request Notes</h3>
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm whitespace-pre-wrap">
+                      {selectedRequest.notes || 'No notes provided'}
                     </p>
                   </div>
                 </div>
-              </div>
 
-              <div>
-                <Label className="text-sm font-medium">Request Notes</Label>
-                <div className="mt-1 p-3 bg-gray-50 rounded-md">
-                  <p className="text-sm">{selectedRequest.notes}</p>
-                </div>
-              </div>
-
-              {selectedRequest.adminNotes && (
-                <div>
-                  <Label className="text-sm font-medium">Admin Notes</Label>
-                  <div className="mt-1 p-3 bg-blue-50 rounded-md">
-                    <p className="text-sm">{selectedRequest.adminNotes}</p>
+                {/* Admin Notes */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-base text-muted-foreground uppercase tracking-wide">Admin Notes</h3>
+                  <div className="space-y-3">
+                    <Textarea
+                      value={editableAdminNotes}
+                      onChange={(e) => setEditableAdminNotes(e.target.value)}
+                      placeholder="Add admin notes here..."
+                      className="min-h-[60px] resize-none"
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={handleSaveAdminNotes}
+                        disabled={isSavingNotes}
+                        size="sm"
+                        className="w-auto"
+                      >
+                        {isSavingNotes ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Save Notes'
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
 
-              <div className="text-sm text-gray-500">
-                Created: {new Date(selectedRequest.createdAt).toLocaleString()}
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsViewModalOpen(false)}
+                >
+                  Close
+                </Button>
+                {selectedRequest.status === 'pending' && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsViewModalOpen(false)
+                        handleProcessRequest(selectedRequest, 'decline')
+                      }}
+                      className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Decline
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setIsViewModalOpen(false)
+                        handleProcessRequest(selectedRequest, 'approve')
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Approve
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -425,12 +752,24 @@ export default function RefundRequestsManagementPage() {
                 Cancel
               </Button>
               <Button
-                variant="outline"
                 onClick={handleConfirmProcessing}
-                className={processingAction === 'approve' ? 'text-green-600 hover:text-green-700 border-green-600 hover:border-green-700' : 'text-red-600 hover:text-red-700 border-red-600 hover:border-red-700'}
+                className={processingAction === 'approve'
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-red-600 hover:bg-red-700 text-white'
+                }
               >
-                {processingAction === 'approve' && 'Approve Request'}
-                {processingAction === 'decline' && 'Decline Request'}
+                {processingAction === 'approve' && (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Approve Request
+                  </>
+                )}
+                {processingAction === 'decline' && (
+                  <>
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Decline Request
+                  </>
+                )}
               </Button>
             </div>
           </div>

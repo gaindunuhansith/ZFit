@@ -8,6 +8,7 @@ import {
   ShoppingBag,
   Calendar,
   ShoppingCart,
+  CreditCard,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -79,13 +80,9 @@ const data = {
       icon: Calendar,
     },
     {
-      title: "Reservations",
-      url: "/memberDashboard/reservations",
-      icon: Calendar,
-      items: [
-        { title: "My Bookings", url: "/memberDashboard/reservations" },
-        { title: "Calendar", url: "/memberDashboard/reservations" },
-      ],
+      title: "Payment History",
+      url: "/memberDashboard/payments/history",
+      icon: CreditCard,
     },
   ],
 }

@@ -241,6 +241,47 @@ export const sendPasswordResetEmail = async (email: string, next: NextFunction) 
     };
 };
 
+export const sendEmailVerification = async (email: string, next: NextFunction) => {
+    try {
+        const user = await UserModel.findOne({ email });
+
+        AppAssert(user, NOT_FOUND, "User not found");
+
+        // Check if user is already verified
+        AppAssert(!user.verified, CONFLICT, "Email is already verified");
+
+        // Email verification request limiting (2 emails per 5 mins)
+        const fiveMinAgo = fiveMinutesAgo();
+        const count = await VerificationCodeModel.countDocuments({
+            userId: user._id,
+            type: VerificationCodeType.EmailVerification,
+            createdAt: { $gt: fiveMinAgo },
+        });
+
+        AppAssert(count <= 1, TOO_MANY_REQUESTS, "Too many requests, please try again later");
+
+        const expiresAt = oneYearFromNow();
+        const verificationCode = await VerificationCodeModel.create({
+            userId: user._id,
+            type: VerificationCodeType.EmailVerification,
+            expiresAt,
+        });
+
+        const url = `${env.FRONTEND_APP_ORIGIN}/auth/verify-email/${verificationCode._id}`;
+
+        const { data, error } = await sendMail({
+            to: email,
+            ...getVerifyEmailTemplate(url),
+        });
+
+        AppAssert(data?.id, INTERNAL_SERVER_ERROR, `${error?.name} - ${error?.message}`);
+
+        return { url, emailId: data.id };
+    } catch (error: any) {
+        next(error);
+    }
+};
+
 
 type ResetPasswordParams = {
     password: string;

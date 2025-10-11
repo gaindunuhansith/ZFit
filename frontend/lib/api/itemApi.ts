@@ -5,21 +5,60 @@ interface ApiResponse<T = unknown> {
   data?: T
   message?: string
   error?: string
+  count?: number
 }
 
 interface ItemData {
-  itemName: string
-  itemDescription: string
+  name: string
   categoryID: string
-  quantity: number
-  price?: number
   supplierID: string
-  lowStockThreshold: number
-  maintenanceStatus: "good" | "maintenance_required" | "under_repair"
-  lastMaintenanceDate?: string
+  type: "sellable" | "equipment"
+  
+  // Sellable fields
+  price?: number
+  stock?: number
+  expiryDate?: string
+  lowStockAlert?: number
+  
+  // Equipment fields
+  purchaseDate?: string
+  maintenanceSchedule?: string
+  warrantyPeriod?: string
 }
 
-export type { ItemData }
+interface Item {
+  _id: string
+  name: string
+  categoryID: {
+    _id: string
+    name: string
+    description?: string
+  } | string
+  supplierID: {
+    _id: string
+    supplierName: string
+    supplierEmail: string
+    supplierPhone: string
+  } | string
+  type: "sellable" | "equipment"
+  isActive: boolean
+  
+  // Sellable fields
+  price?: number
+  stock?: number
+  expiryDate?: string
+  lowStockAlert?: number
+  
+  // Equipment fields
+  purchaseDate?: string
+  maintenanceSchedule?: string
+  warrantyPeriod?: string
+  
+  createdAt: string
+  updatedAt: string
+}
+
+export type { ItemData, Item }
 
 // Base request function - EXACT SAME AS categoryApi.ts and supplierApi.ts
 const apiRequest = async <T>(
@@ -47,48 +86,89 @@ const apiRequest = async <T>(
 
   try {
     const response = await fetch(url, config)
-    const data = await response.json()
+    
+    let data
+    try {
+      data = await response.json()
+    } catch {
+      data = { message: `HTTP error! status: ${response.status}` }
+    }
 
     if (!response.ok) {
-      console.error('API Error Response:', data)
-      throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`)
+      const errorMessage = data.error || data.message || `HTTP error! status: ${response.status}`
+      const error = new Error(errorMessage) as Error & {
+        response?: {
+          data: unknown
+          status: number
+          statusText: string
+        }
+        status?: number
+      }
+      error.response = { 
+        data, 
+        status: response.status,
+        statusText: response.statusText 
+      }
+      error.status = response.status
+      throw error
     }
 
     return data
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('API request failed:', error)
-    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-      throw new Error('Network error: Unable to reach the server')
+    
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        response: 'response' in error ? error.response : undefined,
+        status: 'status' in error ? error.status : undefined
+      })
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        error.message = 'Network error - unable to connect to server'
+      }
     }
+    
     throw error
   }
 }
 
 // Item API functions
 export const itemApiService = {
-  // Get all items
-  getItems: () => apiRequest('/inventory/items'),
+  // Get all items (optionally filter by category)
+  getItems: (categoryID?: string) => {
+    const params = categoryID ? `?categoryID=${categoryID}` : ''
+    return apiRequest<Item[]>(`/items${params}`)
+  },
 
-  // Get item by ID
-  getItem: (id: string) => apiRequest(`/inventory/items/${id}`),
+  // Get single item
+  getItem: (id: string) => {
+    return apiRequest<Item>(`/items/${id}`)
+  },
 
   // Create new item
-  createItem: (itemData: ItemData) =>
-    apiRequest('/inventory/items', {
+  createItem: (data: ItemData) => {
+    console.log('API createItem called with:', data)
+    return apiRequest<Item>('/items', {
       method: 'POST',
-      body: JSON.stringify(itemData),
-    }),
+      body: JSON.stringify(data),
+    })
+  },
 
   // Update item
-  updateItem: (id: string, itemData: Partial<ItemData>) =>
-    apiRequest(`/inventory/items/${id}`, {
+  updateItem: (id: string, data: Partial<ItemData>) => {
+    console.log('API updateItem called with:', { id, data })
+    return apiRequest<Item>(`/items/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(itemData),
-    }),
+      body: JSON.stringify(data),
+    })
+  },
 
-  // Delete item
-  deleteItem: (id: string) =>
-    apiRequest(`/inventory/items/${id}`, {
+  // Delete item (soft delete)
+  deleteItem: (id: string) => {
+    console.log('API deleteItem called with ID:', id)
+    return apiRequest<Item>(`/items/${id}`, {
       method: 'DELETE',
-    }),
+    })
+  },
 }
