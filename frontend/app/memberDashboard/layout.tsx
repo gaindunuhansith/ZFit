@@ -1,5 +1,6 @@
 import { MemberSidebar } from "@/components/member-sidebar"
 import { ProtectedRoute } from "@/components/protected-route"
+import { VoiceSupportWidget } from "@/components/VoiceSupportWidget"
 import {
   SidebarInset,
   SidebarProvider,
@@ -27,6 +28,7 @@ export default function MemberDashboardLayout({
             {children}
           </div>
         </SidebarInset>
+        <VoiceSupportWidget />
       </SidebarProvider>
     </ProtectedRoute>
   )

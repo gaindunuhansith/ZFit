@@ -7,6 +7,7 @@ import {
   TrendingUp,
   Activity,
   Package,
+  UserCheck,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -42,12 +43,6 @@ const data = {
       url: "/dashboard",
       icon: SquareTerminal,
       isActive: true,
-    },
-    {
-      title: "Front Desk Mode",
-      url: "/frontdesk",
-      icon: Users,
-      target: "_blank",
     },
     {
       title: "My Profile",
@@ -177,6 +172,12 @@ const data = {
     },
   ],
   projects: [
+    {
+      name: "Front Desk Mode",
+      url: "/frontdesk",
+      icon: UserCheck,
+      target: "_blank",
+    },
     {
       name: "QR Code Scanner",
       url: "/dashboard/attendance/scan",
