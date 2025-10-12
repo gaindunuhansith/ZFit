@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CalendarView } from "@/components/CalendarView"
 import { BookingTable } from "@/components/BookingTable"
@@ -78,36 +78,7 @@ export default function MemberReservationsPage() {
     booking: null
   })
 
-  // Show loading if auth is still loading
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#AAFF69]"></div>
-      </div>
-    )
-  }
-
-  // Show message if no user
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="bg-[#202022] border-gray-700">
-          <CardContent className="p-8 text-center">
-            <h2 className="text-2xl font-bold text-white mb-4">Please Login</h2>
-            <p className="text-gray-400">You need to be logged in to view your bookings.</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  useEffect(() => {
-    if (user?._id) {
-      fetchBookings()
-    }
-  }, [user])
-
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     if (!user?._id) {
       console.log("No user ID available")
       return
@@ -116,7 +87,7 @@ export default function MemberReservationsPage() {
     setIsLoading(true)
     try {
       console.log("Fetching bookings for user:", user._id)
-      const response = await apiRequest<{ data: Booking[] }>("/bookings")
+      const response = await apiRequest<Booking[]>("/bookings")
       console.log("All bookings response:", response)
       
       // Debug: Check the structure of the first booking
@@ -147,6 +118,35 @@ export default function MemberReservationsPage() {
     } finally {
       setIsLoading(false)
     }
+  }, [user?._id])
+
+  useEffect(() => {
+    if (user?._id) {
+      fetchBookings()
+    }
+  }, [user?._id, fetchBookings])
+
+  // Show loading if auth is still loading
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#AAFF69]"></div>
+      </div>
+    )
+  }
+
+  // Show message if no user
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="bg-[#202022] border-gray-700">
+          <CardContent className="p-8 text-center">
+            <h2 className="text-2xl font-bold text-white mb-4">Please Login</h2>
+            <p className="text-gray-400">You need to be logged in to view your bookings.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   const handleDateSelect = (date: Date) => {
@@ -229,8 +229,6 @@ export default function MemberReservationsPage() {
           <CalendarView
             onDateSelect={handleDateSelect}
             selectedDate={selectedDate}
-            bookings={bookings}
-            isAdmin={false}
           />
         </TabsContent>
 
@@ -282,7 +280,17 @@ export default function MemberReservationsPage() {
         onClose={() => setBookingModal({ isOpen: false, booking: null })}
         onSuccess={handleRefresh}
         showStatusField={false}
-        bookingData={bookingModal.booking}
+        bookingData={bookingModal.booking ? {
+          _id: bookingModal.booking._id,
+          memberId: typeof bookingModal.booking.memberId === 'string' ? bookingModal.booking.memberId : bookingModal.booking.memberId._id,
+          classId: typeof bookingModal.booking.classId === 'string' ? bookingModal.booking.classId : bookingModal.booking.classId._id,
+          trainerId: typeof bookingModal.booking.trainerId === 'string' ? bookingModal.booking.trainerId : bookingModal.booking.trainerId._id,
+          facilityId: typeof bookingModal.booking.facilityId === 'string' ? bookingModal.booking.facilityId : bookingModal.booking.facilityId._id,
+          classType: bookingModal.booking.classType,
+          scheduledDate: bookingModal.booking.scheduledDate,
+          fee: bookingModal.booking.fee,
+          status: bookingModal.booking.status
+        } : null}
       />
 
       {/* Reschedule Modal */}
@@ -291,7 +299,17 @@ export default function MemberReservationsPage() {
         onClose={() => setRescheduleModal({ isOpen: false, booking: null })}
         onSuccess={handleRefresh}
         showStatusField={false}
-        bookingData={rescheduleModal.booking}
+        bookingData={rescheduleModal.booking ? {
+          _id: rescheduleModal.booking._id,
+          memberId: typeof rescheduleModal.booking.memberId === 'string' ? rescheduleModal.booking.memberId : rescheduleModal.booking.memberId._id,
+          classId: typeof rescheduleModal.booking.classId === 'string' ? rescheduleModal.booking.classId : rescheduleModal.booking.classId._id,
+          trainerId: typeof rescheduleModal.booking.trainerId === 'string' ? rescheduleModal.booking.trainerId : rescheduleModal.booking.trainerId._id,
+          facilityId: typeof rescheduleModal.booking.facilityId === 'string' ? rescheduleModal.booking.facilityId : rescheduleModal.booking.facilityId._id,
+          classType: rescheduleModal.booking.classType,
+          scheduledDate: rescheduleModal.booking.scheduledDate,
+          fee: rescheduleModal.booking.fee,
+          status: rescheduleModal.booking.status
+        } : null}
         isReschedule={true}
       />
     </div>
