@@ -26,6 +26,7 @@ export function NavMain({
     url?: string
     icon?: LucideIcon
     isActive?: boolean
+    target?: string
     items?: {
       title: string
       url: string
@@ -54,7 +55,7 @@ export function NavMain({
                 </CollapsibleTrigger>
               ) : (
                 <SidebarMenuButton asChild tooltip={item.title}>
-                  <a href={item.url}>
+                  <a href={item.url} target={item.target}>
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
                   </a>

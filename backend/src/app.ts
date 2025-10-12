@@ -25,6 +25,7 @@ import cartRoutes from "./routes/cart.routes.js";
 import inventoryTransactionRoutes from "./routes/inventoryTransaction.routes.js";
 import lowStockAlertRoutes from "./routes/lowStockAlert.routes.js";
 import analyticsRouter from "./routes/analytics.routes.js";
+import supportRouter from "./routes/support.routes.js";
 import errorMiddleware from "./middleware/error.middleware.js";
 import { rateLimitMiddleware } from "./middleware/rateLimit.middleware.js";
 
@@ -70,6 +71,7 @@ app.use('/api/v1/cart', cartRoutes);
 app.use('/api/v1/transactions', inventoryTransactionRoutes);
 app.use('/api/v1/inventory/low-stock', lowStockAlertRoutes);
 app.use('/api/v1/analytics', analyticsRouter);
+app.use('/api/v1/support', supportRouter);
 
 app.use(errorMiddleware);
 

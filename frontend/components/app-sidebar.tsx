@@ -4,10 +4,10 @@ import {
   SquareTerminal,
   Users,
   Calendar,
-  BarChart3,
   TrendingUp,
   Activity,
   Package,
+  UserCheck,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -172,6 +172,12 @@ const data = {
     },
   ],
   projects: [
+    {
+      name: "Front Desk Mode",
+      url: "/frontdesk",
+      icon: UserCheck,
+      target: "_blank",
+    },
     {
       name: "QR Code Scanner",
       url: "/dashboard/attendance/scan",
