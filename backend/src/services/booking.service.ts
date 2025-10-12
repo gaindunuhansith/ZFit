@@ -44,7 +44,7 @@ export const updateBooking = async (id: string, data: Partial<IBooking>) => {
     data.cancellationDeadline = cd;
   }
 
-  // Ensure fee has a default value
+  // Ensure fee has a default value only if not provided
   if (data.fee === undefined) data.fee = 0;
 
   return await Booking.findByIdAndUpdate(id, data, { new: true })

@@ -8,6 +8,7 @@ import {
   TrendingUp,
   Activity,
   Package,
+  BookOpen,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -80,6 +81,28 @@ const data = {
         {
           title: "Memberships",
           url: "/dashboard/memberships/memberships",
+        },
+      ],
+    },
+    {
+      title: "Reservation",
+      icon: BookOpen,
+      items: [
+        {
+          title: "Bookings",
+          url: "/dashboard/reservations/bookings",
+        },
+        {
+          title: "Classes",
+          url: "/dashboard/reservations/classes",
+        },
+        {
+          title: "Trainers",
+          url: "/dashboard/reservations/trainers",
+        },
+        {
+          title: "Facilities",
+          url: "/dashboard/reservations/facilities",
         },
       ],
     },

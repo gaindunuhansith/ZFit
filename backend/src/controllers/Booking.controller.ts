@@ -160,7 +160,8 @@ export const rescheduleBooking = async (req: Request, res: Response, next: NextF
       scheduledDate: newDate,
       cancellationDeadline: newDeadline,
       rescheduledDate: newDate,
-      status: "rescheduled"
+      status: "rescheduled",
+      fee: booking.fee // Preserve the original fee
     });
 
     res.status(200).json({ success: true, data: updatedBooking, message: "Booking rescheduled" });

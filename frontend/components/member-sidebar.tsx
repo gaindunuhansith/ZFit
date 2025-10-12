@@ -9,6 +9,7 @@ import {
   Calendar,
   ShoppingCart,
   CreditCard,
+  BookOpen,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -48,6 +49,11 @@ const data = {
       title: "My Profile",
       url: "/memberDashboard/profile",
       icon: User,
+    },
+    {
+      title: "Reservation",
+      url: "/memberDashboard/reservations",
+      icon: BookOpen,
     },
     {
       title: "Memberships",
