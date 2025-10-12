@@ -4,25 +4,25 @@ import {
   SquareTerminal,
   Users,
   Calendar,
-  BarChart3,
   TrendingUp,
   Activity,
   Package,
   BookOpen,
+  UserCheck,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
-import { useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/lib/auth-context";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 // This is sample data.
 const data = {
@@ -195,6 +195,12 @@ const data = {
     },
   ],
   projects: [
+    {
+      name: "Front Desk Mode",
+      url: "/frontdesk",
+      icon: UserCheck,
+      target: "_blank",
+    },
     {
       name: "QR Code Scanner",
       url: "/dashboard/attendance/scan",

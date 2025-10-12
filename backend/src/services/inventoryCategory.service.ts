@@ -81,14 +81,14 @@ export default class CategoryService {
 
   // DELETE category (soft delete or hard delete based on usage)
   async deleteCategory(id: string): Promise<ICategory | null> {
-    // Check if any items are linked to this category
-    const itemsCount = await InventoryItem.countDocuments({ categoryID: id });
+    // Check if any ACTIVE items are linked to this category
+    const itemsCount = await InventoryItem.countDocuments({ categoryID: id, isActive: true });
     
     if (itemsCount > 0) {
       throw new AppError(BAD_REQUEST, `Cannot delete category. ${itemsCount} item(s) are still linked to this category. Please reassign or remove the items first.`);
     }
 
-    // Hard delete if no items are linked
+    // Hard delete if no active items are linked
     return await Category.findByIdAndDelete(id);
   }
 

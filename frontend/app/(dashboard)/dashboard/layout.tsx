@@ -1,5 +1,6 @@
 import { AppSidebar } from "@/components/app-sidebar"
 import { ProtectedRoute } from "@/components/protected-route"
+import { VoiceSupportWidget } from "@/components/VoiceSupportWidget"
 import {
   SidebarInset,
   SidebarProvider,
@@ -27,6 +28,7 @@ export default function DashboardLayout({
             {children}
           </div>
         </SidebarInset>
+        <VoiceSupportWidget />
       </SidebarProvider>
     </ProtectedRoute>
   )

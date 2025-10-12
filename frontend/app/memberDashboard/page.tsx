@@ -113,9 +113,7 @@ export default function MemberDashboardPage() {
           <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-center py-8">
-            Your recent activity will appear here once you start using the platform.
-          </p>
+          <p className="text-muted-foreground">Your recent gym activities will appear here.</p>
         </CardContent>
       </Card>
     </div>
