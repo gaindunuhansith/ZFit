@@ -479,7 +479,7 @@ export default function DashboardPage() {
                 <div className="flex-1">
                   <div className="text-foreground text-xs font-medium">Payment Status</div>
                   <div className="text-muted-foreground text-xs">
-                    New payments processed: LKR {financeData?.monthlyRevenue.toLocaleString() || '125,000'}
+                    New payments processed: LKR {(financeData?.monthlyRevenue ?? 125000).toLocaleString()}
                   </div>
                   <div className="text-muted-foreground text-xs mt-1">2 hours ago</div>
                 </div>
@@ -540,7 +540,7 @@ export default function DashboardPage() {
             <div className="p-3 border border-border rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-foreground font-medium text-xs">Revenue Today</span>
-                <span className="text-primary text-xs">LKR {(financeData?.monthlyRevenue / 30 || 4167).toLocaleString()}</span>
+                <span className="text-primary text-xs">LKR {((financeData?.monthlyRevenue ?? 125000) / 30).toLocaleString()}</span>
               </div>
               <div className="text-muted-foreground text-xs mb-2">Daily average</div>
               <div className="flex items-center justify-between">
