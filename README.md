@@ -10,43 +10,8 @@ This repository contains both the **backend API** and **frontend application** i
 ```
 ZFit/
 ├── backend/                    # Express + Node.js API
-│   ├── src/
-│   │   ├── app.ts              # Main Express app
-│   │   ├── server.ts           # Server entry point
-│   │   ├── config/             # Configuration files (env, MongoDB, Resend)
-│   │   ├── constants/          # App constants (error codes, HTTP status, etc.)
-│   │   ├── controllers/        # Route controllers
-│   │   ├── middleware/         # Express middleware
-│   │   ├── models/             # Mongoose models
-│   │   ├── routes/             # API routes
-│   │   ├── services/           # Business logic services
-│   │   ├── types/              # TypeScript type definitions
-│   │   ├── util/               # Utility functions
-│   │   └── uploads/            # File uploads directory
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── eslint.config.js
 ├── frontend/                   # Next.js web application
-│   ├── app/                    # Next.js app router
-│   │   ├── (dashboard)/        # Dashboard pages
-│   │   ├── auth/               # Authentication pages
-│   │   ├── booking/            # Booking pages
-│   │   ├── cart/               # Shopping cart pages
-│   │   ├── frontdesk/          # Front desk pages
-│   │   ├── memberDashboard/    # Member dashboard pages
-│   │   ├── payment/            # Payment pages
-│   │   └── profile/            # Profile pages
-│   ├── components/             # React components
-│   │   ├── ui/                 # UI components (shadcn/ui)
-│   │   └── charts/             # Chart components
-│   ├── hooks/                  # Custom React hooks
-│   ├── lib/                    # Utility libraries
-│   ├── public/                 # Static assets
-│   ├── package.json
-│   ├── next.config.ts
-│   ├── tailwind.config.ts
-│   ├── postcss.config.mjs
-│   └── eslint.config.mjs
+├── docs/                       # Project documentation
 ├── package.json                # Root package.json
 └── README.md                   # This file
 ```
